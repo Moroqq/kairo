@@ -7,24 +7,28 @@ interface InputProps extends InputHTMLAttributes<HTMLInputElement> {
 
 export const Input = forwardRef<HTMLInputElement, InputProps>(
   ({ label, error, className = '', style, ...props }, ref) => (
-    <div className="flex flex-col gap-1.5">
+    <div className="flex flex-col gap-1">
       {label && (
-        <label className="text-xs font-medium uppercase tracking-wide" style={{ color: 'var(--text-muted)' }}>
-          {label}
+        <label className="text-xs font-mono" style={{ color: 'var(--text-muted)' }}>
+          <span style={{ color: 'var(--accent)' }}>›</span> {label}
         </label>
       )}
       <input
         ref={ref}
-        className={`h-9 px-3 rounded-lg text-sm outline-none transition-all ${className}`}
+        className={`h-7 px-2 text-xs outline-none font-mono ${className}`}
         style={{
-          background:  'var(--bg-card)',
-          border:      `1px solid ${error ? 'var(--danger)' : 'var(--border)'}`,
-          color:       'var(--text-primary)',
+          background: 'var(--bg-input)',
+          color: 'var(--text-primary)',
+          border: `1px solid ${error ? 'var(--border-danger)' : 'var(--border)'}`,
           ...style,
         }}
         {...props}
       />
-      {error && <p className="text-xs" style={{ color: 'var(--danger)' }}>{error}</p>}
+      {error && (
+        <p className="text-xs font-mono" style={{ color: 'var(--danger)', textShadow: '0 0 6px rgba(255,0,60,0.5)' }}>
+          [error] {error}
+        </p>
+      )}
     </div>
   )
 );
@@ -37,24 +41,26 @@ interface TextareaProps extends TextareaHTMLAttributes<HTMLTextAreaElement> {
 
 export const Textarea = forwardRef<HTMLTextAreaElement, TextareaProps>(
   ({ label, error, className = '', style, ...props }, ref) => (
-    <div className="flex flex-col gap-1.5">
+    <div className="flex flex-col gap-1">
       {label && (
-        <label className="text-xs font-medium uppercase tracking-wide" style={{ color: 'var(--text-muted)' }}>
-          {label}
+        <label className="text-xs font-mono" style={{ color: 'var(--text-muted)' }}>
+          <span style={{ color: 'var(--accent)' }}>›</span> {label}
         </label>
       )}
       <textarea
         ref={ref}
-        className={`px-3 py-2 rounded-lg text-sm outline-none resize-none transition-all ${className}`}
+        className={`px-2 py-1.5 text-xs outline-none resize-none font-mono ${className}`}
         style={{
-          background: 'var(--bg-card)',
-          border:     `1px solid ${error ? 'var(--danger)' : 'var(--border)'}`,
-          color:      'var(--text-primary)',
+          background: 'var(--bg-input)',
+          color: 'var(--text-primary)',
+          border: `1px solid ${error ? 'var(--border-danger)' : 'var(--border)'}`,
           ...style,
         }}
         {...props}
       />
-      {error && <p className="text-xs" style={{ color: 'var(--danger)' }}>{error}</p>}
+      {error && (
+        <p className="text-xs font-mono" style={{ color: 'var(--danger)' }}>[error] {error}</p>
+      )}
     </div>
   )
 );

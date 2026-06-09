@@ -24,7 +24,7 @@ export function TextCapture() {
       const result = await parseText(text);
       setPreview(result);
     } catch {
-      toast('Parsing failed', 'error');
+      toast('Не удалось разобрать', 'error');
     } finally {
       setParsing(false);
     }
@@ -41,10 +41,10 @@ export function TextCapture() {
         ai_summary:  p.summary,
         source_type: 'text',
       });
-      toast('Task created');
+      toast('Задача создана');
       closeCapture();
     } catch {
-      toast('Failed to create task', 'error');
+      toast('Не удалось создать задачу', 'error');
     }
   };
 
@@ -62,11 +62,11 @@ export function TextCapture() {
   return (
     <div className="flex flex-col gap-4 p-5">
       <Textarea
-        label="Describe the task"
+        label="опишите задачу"
         value={text}
         onChange={(e) => setText(e.target.value)}
         rows={5}
-        placeholder="e.g. Need to check warehouse cameras tomorrow, high priority"
+        placeholder="напр. Проверить камеры на складе завтра, высокий приоритет"
         autoFocus
         data-selectable
         onKeyDown={(e) => {
@@ -77,7 +77,9 @@ export function TextCapture() {
         {parsing ? (
           <LoadingDots />
         ) : (
-          <p className="text-xs" style={{ color: 'var(--text-muted)' }}>Ctrl+Enter to parse</p>
+          <p className="text-xs font-mono" style={{ color: 'var(--text-muted)' }}>
+            <span style={{ color: 'var(--accent)' }}>$</span> ctrl+enter — разобрать
+          </p>
         )}
         <Button
           variant="primary"
@@ -86,7 +88,7 @@ export function TextCapture() {
           loading={parsing}
           disabled={!text.trim()}
         >
-          Parse
+          разобрать
         </Button>
       </div>
     </div>

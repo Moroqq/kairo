@@ -2,106 +2,304 @@
 @tailwind components;
 @tailwind utilities;
 
+/* ============================================================
+   KAIRO — MATRIX TERMINAL
+   Flat dark UI · monospace · green accent · falling code bg
+   ============================================================ */
+
 :root {
-  --bg-base:        #1C1C1C;
-  --bg-surface:     #272727;
-  --bg-card:        #313131;
-  --bg-elevated:    #393939;
-  --border:         #3B3B3B;
-  --border-subtle:  #2F2F2F;
+  /* Surfaces */
+  --bg-base:        #000000;
+  --bg-surface:     #0A0A0A;
+  --bg-card:        #0D110D;
+  --bg-elevated:    #121A12;
+  --bg-paper:       #0D110D;
+  --bg-input:       #050805;
 
-  --text-primary:   #FDFDFD;
-  --text-secondary: #979797;
-  --text-muted:     #626262;
+  /* Borders */
+  --border:         rgba(0, 255, 65, 0.18);
+  --border-strong:  rgba(0, 255, 65, 0.45);
+  --border-subtle:  rgba(0, 255, 65, 0.08);
+  --border-danger:  rgba(255, 0, 60, 0.5);
 
-  --accent:         #00F0CA;
-  --accent-dim:     rgba(0, 240, 202, 0.12);
+  /* Text — пирамида контраста для долгого чтения */
+  --text-primary:   #D6F5D6;          /* основной body — мягкий пыльно-зелёный */
+  --text-secondary: #8FCC8F;
+  --text-muted:     #4A8A4A;
+  --text-dim:       #2E5A2E;
+  --text-bright:    #00FF41;          /* акцентные строки, числа, заголовки */
 
-  --pa:             #FB4747;
-  --pb:             #FF7917;
-  --pc:             #3E89FF;
-  --pd:             #707886;
+  /* Accent */
+  --accent:         #00FF41;
+  --accent-soft:    #00B82E;
+  --accent-glow:    rgba(0, 255, 65, 0.55);
+  --accent-dim:     rgba(0, 255, 65, 0.10);
 
-  --success:        #24CF63;
-  --warning:        #F6BC08;
-  --danger:         #FB4747;
+  /* Semantic */
+  --success:        #00FF41;
+  --warning:        #FFD400;
+  --danger:         #FF003C;
+  --info:           #00E5FF;
 
-  --radius-card:    14px;
-  --radius-sm:      8px;
-  --radius-pill:    999px;
+  /* Legacy compatibility (старый код всё ещё ссылается) */
+  --bg-base-legacy: #000000;
+  --edge-light:     rgba(0, 255, 65, 0.30);
+  --edge-face:      rgba(0, 255, 65, 0.15);
+  --edge-shadow:    rgba(0, 255, 65, 0.08);
+  --edge-dark:      #000000;
+  --pa: #FF003C; --pb: #FF003C; --pc: #00FF41; --pd: #4A8A4A;
 
-  --shadow-card:    0 2px 12px rgba(0, 0, 0, 0.4);
-  --shadow-elevated:0 8px 32px rgba(0, 0, 0, 0.6);
+  /* Radii — острые углы, как в терминале */
+  --radius-card:    0px;
+  --radius-sm:      0px;
+  --radius-pill:    0px;
 
-  --transition:     200ms ease-out;
+  --shadow-card:    0 0 0 1px var(--border);
+  --shadow-elevated:
+    0 0 0 1px var(--border-strong),
+    0 0 32px rgba(0, 255, 65, 0.18),
+    0 8px 32px rgba(0, 0, 0, 0.8);
+
+  --transition:     160ms ease-out;
 }
 
-* {
-  box-sizing: border-box;
-  margin: 0;
-  padding: 0;
-}
-
-html, body, #root {
-  height: 100%;
-  overflow: hidden;
-}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html, body, #root { height: 100%; overflow: hidden; background: #000; }
 
 body {
-  font-family: 'Inter', system-ui, sans-serif;
-  font-size: 14px;
+  font-family: "JetBrains Mono", "Fira Code", "IBM Plex Mono", "Lucida Console", "Consolas", monospace;
+  font-size: 12px;
   line-height: 1.5;
   color: var(--text-primary);
   background: var(--bg-base);
   -webkit-font-smoothing: antialiased;
   user-select: none;
+  font-feature-settings: "calt" 0;   /* откл. лигатуры — терминальный look */
 }
 
-/* Custom scrollbar */
-::-webkit-scrollbar {
-  width: 5px;
-  height: 5px;
+/* ============================================================
+   DESKTOP — чистый чёрный, matrix rain рисуется отдельным canvas
+   ============================================================ */
+.win-desktop {
+  position: relative;
+  background: #000;
 }
-::-webkit-scrollbar-track {
+/* Тонкий vignette сверху + scanlines */
+.win-desktop::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background:
+    radial-gradient(ellipse at center, transparent 50%, rgba(0,0,0,0.5) 100%),
+    repeating-linear-gradient(0deg, transparent 0 2px, rgba(0,0,0,0.20) 2px 3px);
+  z-index: 2;
+}
+
+/* Канвас матрицы кладётся под UI */
+.matrix-canvas {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  opacity: 0.55;
+  mix-blend-mode: screen;
+}
+
+/* ============================================================
+   BEVEL-CLASSES (переопределены к FLAT — сохранены имена для совместимости)
+   ============================================================ */
+
+.bevel-raised {
+  border: 1px solid var(--border);
+  background: var(--bg-surface);
+  box-shadow: none;
+  transition: border-color var(--transition), box-shadow var(--transition), background var(--transition);
+}
+
+.bevel-sunken {
+  border: 1px solid var(--border-subtle);
+  background: var(--bg-input);
+  box-shadow: inset 0 0 0 1px rgba(0,0,0,0.4);
+}
+
+.bevel-well {
+  border: 1px solid var(--border-subtle);
+  background: var(--bg-surface);
+  box-shadow: none;
+}
+
+.bevel-pressed {
+  border: 1px solid var(--accent);
+  background: var(--accent-dim);
+  box-shadow: inset 0 0 12px var(--accent-glow);
+}
+
+/* Hover/focus на интерактивных raised */
+button.bevel-raised:not(:disabled):hover,
+a.bevel-raised:hover {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 1px var(--accent), 0 0 12px var(--accent-glow);
+  background: var(--accent-dim);
+}
+button.bevel-raised:not(:disabled):active {
+  background: rgba(0, 255, 65, 0.2);
+}
+
+button.bevel-raised:focus-visible,
+input:focus-visible,
+textarea:focus-visible,
+select:focus-visible {
+  outline: none;
+  border-color: var(--accent) !important;
+  box-shadow: 0 0 0 1px var(--accent), 0 0 16px var(--accent-glow);
+}
+
+/* ============================================================
+   TITLE BAR → TERMINAL HEADER
+   Чёрная полоса с зелёным prompt-like текстом
+   ============================================================ */
+.titlebar {
+  height: 24px;
+  padding: 0 8px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: linear-gradient(180deg, #0A0A0A 0%, #050505 100%);
+  color: var(--accent);
+  font-weight: 500;
+  font-size: 11px;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  text-shadow: 0 0 8px var(--accent-glow);
+  user-select: none;
+  border-bottom: 1px solid var(--border);
+}
+.titlebar-inactive {
+  background: #050505;
+  color: var(--text-dim);
+  text-shadow: none;
+  border-bottom-color: var(--border-subtle);
+}
+
+.titlebar-btn {
+  width: 18px;
+  height: 16px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 10px;
+  font-weight: 500;
+  color: var(--text-muted);
   background: transparent;
+  border: 1px solid var(--border-subtle);
+  cursor: pointer;
+  padding: 0;
+  font-family: inherit;
+  transition: var(--transition);
+}
+.titlebar-btn:hover {
+  color: var(--accent);
+  border-color: var(--accent);
+  box-shadow: 0 0 8px var(--accent-glow);
+}
+
+/* ============================================================
+   NEON / GLOW HELPERS
+   ============================================================ */
+.neon-text   { color: var(--accent); text-shadow: 0 0 8px var(--accent-glow); }
+.neon-cyan-text   { color: var(--accent); text-shadow: 0 0 8px var(--accent-glow); }
+.neon-mag-text    { color: var(--accent); text-shadow: 0 0 8px var(--accent-glow); }
+.neon-pink-text   { color: var(--danger); text-shadow: 0 0 8px rgba(255,0,60,0.6); }
+.neon-yellow-text { color: var(--warning); text-shadow: 0 0 6px rgba(255,212,0,0.5); }
+.neon-green-text  { color: var(--accent); text-shadow: 0 0 8px var(--accent-glow); }
+
+/* LED */
+.led {
+  display: inline-block;
+  width: 7px; height: 7px;
+  border-radius: 50%;
+  background: var(--accent);
+  box-shadow: 0 0 4px var(--accent), 0 0 8px var(--accent-glow);
+}
+.led-red    { background: var(--danger); box-shadow: 0 0 4px var(--danger), 0 0 8px rgba(255,0,60,0.6); }
+.led-yellow { background: var(--warning); box-shadow: 0 0 4px var(--warning); }
+
+@keyframes led-blink {
+  0%, 49%   { opacity: 1; }
+  50%, 100% { opacity: 0.25; }
+}
+.led-blink { animation: led-blink 1.2s steps(1) infinite; }
+
+/* Курсор-блинк для prompt */
+@keyframes cursor-blink {
+  0%, 49%   { opacity: 1; }
+  50%, 100% { opacity: 0; }
+}
+.cursor-blink::after {
+  content: "▊";
+  margin-left: 2px;
+  animation: cursor-blink 1s steps(1) infinite;
+  color: var(--accent);
+}
+
+/* ============================================================
+   RADIUS OVERRIDES (наследие)
+   ============================================================ */
+.rounded-card, .rounded-lg, .rounded-md, .rounded-xl, .rounded-2xl, .rounded-3xl,
+.rounded-full, .rounded-l-card, .rounded-r-card, .rounded-l-lg, .rounded-r-lg,
+.rounded-t-lg, .rounded-b-lg {
+  border-radius: 0 !important;
+}
+
+/* ============================================================
+   SCROLLBAR — minimal terminal-style
+   ============================================================ */
+::-webkit-scrollbar { width: 10px; height: 10px; }
+::-webkit-scrollbar-track {
+  background: #050505;
+  border-left: 1px solid var(--border-subtle);
 }
 ::-webkit-scrollbar-thumb {
   background: var(--border);
-  border-radius: 99px;
-  opacity: 0;
-  transition: opacity 0.2s;
+  border: 2px solid #050505;
+  box-shadow: none;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: var(--text-muted);
+  background: var(--accent);
+  box-shadow: 0 0 6px var(--accent-glow);
 }
+::-webkit-scrollbar-corner { background: #050505; }
 
-/* Allow text selection in inputs and drawers */
-input, textarea, [data-selectable] {
-  user-select: text;
-}
+/* ============================================================
+   FOCUS / SELECTION
+   ============================================================ */
+input, textarea, [data-selectable] { user-select: text; }
 
-/* Focus ring */
 *:focus-visible {
-  outline: 2px solid var(--accent);
-  outline-offset: 2px;
-  border-radius: 4px;
+  outline: none;
 }
 
-/* Mono font utility */
+::selection {
+  background: var(--accent);
+  color: #000;
+  text-shadow: none;
+}
+
 .font-mono {
-  font-family: 'JetBrains Mono', 'Fira Code', monospace;
+  font-family: "JetBrains Mono", "Fira Code", "IBM Plex Mono", monospace;
+  font-size: 11px;
 }
 
-/* Deadline pulse animation */
+/* ============================================================
+   ANIMATIONS
+   ============================================================ */
 @keyframes deadline-pulse {
-  0%, 100% { box-shadow: 0 0 0 0 rgba(251, 71, 71, 0); }
-  50%       { box-shadow: 0 0 12px 3px rgba(251, 71, 71, 0.35); }
+  0%, 100% { box-shadow: 0 0 0 1px var(--border); }
+  50%      { box-shadow: 0 0 0 1px var(--danger), 0 0 18px rgba(255,0,60,0.55); }
 }
-.deadline-pulse {
-  animation: deadline-pulse 2s ease-in-out infinite;
-}
+.deadline-pulse { animation: deadline-pulse 1.6s ease-in-out infinite; }
 
-/* loading dots */
 @keyframes dot-pulse {
   0%, 60%, 100% { opacity: 0.2; transform: scale(0.8); }
   30%           { opacity: 1;   transform: scale(1); }
@@ -112,7 +310,56 @@ input, textarea, [data-selectable] {
   height: 6px;
   border-radius: 50%;
   background: var(--accent);
+  box-shadow: 0 0 6px var(--accent-glow);
   animation: dot-pulse 1.2s ease-in-out infinite;
 }
 .dot-pulse > span:nth-child(2) { animation-delay: 0.2s; }
 .dot-pulse > span:nth-child(3) { animation-delay: 0.4s; }
+
+/* Subtle scanlines на затемнённых поверхностях */
+.scanlines { position: relative; }
+
+/* ============================================================
+   GENERIC UTILITY OVERRIDES
+   ============================================================ */
+input, textarea, select {
+  font-family: inherit;
+  color: var(--text-primary);
+  background: var(--bg-input);
+}
+
+/* Date-input в Chromium — невидимая иконка стрелки → красим в зелёный */
+input[type="date"]::-webkit-calendar-picker-indicator {
+  filter: invert(70%) sepia(89%) saturate(2483%) hue-rotate(85deg) brightness(1.2);
+  cursor: pointer;
+}
+
+/* Hover-row helper для list-view */
+.row-hover:hover {
+  background: rgba(0, 255, 65, 0.06) !important;
+}
+
+/* Flat button hover/focus — для всех вариантов */
+.btn-flat:not(:disabled):hover {
+  border-color: var(--accent) !important;
+  box-shadow: 0 0 0 1px var(--accent), 0 0 16px var(--accent-glow);
+  background: var(--accent-dim) !important;
+  color: var(--accent) !important;
+  text-shadow: 0 0 6px var(--accent-glow);
+}
+.btn-flat[data-variant="primary"]:not(:disabled):hover {
+  background: var(--accent) !important;
+  color: #000 !important;
+  text-shadow: none !important;
+  box-shadow: 0 0 0 1px var(--accent), 0 0 22px var(--accent);
+}
+.btn-flat[data-variant="danger"]:not(:disabled):hover {
+  border-color: var(--danger) !important;
+  background: rgba(255,0,60,0.1) !important;
+  color: var(--danger) !important;
+  box-shadow: 0 0 0 1px var(--danger), 0 0 14px rgba(255,0,60,0.5);
+  text-shadow: 0 0 6px rgba(255,0,60,0.6);
+}
+.btn-flat:not(:disabled):active {
+  transform: translateY(1px);
+}

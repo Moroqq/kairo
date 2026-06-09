@@ -19,14 +19,14 @@ export function ImageCapture() {
   const closeCapture = useUIStore((s) => s.closeCapture);
 
   const processFile = useCallback(async (file: File) => {
-    if (!file.type.startsWith('image/')) { toast('Only image files are supported', 'error'); return; }
+    if (!file.type.startsWith('image/')) { toast('Поддерживаются только изображения', 'error'); return; }
     setImgUrl(URL.createObjectURL(file));
     setParsing(true);
     try {
       const result = await parseImage(file);
       setPreview(result);
     } catch {
-      toast('Image parsing failed', 'error');
+      toast('Не удалось обработать изображение', 'error');
     } finally {
       setParsing(false);
     }
@@ -62,10 +62,10 @@ export function ImageCapture() {
         ai_summary:  p.summary,
         source_type: 'image',
       });
-      toast('Task created from image');
+      toast('Задача создана из фото');
       closeCapture();
     } catch {
-      toast('Failed to create task', 'error');
+      toast('Не удалось создать задачу', 'error');
     }
   };
 
@@ -116,11 +116,11 @@ export function ImageCapture() {
               <Image size={24} style={{ color: 'var(--text-muted)' }} />
             </div>
             <div className="text-center">
-              <p className="text-sm font-medium" style={{ color: 'var(--text-secondary)' }}>
-                Drop image or paste screenshot
+              <p className="text-sm font-mono font-medium" style={{ color: 'var(--text-secondary)' }}>
+                перетащите или вставьте скриншот
               </p>
-              <p className="text-xs mt-1" style={{ color: 'var(--text-muted)' }}>
-                Ctrl+V · Drag & drop · or choose file
+              <p className="text-xs font-mono mt-1" style={{ color: 'var(--text-muted)' }}>
+                Ctrl+V · drag & drop · выберите файл
               </p>
             </div>
           </>
@@ -131,7 +131,7 @@ export function ImageCapture() {
       <label className="flex items-center justify-center gap-2 cursor-pointer">
         <input type="file" accept="image/*" className="hidden" onChange={handleFileInput} />
         <Button variant="secondary" size="sm" className="gap-1.5 pointer-events-none">
-          <Upload size={13} /> Choose file
+          <Upload size={13} /> выбрать файл
         </Button>
       </label>
     </div>

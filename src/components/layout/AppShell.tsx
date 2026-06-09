@@ -1,13 +1,14 @@
-import { ReactNode } from 'react';
-import { Plus } from 'lucide-react';
+import { ReactNode, useEffect, useState } from 'react';
 import { Sidebar } from './Sidebar';
 import { Header } from './Header';
+import { MatrixRain } from './MatrixRain';
 import { TaskDrawer } from '@/components/task/TaskDrawer';
 import { CaptureModal } from '@/components/capture/CaptureModal';
 import { useUIStore } from '@/stores/ui.store';
+import { useTasks } from '@/hooks/useTasks';
 import { initNotifications } from '@/services/notifications.service';
+import { isOverdue } from '@/hooks/useDeadlineWatcher';
 
-// Init notifications once on mount
 initNotifications().catch(() => {});
 
 interface AppShellProps {
@@ -16,36 +17,149 @@ interface AppShellProps {
 
 export function AppShell({ children }: AppShellProps) {
   const openCapture = useUIStore((s) => s.openCapture);
+  const { data: tasks } = useTasks();
+
+  const active   = (tasks ?? []).filter((t) => t.status !== 'Resolved' && t.status !== 'Archived');
+  const total    = tasks?.length ?? 0;
+  const open     = active.length;
+  const resolved = tasks?.filter((t) => t.status === 'Resolved').length ?? 0;
+  const overdue  = active.filter((t) => isOverdue(t.deadline)).length;
+
+  // Ближайший дедлайн среди активных (не просрочённых)
+  const nextDeadline = active
+    .filter((t) => t.deadline && !isOverdue(t.deadline))
+    .map((t) => new Date(t.deadline!).getTime())
+    .sort((a, b) => a - b)[0];
 
   return (
-    <div className="flex h-full" style={{ background: 'var(--bg-base)' }}>
-      <Sidebar />
+    <div className="win-desktop h-full flex flex-col p-3 gap-3 relative">
+      <MatrixRain />
 
-      <div className="flex flex-col flex-1 min-w-0">
-        <Header />
+      <div
+        className="bevel-raised flex-1 flex flex-col min-h-0 relative"
+        style={{
+          background: 'rgba(5, 5, 5, 0.92)',
+          boxShadow: 'var(--shadow-elevated)',
+          zIndex: 3,
+        }}
+      >
+        {/* Terminal title bar */}
+        <div className="titlebar">
+          <span className="neon-text">●</span>
+          <span className="flex-1 truncate cursor-blink">[kairo@matrix:~]$ task_manager --status=работает</span>
+          <button className="titlebar-btn" title="Свернуть">_</button>
+          <button className="titlebar-btn" title="Развернуть">□</button>
+          <button className="titlebar-btn" title="Закрыть">✕</button>
+        </div>
 
-        <main className="flex-1 overflow-hidden flex flex-col relative">
-          {children}
+        {/* Body */}
+        <div className="flex flex-1 min-h-0" style={{ padding: 8, gap: 8 }}>
+          <Sidebar />
 
-          {/* Floating action button */}
-          <button
-            onClick={openCapture}
-            className="absolute bottom-6 right-6 z-30 flex items-center justify-center rounded-full shadow-elevated transition-all hover:scale-105 active:scale-95"
-            style={{
-              width:      52,
-              height:     52,
-              background: 'var(--accent)',
-              boxShadow:  '0 4px 24px rgba(0,229,192,0.35)',
-            }}
-            title="New Task (N)"
-          >
-            <Plus size={22} style={{ color: '#000' }} strokeWidth={2.5} />
-          </button>
-        </main>
+          <div className="flex flex-col flex-1 min-w-0 min-h-0 gap-2">
+            <Header />
+
+            <main
+              className="bevel-sunken flex-1 overflow-hidden flex flex-col relative"
+              style={{ background: 'rgba(0,0,0,0.5)' }}
+            >
+              {children}
+
+              <button
+                onClick={openCapture}
+                className="bevel-raised absolute bottom-3 right-3 z-30 flex items-center gap-2 px-3 h-8 text-xs font-medium"
+                style={{ background: 'var(--bg-surface)' }}
+                title="Новая задача (N)"
+              >
+                <span className="neon-text" style={{ fontSize: 14, lineHeight: 1 }}>+</span>
+                <span style={{ color: 'var(--text-primary)' }}>новая задача</span>
+              </button>
+            </main>
+          </div>
+        </div>
+
+        {/* Status bar */}
+        <div
+          className="flex items-center gap-2 px-2 py-1 text-xs"
+          style={{ background: '#020402', borderTop: '1px solid var(--border-subtle)' }}
+        >
+          <span className="flex items-center gap-1.5">
+            <span className="led led-blink" />
+            <span className="neon-text" style={{ letterSpacing: 1 }}>В СЕТИ</span>
+          </span>
+          <Sep />
+          <span style={{ color: 'var(--text-muted)' }}>
+            всего <span className="font-mono" style={{ color: 'var(--text-bright)' }}>{pad(total)}</span>
+          </span>
+          <Sep />
+          <span style={{ color: 'var(--text-muted)' }}>
+            активных <span className="font-mono" style={{ color: 'var(--text-bright)' }}>{pad(open)}</span>
+          </span>
+          <Sep />
+          <span style={{ color: 'var(--text-muted)' }}>
+            выполнено <span className="font-mono" style={{ color: 'var(--text-bright)' }}>{pad(resolved)}</span>
+          </span>
+          {overdue > 0 && (
+            <>
+              <Sep />
+              <span className="flex items-center gap-1.5">
+                <span className="led led-red led-blink" />
+                <span className="neon-pink-text font-bold">ПРОСРОЧЕНО {pad(overdue)}</span>
+              </span>
+            </>
+          )}
+          <div className="flex-1" />
+          {nextDeadline !== undefined && (
+            <span style={{ color: 'var(--text-muted)' }}>
+              ближайший дедлайн{' '}
+              <span className="font-mono" style={{ color: 'var(--text-bright)' }}>
+                <Countdown to={nextDeadline} />
+              </span>
+              <span style={{ color: 'var(--text-dim)' }}> │ </span>
+            </span>
+          )}
+          <span className="font-mono" style={{ color: 'var(--text-muted)' }}>
+            <Clock />
+          </span>
+        </div>
       </div>
 
       <TaskDrawer />
       <CaptureModal />
     </div>
   );
+}
+
+function Sep() {
+  return <span style={{ color: 'var(--text-dim)' }}>│</span>;
+}
+
+function pad(n: number) {
+  return n.toString().padStart(3, '0');
+}
+
+function Clock() {
+  const [now, setNow] = useState(() => new Date());
+  useEffect(() => {
+    const id = setInterval(() => setNow(new Date()), 1000);
+    return () => clearInterval(id);
+  }, []);
+  return <>{now.toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}</>;
+}
+
+/** Обратный отсчёт «12ч 34м» до целевой timestamp. */
+function Countdown({ to }: { to: number }) {
+  const [now, setNow] = useState(() => Date.now());
+  useEffect(() => {
+    const id = setInterval(() => setNow(Date.now()), 30_000);
+    return () => clearInterval(id);
+  }, []);
+  const diff = Math.max(0, to - now);
+  const min  = Math.floor(diff / 60_000);
+  const days = Math.floor(min / (60 * 24));
+  const hrs  = Math.floor((min % (60 * 24)) / 60);
+  const m    = min % 60;
+  if (days > 0) return <>{days}д {hrs}ч</>;
+  if (hrs > 0)  return <>{hrs}ч {m}м</>;
+  return <>{m}м</>;
 }

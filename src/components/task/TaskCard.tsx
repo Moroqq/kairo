@@ -1,102 +1,194 @@
 import { useDraggable } from '@dnd-kit/core';
 import { CSS } from '@dnd-kit/utilities';
 import { motion } from 'framer-motion';
-import { Clock, MessageSquare } from 'lucide-react';
-import type { Task } from '@/types';
-import { PRIORITY_CONFIG, STATUS_LABELS } from '@/types';
-import { PriorityStripe } from './PriorityBadge';
-import { Badge } from '@/components/ui/Badge';
+import { Clock, MessageSquare, ChevronRight } from 'lucide-react';
+import type { Task, TaskStatus } from '@/types';
 import { useUIStore } from '@/stores/ui.store';
-import { formatDeadline, isDeadlineUrgent, isOverdue } from '@/hooks/useDeadlineWatcher';
+import { useUpdateStatus } from '@/hooks/useTasks';
+import { useToast } from '@/components/ui/Toast';
+import { formatDeadline, isDeadlineUrgent, isOverdue, formatRelative } from '@/hooks/useDeadlineWatcher';
 
 interface TaskCardProps {
   task: Task;
 }
 
+/**
+ * Следующий статус в линейном workflow:
+ *   New → In Progress → Resolved
+ *   Waiting / Escalation → Resolved
+ *   Blocked → In Progress (unblock)
+ *   Resolved / Archived → null (terminal)
+ */
+const NEXT_STATUS: Record<TaskStatus, TaskStatus | null> = {
+  'New':              'In Progress',
+  'In Progress':      'Resolved',
+  'Waiting Response': 'Resolved',
+  'Escalation':       'Resolved',
+  'Blocked':          'In Progress',
+  'Resolved':         null,
+  'Archived':         null,
+};
+
 export function TaskCard({ task }: TaskCardProps) {
   const setActiveTaskId = useUIStore((s) => s.setActiveTaskId);
+  const updateStatus    = useUpdateStatus();
+  const { toast }       = useToast();
   const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({ id: task.id });
+
+  const urgent     = isDeadlineUrgent(task.deadline);
+  const overdue    = isOverdue(task.deadline);
+  const hasDeadline = !!task.deadline;
+  const nextStatus = NEXT_STATUS[task.status];
 
   const style: React.CSSProperties = {
     transform:  CSS.Translate.toString(transform),
-    opacity:    isDragging ? 0.4 : 1,
-    cursor:     isDragging ? 'grabbing' : 'grab',
-    position:   'relative',
-    background: 'var(--bg-card)',
+    opacity:    isDragging ? 0.7 : 1,
+    cursor:     isDragging ? 'grabbing' : 'default',
+    background: '#0A0F0A',
     border:     '1px solid var(--border)',
-    borderRadius: 'var(--radius-card)',
-    boxShadow:  isDragging ? 'var(--shadow-elevated)' : 'var(--shadow-card)',
-    transition: isDragging ? 'none' : 'box-shadow 200ms ease-out',
-    overflow:   'hidden',
-    paddingLeft: 16,
+    boxShadow:  isDragging
+      ? '0 0 0 1px var(--accent), 0 0 20px var(--accent-glow), 0 4px 16px rgba(0,0,0,0.6)'
+      : 'none',
+    transition: isDragging ? 'none' : 'border-color 140ms ease-out, box-shadow 140ms ease-out, background 140ms ease-out',
   };
 
-  const urgent   = isDeadlineUrgent(task.deadline);
-  const overdue  = isOverdue(task.deadline);
-  const hasDeadline = !!task.deadline;
+  const handleAdvance = async (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (!nextStatus) return;
+    try {
+      await updateStatus.mutateAsync({ id: task.id, status: nextStatus });
+    } catch {
+      toast('Не удалось продвинуть задачу', 'error');
+    }
+  };
+
+  const NEXT_LABELS: Record<string, string> = {
+    'New':              'новая',
+    'In Progress':      'в работе',
+    'Waiting Response': 'ожидание',
+    'Escalation':       'эскалация',
+    'Blocked':          'блок',
+    'Resolved':         'выполнена',
+    'Archived':         'архив',
+  };
 
   return (
     <motion.div
       ref={setNodeRef}
       style={style}
-      initial={{ opacity: 0, y: 8 }}
+      initial={{ opacity: 0, y: 4 }}
       animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.2, ease: 'easeOut' }}
-      className={urgent ? 'deadline-pulse' : ''}
+      transition={{ duration: 0.14 }}
+      className={`row-hover task-card ${urgent ? 'deadline-pulse' : ''}`}
       onClick={() => setActiveTaskId(task.id)}
+      onMouseEnter={(e) => {
+        if (isDragging) return;
+        e.currentTarget.style.borderColor = 'var(--accent)';
+        e.currentTarget.style.boxShadow = '0 0 0 1px var(--accent), 0 0 14px var(--accent-glow)';
+      }}
+      onMouseLeave={(e) => {
+        if (isDragging) return;
+        e.currentTarget.style.borderColor = 'var(--border)';
+        e.currentTarget.style.boxShadow = 'none';
+      }}
       {...listeners}
       {...attributes}
     >
-      <PriorityStripe priority={task.priority} />
-
-      <div className="p-3 pl-3">
-        <div className="flex items-start justify-between gap-2 mb-2">
+      <div style={{ padding: '8px 10px' }}>
+        {/* Title row + advance button */}
+        <div className="flex items-start gap-2" style={{ marginBottom: 6 }}>
           <p
-            className="text-sm font-medium leading-snug flex-1 min-w-0"
-            style={{ color: 'var(--text-primary)' }}
+            className="text-xs leading-snug flex-1 min-w-0"
+            style={{
+              color: 'var(--text-primary)',
+              fontWeight: 500,
+            }}
           >
             {task.title}
           </p>
-          <Badge
-            color={PRIORITY_CONFIG[task.priority].color}
-            bg="transparent"
-            style={{ flexShrink: 0, border: 'none', padding: '0 4px', fontSize: 11 }}
-          >
-            {task.priority}
-          </Badge>
+
+          {nextStatus && (
+            <button
+              type="button"
+              onPointerDown={(e) => e.stopPropagation()}
+              onClick={handleAdvance}
+              disabled={updateStatus.isPending}
+              className="advance-btn flex items-center justify-center flex-shrink-0"
+              style={{
+                width: 22,
+                height: 18,
+                background: 'transparent',
+                border: '1px solid var(--border)',
+                color: 'var(--accent)',
+                cursor: updateStatus.isPending ? 'wait' : 'pointer',
+                padding: 0,
+                transition: 'all 140ms ease-out',
+              }}
+              title={`следующий этап: ${NEXT_LABELS[nextStatus] ?? nextStatus}`}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.background  = 'var(--accent-dim)';
+                e.currentTarget.style.borderColor = 'var(--accent)';
+                e.currentTarget.style.boxShadow   = '0 0 0 1px var(--accent), 0 0 10px var(--accent-glow)';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.background  = 'transparent';
+                e.currentTarget.style.borderColor = 'var(--border)';
+                e.currentTarget.style.boxShadow   = 'none';
+              }}
+            >
+              <ChevronRight size={12} />
+            </button>
+          )}
         </div>
 
+        {/* Meta row 1: категория + дедлайн справа */}
         <div className="flex items-center justify-between gap-2">
-          <div className="flex items-center gap-2 flex-wrap">
+          <div className="flex items-center gap-1.5 flex-wrap min-w-0">
             {task.category && (
-              <span className="text-xs px-1.5 py-0.5 rounded" style={{ background: 'var(--bg-elevated)', color: 'var(--text-muted)' }}>
+              <span
+                className="font-mono truncate"
+                style={{
+                  fontSize: 10,
+                  padding: '0 5px',
+                  background: 'transparent',
+                  color: 'var(--accent)',
+                  border: '1px solid var(--border)',
+                  maxWidth: 120,
+                }}
+              >
                 {task.category}
               </span>
             )}
-            <Badge
-              style={{ fontSize: 10, border: 'none', padding: '2px 6px', background: 'var(--bg-elevated)' }}
-            >
-              {STATUS_LABELS[task.status]}
-            </Badge>
-          </div>
-
-          <div className="flex items-center gap-2 flex-shrink-0">
             {task.comments.length > 0 && (
-              <span className="flex items-center gap-1 text-xs" style={{ color: 'var(--text-muted)' }}>
-                <MessageSquare size={11} />
+              <span className="flex items-center gap-0.5 font-mono" style={{ color: 'var(--text-muted)', fontSize: 10 }}>
+                <MessageSquare size={10} />
                 {task.comments.length}
               </span>
             )}
-            {hasDeadline && (
-              <span
-                className="flex items-center gap-1 text-xs font-mono"
-                style={{ color: overdue ? 'var(--p1)' : urgent ? 'var(--p2)' : 'var(--text-muted)' }}
-              >
-                <Clock size={11} />
-                {formatDeadline(task.deadline!)}
-              </span>
-            )}
           </div>
+
+          {hasDeadline && (
+            <span
+              className="flex items-center gap-1 font-mono flex-shrink-0"
+              style={{
+                fontSize: 10,
+                color: overdue ? 'var(--danger)' : urgent ? 'var(--warning)' : 'var(--text-muted)',
+                fontWeight: overdue ? 600 : 400,
+                textShadow: overdue ? '0 0 6px rgba(255,0,60,0.6)' : 'none',
+              }}
+            >
+              <Clock size={10} />
+              {formatDeadline(task.deadline!)}
+            </span>
+          )}
+        </div>
+
+        {/* Meta row 2: created relative */}
+        <div
+          className="flex items-center justify-between gap-2 font-mono"
+          style={{ marginTop: 4, fontSize: 9, color: 'var(--text-dim)' }}
+        >
+          <span>создано {formatRelative(task.created_at)}</span>
         </div>
       </div>
     </motion.div>

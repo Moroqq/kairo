@@ -62,25 +62,25 @@ export interface KanbanColumn {
 }
 
 export const KANBAN_COLUMNS: KanbanColumn[] = [
-  { id: 'todo',       title: 'To Do',       statuses: ['New'],                                        defaultStatus: 'New' },
-  { id: 'inprogress', title: 'In Progress', statuses: ['In Progress', 'Waiting Response', 'Escalation'], defaultStatus: 'In Progress' },
-  { id: 'blocked',    title: 'Blocked',     statuses: ['Blocked'],                                    defaultStatus: 'Blocked' },
-  { id: 'done',       title: 'Done',        statuses: ['Resolved'],                                   defaultStatus: 'Resolved' },
+  { id: 'todo',       title: 'ОЧЕРЕДЬ',   statuses: ['New'],                                        defaultStatus: 'New' },
+  { id: 'inprogress', title: 'АКТИВНЫЕ',  statuses: ['In Progress', 'Waiting Response', 'Escalation'], defaultStatus: 'In Progress' },
+  { id: 'blocked',    title: 'БЛОК',      statuses: ['Blocked'],                                    defaultStatus: 'Blocked' },
+  { id: 'done',       title: 'ВЫПОЛНЕНО', statuses: ['Resolved'],                                   defaultStatus: 'Resolved' },
 ];
 
-export const PRIORITY_CONFIG: Record<Priority, { color: string; label: string; bgColor: string }> = {
-  A: { color: '#FB4747', bgColor: 'rgba(251,71,71,0.12)',   label: 'Critical' },
-  B: { color: '#FF7917', bgColor: 'rgba(255,121,23,0.12)',  label: 'Today'    },
-  C: { color: '#3E89FF', bgColor: 'rgba(62,137,255,0.12)',  label: 'Planned'  },
-  D: { color: '#707886', bgColor: 'rgba(112,120,134,0.12)', label: 'Optional' },
+export const PRIORITY_CONFIG: Record<Priority, { color: string; label: string; bgColor: string; glow: string }> = {
+  A: { color: '#FF1744', bgColor: 'rgba(255,23,68,0.10)',   glow: 'rgba(255,23,68,0.6)',   label: 'Critical' },
+  B: { color: '#FF9100', bgColor: 'rgba(255,145,0,0.10)',   glow: 'rgba(255,145,0,0.5)',   label: 'Today'    },
+  C: { color: '#00B0FF', bgColor: 'rgba(0,176,255,0.10)',   glow: 'rgba(0,176,255,0.5)',   label: 'Planned'  },
+  D: { color: '#B388FF', bgColor: 'rgba(179,136,255,0.10)', glow: 'rgba(179,136,255,0.5)', label: 'Optional' },
 };
 
 export const STATUS_LABELS: Record<TaskStatus, string> = {
-  'New':              'New',
-  'In Progress':      'In Progress',
-  'Waiting Response': 'Waiting',
-  'Escalation':       'Escalation',
-  'Blocked':          'Blocked',
-  'Resolved':         'Resolved',
-  'Archived':         'Archived',
+  'New':              'новая',
+  'In Progress':      'в работе',
+  'Waiting Response': 'ожидание',
+  'Escalation':       'эскалация',
+  'Blocked':          'блок',
+  'Resolved':         'выполнена',
+  'Archived':         'архив',
 };

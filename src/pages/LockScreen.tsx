@@ -1,35 +1,32 @@
-import { useState, useEffect } from 'react';
-import { Shield, Eye, EyeOff, KeyRound, Smartphone } from 'lucide-react';
-import { Store } from '@tauri-apps/plugin-store';
-import * as OTPAuth from 'otpauth';
-import QRCode from 'qrcode';
+import {
+  useState,
+  useEffect,
+  useRef,
+  useLayoutEffect,
+  ChangeEvent,
+  InputHTMLAttributes,
+} from 'react';
+import { Eye, EyeOff } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { Button } from '@/components/ui/Button';
-import { Input } from '@/components/ui/Input';
+import { MatrixRain } from '@/components/layout/MatrixRain';
 import { useAuthStore } from '@/stores/auth.store';
 
-// Singleton store — loaded once
-let _store: Store | null = null;
-async function getStore(): Promise<Store> {
-  if (!_store) _store = await Store.load('auth.json', { defaults: {} });
-  return _store;
-}
+const storage = {
+  get: (key: string) => localStorage.getItem(`kairo_auth_${key}`),
+  set: (key: string, value: string) => localStorage.setItem(`kairo_auth_${key}`, value),
+  has: (key: string) => localStorage.getItem(`kairo_auth_${key}`) !== null,
+};
 
-async function hashPassword(
-  password: string,
-  salt?: Uint8Array,
-): Promise<{ hash: string; salt: string }> {
-  const enc = new TextEncoder();
-  // Ensure the salt buffer is an ArrayBuffer (not SharedArrayBuffer)
-  const s   = salt ?? new Uint8Array(new ArrayBuffer(16));
-  if (!salt) crypto.getRandomValues(s);
+async function hashPassword(password: string, salt?: Uint8Array): Promise<{ hash: string; salt: string }> {
+  const enc  = new TextEncoder();
+  const s    = salt ?? crypto.getRandomValues(new Uint8Array(16));
   const key  = await crypto.subtle.importKey('raw', enc.encode(password), 'PBKDF2', false, ['deriveBits']);
   const bits = await crypto.subtle.deriveBits(
     { name: 'PBKDF2', salt: s.buffer as ArrayBuffer, iterations: 310_000, hash: 'SHA-256' },
-    key,
-    256,
+    key, 256,
   );
-  const toB64 = (buf: Uint8Array) => btoa(String.fromCharCode(...buf));
+  const toB64 = (b: Uint8Array) => btoa(String.fromCharCode(...b));
   return { hash: toB64(new Uint8Array(bits)), salt: toB64(s) };
 }
 
@@ -39,244 +36,281 @@ async function verifyPassword(password: string, storedHash: string, storedSalt: 
   return hash === storedHash;
 }
 
-type Screen = 'loading' | 'setup-password' | 'setup-totp' | 'login';
+/* ------------------------------------------------------------------ */
+/* MaskedPasswordInput — реальное значение в state, отображаются `*`   */
+/* ------------------------------------------------------------------ */
+
+interface MaskedProps
+  extends Omit<InputHTMLAttributes<HTMLInputElement>, 'onChange' | 'value' | 'type'> {
+  label: string;
+  value: string;
+  onChange: (v: string) => void;
+  visible: boolean;
+  trailing?: React.ReactNode;
+}
+
+function MaskedPasswordInput({
+  label,
+  value,
+  onChange,
+  visible,
+  trailing,
+  ...rest
+}: MaskedProps) {
+  const inputRef = useRef<HTMLInputElement>(null);
+  const pendingCursor = useRef<number | null>(null);
+
+  // Восстанавливаем позицию курсора после каждого рендера, если мы её запомнили
+  useLayoutEffect(() => {
+    if (pendingCursor.current !== null && inputRef.current) {
+      const pos = pendingCursor.current;
+      inputRef.current.setSelectionRange(pos, pos);
+      pendingCursor.current = null;
+    }
+  });
+
+  const display = visible ? value : '*'.repeat(value.length);
+
+  const handleChange = (e: ChangeEvent<HTMLInputElement>) => {
+    const next   = e.target.value;
+    const cursor = e.target.selectionStart ?? next.length;
+
+    if (visible) {
+      pendingCursor.current = cursor;
+      onChange(next);
+      return;
+    }
+
+    const oldLen = value.length;
+    const newLen = next.length;
+    const delta  = newLen - oldLen;
+
+    if (delta > 0) {
+      // Вставка: появилось `delta` новых символов; они оканчиваются на cursor
+      const insertStart = cursor - delta;
+      const inserted    = next.slice(insertStart, cursor);
+      pendingCursor.current = cursor;
+      onChange(value.slice(0, insertStart) + inserted + value.slice(insertStart));
+    } else if (delta < 0) {
+      // Удаление: вырезано `-delta` символов, курсор стоит на позиции среза
+      pendingCursor.current = cursor;
+      onChange(value.slice(0, cursor) + value.slice(cursor - delta));
+    } else if (cursor > 0 && next[cursor - 1] !== '*') {
+      // Длина не изменилась — обычно это selection-replace одним символом
+      pendingCursor.current = cursor;
+      onChange(value.slice(0, cursor - 1) + next[cursor - 1] + value.slice(cursor));
+    }
+  };
+
+  return (
+    <div className="flex flex-col gap-1">
+      <label className="text-xs font-mono" style={{ color: 'var(--text-muted)' }}>
+        <span style={{ color: 'var(--accent)' }}>›</span> {label}
+      </label>
+      <div className="relative">
+        <input
+          {...rest}
+          ref={inputRef}
+          type="text"
+          autoComplete="off"
+          spellCheck={false}
+          autoCapitalize="off"
+          autoCorrect="off"
+          value={display}
+          onChange={handleChange}
+          className="h-7 w-full pl-2 pr-7 text-xs outline-none font-mono"
+          style={{
+            background: 'var(--bg-input)',
+            color: visible ? 'var(--text-primary)' : 'var(--accent)',
+            textShadow: visible ? 'none' : '0 0 6px var(--accent-glow), 0 0 2px var(--accent)',
+            letterSpacing: visible ? 0 : 3,
+            border: '1px solid var(--border)',
+            caretColor: 'var(--accent)',
+          }}
+        />
+        {trailing && (
+          <div className="absolute right-1 top-1/2 -translate-y-1/2 flex items-center">
+            {trailing}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+/* ------------------------------------------------------------------ */
 
 export function LockScreen() {
   const unlock = useAuthStore((s) => s.unlock);
-  const [screen,   setScreen]   = useState<Screen>('loading');
+  const [isSetup,  setIsSetup]  = useState<boolean | null>(null);
   const [password, setPassword] = useState('');
   const [confirm,  setConfirm]  = useState('');
-  const [totp,     setTotp]     = useState('');
   const [showPass, setShowPass] = useState(false);
   const [error,    setError]    = useState('');
   const [loading,  setLoading]  = useState(false);
-  const [qrUrl,    setQrUrl]    = useState('');
-  const [totpObj,  setTotpObj]  = useState<OTPAuth.TOTP | null>(null);
 
-  useEffect(() => {
-    getStore().then(async (store) => {
-      const hasPassword = await store.has('password_hash');
-      setScreen(hasPassword ? 'login' : 'setup-password');
-    });
-  }, []);
+  useEffect(() => { setIsSetup(storage.has('password_hash')); }, []);
 
-  // SETUP — Step 1: create password
-  const handleSetupPassword = async () => {
+  const handleSetup = async () => {
     setError('');
-    if (password.length < 8) { setError('Password must be at least 8 characters'); return; }
-    if (password !== confirm) { setError('Passwords do not match'); return; }
+    if (password.length < 4) { setError('минимум 4 символа'); return; }
+    if (password !== confirm) { setError('пароли не совпадают'); return; }
     setLoading(true);
     try {
-      const store = await getStore();
       const { hash, salt } = await hashPassword(password);
-      await store.set('password_hash', hash);
-      await store.set('password_salt', salt);
-
-      const secret = new OTPAuth.Secret({ size: 20 });
-      const totpInstance = new OTPAuth.TOTP({
-        issuer: 'Kairo', label: 'master', algorithm: 'SHA1', digits: 6, period: 30, secret,
-      });
-      setTotpObj(totpInstance);
-
-      const uri = totpInstance.toString();
-      const qr  = await QRCode.toDataURL(uri, { width: 200, margin: 1, color: { dark: '#00E5C0', light: '#0F0F0F' } });
-      setQrUrl(qr);
-
-      await store.set('totp_secret', secret.base32);
-      await store.save();
-      setScreen('setup-totp');
+      storage.set('password_hash', hash);
+      storage.set('password_salt', salt);
+      unlock();
     } catch {
-      setError('Setup failed, try again');
+      setError('ошибка шифрования, попробуйте снова');
     } finally {
       setLoading(false);
     }
   };
 
-  // SETUP — Step 2: verify TOTP scan
-  const handleVerifyTOTP = () => {
-    if (!totpObj) return;
-    const delta = totpObj.validate({ token: totp, window: 1 });
-    if (delta !== null) {
-      unlock();
-    } else {
-      setError('Invalid code — scan the QR in Google Authenticator then enter the 6-digit code');
-    }
-  };
-
-  // LOGIN
   const handleLogin = async () => {
     setError('');
     setLoading(true);
     try {
-      const store  = await getStore();
-      const hash   = await store.get<string>('password_hash');
-      const salt   = await store.get<string>('password_salt');
-      const secret = await store.get<string>('totp_secret');
-      if (!hash || !salt || !secret) { setError('Auth data missing — reinstall app'); setLoading(false); return; }
-
-      const pwOk = await verifyPassword(password, hash, salt);
-      if (!pwOk) { setError('Incorrect password'); setLoading(false); return; }
-
-      const totpInstance = new OTPAuth.TOTP({
-        issuer: 'Kairo', label: 'master', algorithm: 'SHA1', digits: 6, period: 30,
-        secret: OTPAuth.Secret.fromBase32(secret),
-      });
-      const delta = totpInstance.validate({ token: totp, window: 1 });
-      if (delta === null) { setError('Invalid authenticator code'); setLoading(false); return; }
-
+      const hash = storage.get('password_hash');
+      const salt = storage.get('password_salt');
+      if (!hash || !salt) { setError('данные не найдены'); setLoading(false); return; }
+      const ok = await verifyPassword(password, hash, salt);
+      if (!ok) { setError('доступ запрещён'); setLoading(false); return; }
       unlock();
     } catch {
-      setError('Login failed');
+      setError('ошибка входа');
     } finally {
       setLoading(false);
     }
   };
 
-  if (screen === 'loading') {
+  if (isSetup === null) {
     return (
-      <div className="h-full flex items-center justify-center" style={{ background: 'var(--bg-base)' }}>
+      <div className="h-full flex items-center justify-center" style={{ background: '#000' }}>
         <div className="dot-pulse flex gap-1"><span /><span /><span /></div>
       </div>
     );
   }
 
+  const eyeBtn = (
+    <button
+      onClick={() => setShowPass((v) => !v)}
+      className="h-5 w-5 flex items-center justify-center"
+      style={{ background: 'transparent', border: 'none', color: 'var(--text-muted)', cursor: 'pointer' }}
+      title={showPass ? 'Скрыть' : 'Показать'}
+      type="button"
+    >
+      {showPass ? <EyeOff size={11} /> : <Eye size={11} />}
+    </button>
+  );
+
   return (
-    <div className="h-full flex items-center justify-center" style={{ background: 'var(--bg-base)' }}>
+    <div className="win-desktop h-full flex items-center justify-center relative">
+      <MatrixRain />
+
       <motion.div
-        initial={{ opacity: 0, y: 16 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.3, ease: 'easeOut' }}
-        className="w-full max-w-sm flex flex-col gap-6 rounded-card p-8"
-        style={{ background: 'var(--bg-surface)', border: '1px solid var(--border)', boxShadow: 'var(--shadow-elevated)' }}
+        initial={{ opacity: 0, scale: 0.97 }}
+        animate={{ opacity: 1, scale: 1 }}
+        transition={{ duration: 0.2, ease: 'easeOut' }}
+        className="flex flex-col relative"
+        style={{
+          width: 380,
+          background: 'rgba(5, 8, 5, 0.95)',
+          border: '1px solid var(--accent)',
+          boxShadow: '0 0 0 1px var(--accent), 0 0 40px var(--accent-glow), 0 0 100px rgba(0,255,65,0.15)',
+          zIndex: 5,
+        }}
       >
-        {/* Icon */}
-        <div className="flex flex-col items-center gap-3">
-          <div className="p-3 rounded-2xl" style={{ background: 'var(--accent-dim)' }}>
-            <Shield size={28} style={{ color: 'var(--accent)' }} />
-          </div>
-          <div className="text-center">
-            <h1 className="text-lg font-bold" style={{ color: 'var(--text-primary)' }}>
-              {screen === 'setup-password' ? 'Set up access' :
-               screen === 'setup-totp'     ? 'Scan QR code'  : 'Kairo'}
-            </h1>
-            <p className="text-xs mt-1" style={{ color: 'var(--text-muted)' }}>
-              {screen === 'setup-password' ? 'Create your master password' :
-               screen === 'setup-totp'     ? 'Add to Google Authenticator' : 'Enter credentials to unlock'}
-            </p>
-          </div>
+        <div className="titlebar">
+          <span className="neon-text">●</span>
+          <span className="flex-1 truncate">
+            {isSetup ? '[kairo]$ auth --вход' : '[kairo]$ auth --настройка'}
+          </span>
         </div>
 
-        {/* SETUP: password */}
-        {screen === 'setup-password' && (
-          <>
-            <div className="flex flex-col gap-3">
-              <div className="relative">
-                <Input
-                  label="Master Password"
-                  type={showPass ? 'text' : 'password'}
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  placeholder="At least 8 characters"
-                  data-selectable
-                  autoFocus
-                />
-                <button
-                  onClick={() => setShowPass((v) => !v)}
-                  className="absolute right-3 top-8 opacity-40 hover:opacity-80"
-                  style={{ color: 'var(--text-secondary)' }}
-                >
-                  {showPass ? <EyeOff size={14} /> : <Eye size={14} />}
-                </button>
-              </div>
-              <Input
-                label="Confirm Password"
-                type="password"
-                value={confirm}
-                onChange={(e) => setConfirm(e.target.value)}
-                placeholder="Repeat password"
-                data-selectable
-                onKeyDown={(e) => { if (e.key === 'Enter') handleSetupPassword(); }}
-              />
+        <div className="flex flex-col gap-3" style={{ padding: 16 }}>
+          <div className="flex flex-col items-center gap-2" style={{ marginBottom: 6, marginTop: 4 }}>
+            <img
+              src="/logo.png"
+              alt="Kairo"
+              width={88}
+              height={88}
+              style={{
+                display: 'block',
+                filter: 'drop-shadow(0 0 18px var(--accent-glow)) drop-shadow(0 0 36px rgba(0,255,65,0.25))',
+              }}
+            />
+            <div
+              className="font-mono neon-text"
+              style={{
+                fontSize: 11,
+                letterSpacing: 6,
+                fontWeight: 700,
+              }}
+            >
+              K A I R O
             </div>
-            {error && <p className="text-xs text-center" style={{ color: 'var(--danger)' }}>{error}</p>}
-            <Button variant="primary" onClick={handleSetupPassword} loading={loading} disabled={!password || !confirm}>
-              Continue
-            </Button>
-          </>
-        )}
+            <div
+              className="font-mono"
+              style={{ fontSize: 9, letterSpacing: 2, color: 'var(--text-dim)' }}
+            >
+              — терминал задач —
+            </div>
+          </div>
 
-        {/* SETUP: TOTP */}
-        {screen === 'setup-totp' && (
-          <>
-            <div className="flex flex-col items-center gap-4">
-              <div className="p-2 rounded-xl" style={{ background: '#0F0F0F', border: '1px solid var(--border)' }}>
-                {qrUrl && <img src={qrUrl} alt="TOTP QR" width={160} height={160} />}
-              </div>
-              <div className="flex items-center gap-1.5 text-xs text-center" style={{ color: 'var(--text-muted)' }}>
-                <Smartphone size={12} />
-                Scan with Google Authenticator, then enter the 6-digit code
-              </div>
-              <Input
-                label="6-digit code"
-                value={totp}
-                onChange={(e) => setTotp(e.target.value.replace(/\D/g, '').slice(0, 6))}
-                placeholder="000000"
-                maxLength={6}
-                className="text-center font-mono text-lg tracking-widest"
-                data-selectable
-                onKeyDown={(e) => { if (e.key === 'Enter') handleVerifyTOTP(); }}
-                autoFocus
-              />
-            </div>
-            {error && <p className="text-xs text-center" style={{ color: 'var(--danger)' }}>{error}</p>}
-            <Button variant="primary" onClick={handleVerifyTOTP} disabled={totp.length !== 6}>
-              Verify & Unlock
-            </Button>
-          </>
-        )}
+          <p className="text-xs font-mono" style={{ color: 'var(--text-secondary)' }}>
+            <span className="neon-text">›</span> {isSetup ? 'введите пароль для входа' : 'придумайте пароль (мин. 4 символа)'}
+          </p>
 
-        {/* LOGIN */}
-        {screen === 'login' && (
-          <>
-            <div className="flex flex-col gap-3">
-              <div className="relative">
-                <Input
-                  label="Password"
-                  type={showPass ? 'text' : 'password'}
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  placeholder="Master password"
-                  data-selectable
-                  autoFocus
-                />
-                <button
-                  onClick={() => setShowPass((v) => !v)}
-                  className="absolute right-3 top-8 opacity-40 hover:opacity-80"
-                  style={{ color: 'var(--text-secondary)' }}
-                >
-                  {showPass ? <EyeOff size={14} /> : <Eye size={14} />}
-                </button>
-              </div>
-              <div className="relative">
-                <Input
-                  label="Authenticator Code"
-                  value={totp}
-                  onChange={(e) => setTotp(e.target.value.replace(/\D/g, '').slice(0, 6))}
-                  placeholder="000000"
-                  maxLength={6}
-                  className="text-center font-mono tracking-widest"
-                  data-selectable
-                  onKeyDown={(e) => { if (e.key === 'Enter') handleLogin(); }}
-                />
-                <KeyRound size={13} className="absolute right-3 top-8 opacity-30" style={{ color: 'var(--text-muted)' }} />
-              </div>
+          <MaskedPasswordInput
+            label="пароль"
+            value={password}
+            onChange={setPassword}
+            visible={showPass}
+            autoFocus
+            data-selectable
+            onKeyDown={(e) => { if (e.key === 'Enter' && isSetup) handleLogin(); }}
+            trailing={eyeBtn}
+          />
+
+          {!isSetup && (
+            <MaskedPasswordInput
+              label="подтверждение"
+              value={confirm}
+              onChange={setConfirm}
+              visible={showPass}
+              data-selectable
+              onKeyDown={(e) => { if (e.key === 'Enter') handleSetup(); }}
+            />
+          )}
+
+          {error && (
+            <div
+              className="px-2 py-1.5 text-xs font-mono"
+              style={{
+                background: 'rgba(255,0,60,0.08)',
+                border: '1px solid var(--border-danger)',
+                color: 'var(--danger)',
+                textShadow: '0 0 6px rgba(255,0,60,0.5)',
+              }}
+            >
+              [ошибка] {error}
             </div>
-            {error && <p className="text-xs text-center" style={{ color: 'var(--danger)' }}>{error}</p>}
-            <Button variant="primary" onClick={handleLogin} loading={loading} disabled={!password || totp.length !== 6}>
-              Unlock
+          )}
+
+          <div className="flex justify-end pt-1">
+            <Button
+              variant="primary"
+              size="md"
+              onClick={isSetup ? handleLogin : handleSetup}
+              loading={loading}
+              disabled={!password || (!isSetup && !confirm)}
+            >
+              {isSetup ? '> войти' : '> создать'}
             </Button>
-          </>
-        )}
+          </div>
+        </div>
       </motion.div>
     </div>
   );

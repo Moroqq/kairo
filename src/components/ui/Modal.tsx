@@ -1,6 +1,5 @@
 import { ReactNode, useEffect } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
-import { X } from 'lucide-react';
 
 interface ModalProps {
   open: boolean;
@@ -10,7 +9,7 @@ interface ModalProps {
   width?: number | string;
 }
 
-export function Modal({ open, onClose, title, children, width = 560 }: ModalProps) {
+export function Modal({ open, onClose, title, children, width = 520 }: ModalProps) {
   useEffect(() => {
     const handler = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose(); };
     if (open) document.addEventListener('keydown', handler);
@@ -25,38 +24,33 @@ export function Modal({ open, onClose, title, children, width = 560 }: ModalProp
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
-          transition={{ duration: 0.15 }}
+          transition={{ duration: 0.12 }}
           onClick={onClose}
         >
-          <div className="absolute inset-0" style={{ background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(4px)' }} />
+          <div className="absolute inset-0" style={{ background: 'rgba(0,0,0,0.75)', backdropFilter: 'blur(2px)' }} />
           <motion.div
-            className="relative z-10 flex flex-col rounded-card overflow-hidden"
+            className="relative z-10 flex flex-col"
             style={{
               width,
               maxHeight: 'calc(100vh - 80px)',
-              background: 'var(--bg-surface)',
-              border: '1px solid var(--border)',
-              boxShadow: 'var(--shadow-elevated)',
+              background: 'rgba(8, 12, 8, 0.96)',
+              border: '1px solid var(--accent)',
+              boxShadow: '0 0 0 1px var(--accent), 0 0 32px var(--accent-glow), 0 8px 40px rgba(0,0,0,0.8)',
             }}
             initial={{ opacity: 0, scale: 0.96, y: 8 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.96 }}
-            transition={{ duration: 0.2, ease: 'easeOut' }}
+            transition={{ duration: 0.16, ease: 'easeOut' }}
             onClick={(e) => e.stopPropagation()}
           >
-            {title && (
-              <div className="flex items-center justify-between px-5 py-4 flex-shrink-0" style={{ borderBottom: '1px solid var(--border)' }}>
-                <h2 className="text-base font-semibold" style={{ color: 'var(--text-primary)' }}>{title}</h2>
-                <button
-                  onClick={onClose}
-                  className="p-1 rounded-lg transition-opacity hover:opacity-60"
-                  style={{ color: 'var(--text-muted)' }}
-                >
-                  <X size={16} />
-                </button>
-              </div>
-            )}
-            <div className="overflow-y-auto flex-1">{children}</div>
+            <div className="titlebar">
+              <span className="neon-text">●</span>
+              <span className="flex-1 truncate">{title ?? 'dialog'}</span>
+              <button className="titlebar-btn" onClick={onClose} title="Close">✕</button>
+            </div>
+            <div className="overflow-y-auto flex-1">
+              {children}
+            </div>
           </motion.div>
         </motion.div>
       )}

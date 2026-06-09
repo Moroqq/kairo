@@ -8,33 +8,50 @@ interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
 
 export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
   ({ variant = 'secondary', size = 'md', loading, disabled, children, className = '', style, ...props }, ref) => {
-    const base = 'inline-flex items-center justify-center gap-2 font-medium rounded-lg transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 disabled:opacity-40 disabled:cursor-not-allowed select-none';
-
-    const variants: Record<string, string> = {
-      primary:   'text-black font-semibold',
-      secondary: 'border',
-      ghost:     'hover:opacity-80',
-      danger:    'border',
-    };
+    const base =
+      'inline-flex items-center justify-center gap-1.5 font-mono select-none transition-all duration-150 disabled:opacity-40 disabled:cursor-not-allowed';
 
     const sizes: Record<string, string> = {
-      sm: 'h-7  px-3  text-xs',
-      md: 'h-9  px-4  text-sm',
-      lg: 'h-11 px-6  text-sm',
+      sm: 'h-7  px-3 text-xs',
+      md: 'h-8  px-4 text-xs',
+      lg: 'h-10 px-6 text-sm',
     };
 
     const variantStyles: Record<string, React.CSSProperties> = {
-      primary:   { background: 'var(--accent)', color: '#000' },
-      secondary: { background: 'var(--bg-elevated)', border: '1px solid var(--border)', color: 'var(--text-primary)' },
-      ghost:     { background: 'transparent', color: 'var(--text-secondary)' },
-      danger:    { background: 'transparent', border: '1px solid var(--danger)', color: 'var(--danger)' },
+      primary: {
+        background: 'var(--accent-dim)',
+        color: 'var(--accent)',
+        border: '1px solid var(--accent)',
+        textShadow: '0 0 6px var(--accent-glow)',
+        boxShadow: '0 0 0 1px var(--accent), 0 0 12px var(--accent-glow)',
+        letterSpacing: 1,
+      },
+      secondary: {
+        background: 'transparent',
+        color: 'var(--text-secondary)',
+        border: '1px solid var(--border)',
+        letterSpacing: 0.5,
+      },
+      ghost: {
+        background: 'transparent',
+        color: 'var(--text-muted)',
+        border: '1px solid transparent',
+      },
+      danger: {
+        background: 'transparent',
+        color: 'var(--danger)',
+        border: '1px solid var(--border-danger)',
+        textShadow: '0 0 6px rgba(255,0,60,0.5)',
+        letterSpacing: 0.5,
+      },
     };
 
     return (
       <button
         ref={ref}
         disabled={disabled || loading}
-        className={`${base} ${variants[variant]} ${sizes[size]} ${className}`}
+        className={`btn-flat ${base} ${sizes[size]} ${className}`}
+        data-variant={variant}
         style={{ ...variantStyles[variant], ...style }}
         {...props}
       >

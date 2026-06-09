@@ -51,10 +51,37 @@ export function formatDeadline(deadline: string): string {
   const d     = new Date(date.getFullYear(), date.getMonth(), date.getDate());
   const diff  = Math.round((d.getTime() - today.getTime()) / 86_400_000);
 
-  if (diff === 0)  return 'Today';
-  if (diff === 1)  return 'Tomorrow';
-  if (diff === -1) return 'Yesterday';
-  if (diff < 0)   return `${Math.abs(diff)}d overdue`;
-  if (diff < 7)   return `in ${diff}d`;
-  return date.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
+  if (diff === 0)  return 'сегодня';
+  if (diff === 1)  return 'завтра';
+  if (diff === -1) return 'вчера';
+  if (diff < 0)   return `просрочено ${Math.abs(diff)}д`;
+  if (diff < 7)   return `через ${diff}д`;
+  // Без года — только день и месяц
+  return date.toLocaleDateString('ru-RU', { day: 'numeric', month: 'short' });
+}
+
+/** Относительное время «3д назад / 5ч назад / только что». Без года. */
+export function formatRelative(iso: string): string {
+  const diff = Date.now() - new Date(iso).getTime();
+  const sec  = Math.floor(diff / 1000);
+  if (sec < 30)    return 'только что';
+  if (sec < 60)    return `${sec}с назад`;
+  const min = Math.floor(sec / 60);
+  if (min < 60)    return `${min}м назад`;
+  const hr = Math.floor(min / 60);
+  if (hr < 24)     return `${hr}ч назад`;
+  const day = Math.floor(hr / 24);
+  if (day < 30)    return `${day}д назад`;
+  const mon = Math.floor(day / 30);
+  if (mon < 12)    return `${mon}мес назад`;
+  return new Date(iso).toLocaleDateString('ru-RU', { day: 'numeric', month: 'short' });
+}
+
+/** Дата-время без года, ru-RU. */
+export function formatDateTime(iso: string): string {
+  const d = new Date(iso);
+  return d.toLocaleString('ru-RU', {
+    day: '2-digit', month: 'short',
+    hour: '2-digit', minute: '2-digit',
+  });
 }

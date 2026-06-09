@@ -1,18 +1,12 @@
-import { isPermissionGranted, requestPermission, sendNotification } from '@tauri-apps/plugin-notification';
-
-let permissionGranted = false;
-
 export async function initNotifications(): Promise<void> {
-  permissionGranted = await isPermissionGranted();
-  if (!permissionGranted) {
-    const permission = await requestPermission();
-    permissionGranted = permission === 'granted';
+  if ('Notification' in window && Notification.permission === 'default') {
+    await Notification.requestPermission();
   }
 }
 
 export async function notify(title: string, body: string): Promise<void> {
-  if (!permissionGranted) return;
-  await sendNotification({ title, body });
+  if (!('Notification' in window) || Notification.permission !== 'granted') return;
+  new Notification(title, { body, icon: '/icon.png' });
 }
 
 export async function notifyDeadline(taskTitle: string, minutesLeft: number): Promise<void> {

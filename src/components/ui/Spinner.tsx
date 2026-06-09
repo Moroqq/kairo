@@ -29,7 +29,7 @@ export function LoadingDots() {
         <span />
         <span />
       </span>
-      <span className="text-xs" style={{ color: 'var(--text-muted)' }}>Parsing…</span>
+      <span className="text-xs font-mono" style={{ color: 'var(--text-muted)' }}>разбор…</span>
     </div>
   );
 }

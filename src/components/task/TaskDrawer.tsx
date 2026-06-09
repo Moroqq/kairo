@@ -2,15 +2,19 @@ import { useState } from 'react';
 import { Archive, Clock, Edit2, Tag, MessageSquare, Send } from 'lucide-react';
 import { Drawer } from '@/components/ui/Drawer';
 import { Button } from '@/components/ui/Button';
-import { Badge } from '@/components/ui/Badge';
-import { PriorityBadge, PriorityStripe } from './PriorityBadge';
 import { TaskForm } from './TaskForm';
 import { useUIStore } from '@/stores/ui.store';
 import { useTasks, useUpdateTask, useAddComment, useArchiveTask } from '@/hooks/useTasks';
 import { useToast } from '@/components/ui/Toast';
-import { formatDeadline, isOverdue } from '@/hooks/useDeadlineWatcher';
+import { formatDeadline, isOverdue, formatRelative, formatDateTime } from '@/hooks/useDeadlineWatcher';
 import type { Task } from '@/types';
 import { STATUS_LABELS } from '@/types';
+
+const SOURCE_LABELS: Record<string, string> = {
+  voice: 'голос',
+  text:  'текст',
+  image: 'изображение',
+};
 
 export function TaskDrawer() {
   const activeTaskId   = useUIStore((s) => s.activeTaskId);
@@ -22,7 +26,7 @@ export function TaskDrawer() {
     <Drawer
       open={!!activeTaskId}
       onClose={() => setActiveTaskId(null)}
-      title={task?.title ?? 'Task'}
+      title={task?.title ? `задача — ${task.title}` : 'задача'}
       width={440}
     >
       {task && <TaskDrawerContent task={task} onClose={() => setActiveTaskId(null)} />}
@@ -43,9 +47,9 @@ function TaskDrawerContent({ task, onClose }: { task: Task; onClose: () => void 
     try {
       await updateTask.mutateAsync({ id: task.id, updates });
       setEditing(false);
-      toast('Task updated');
+      toast('Задача обновлена');
     } catch {
-      toast('Failed to update task', 'error');
+      toast('Не удалось обновить задачу', 'error');
     }
   };
 
@@ -55,7 +59,7 @@ function TaskDrawerContent({ task, onClose }: { task: Task; onClose: () => void 
       await addComment.mutateAsync({ id: task.id, text: commentText.trim() });
       setCommentText('');
     } catch {
-      toast('Failed to add comment', 'error');
+      toast('Не удалось добавить комментарий', 'error');
     }
   };
 
@@ -63,9 +67,9 @@ function TaskDrawerContent({ task, onClose }: { task: Task; onClose: () => void 
     try {
       await archiveTask.mutateAsync(task.id);
       onClose();
-      toast('Task archived');
+      toast('Задача в архиве');
     } catch {
-      toast('Failed to archive', 'error');
+      toast('Не удалось архивировать', 'error');
     }
   };
 
@@ -85,87 +89,117 @@ function TaskDrawerContent({ task, onClose }: { task: Task; onClose: () => void 
   return (
     <div className="flex flex-col h-full">
       {/* Header meta */}
-      <div className="relative px-5 py-4" style={{ borderBottom: '1px solid var(--border)' }}>
-        <PriorityStripe priority={task.priority} />
-        <div className="pl-3 flex flex-col gap-2">
-          <div className="flex flex-wrap gap-2 items-center">
-            <PriorityBadge priority={task.priority} />
-            <Badge style={{ background: 'var(--bg-elevated)', color: 'var(--text-secondary)', border: 'none' }}>
+      <div
+        className="bevel-sunken"
+        style={{
+          padding: '10px 12px',
+          margin: 4,
+          background: 'var(--bg-card)',
+        }}
+      >
+        <div className="flex flex-col gap-2">
+          <div className="flex flex-wrap gap-1.5 items-center">
+            <span
+              className="font-mono"
+              style={{
+                fontSize: 10,
+                padding: '1px 6px',
+                background: 'transparent',
+                color: 'var(--accent)',
+                border: '1px solid var(--border)',
+              }}
+            >
               {STATUS_LABELS[task.status]}
-            </Badge>
+            </span>
             {task.source_type && (
-              <Badge style={{ background: 'var(--bg-elevated)', color: 'var(--text-muted)', border: 'none', fontSize: 11 }}>
-                {task.source_type}
-              </Badge>
+              <span
+                className="font-mono"
+                style={{
+                  fontSize: 10,
+                  padding: '1px 6px',
+                  background: 'transparent',
+                  border: '1px solid var(--border-subtle)',
+                  color: 'var(--text-muted)',
+                }}
+              >
+                {SOURCE_LABELS[task.source_type] ?? task.source_type}
+              </span>
             )}
           </div>
 
           {task.deadline && (
             <div
               className="flex items-center gap-1.5 text-xs font-mono"
-              style={{ color: overdue ? 'var(--pa)' : 'var(--text-secondary)' }}
+              style={{
+                color: overdue ? 'var(--danger)' : 'var(--text-secondary)',
+                fontWeight: overdue ? 600 : 400,
+                textShadow: overdue ? '0 0 6px rgba(255,0,60,0.6)' : 'none',
+              }}
             >
-              <Clock size={12} />
-              {overdue ? 'Overdue · ' : ''}{formatDeadline(task.deadline)}
+              <Clock size={11} />
+              {overdue ? 'просрочено · ' : ''}{formatDeadline(task.deadline)}
             </div>
           )}
 
           {task.category && (
-            <div className="flex items-center gap-1.5 text-xs" style={{ color: 'var(--text-muted)' }}>
-              <Tag size={12} />
-              {task.category}
+            <div className="flex items-center gap-1.5 text-xs font-mono" style={{ color: 'var(--text-muted)' }}>
+              <Tag size={11} /> {task.category}
             </div>
           )}
         </div>
       </div>
 
       {/* Scrollable body */}
-      <div className="flex-1 overflow-y-auto flex flex-col gap-5 px-5 py-4" data-selectable>
+      <div className="flex-1 overflow-y-auto flex flex-col gap-2.5" data-selectable style={{ padding: '0 4px' }}>
         {task.ai_summary && (
-          <div className="rounded-lg p-3 flex flex-col gap-1.5" style={{ background: 'var(--accent-dim)', border: '1px solid rgba(0,240,202,0.15)' }}>
-            <div className="flex items-center gap-1.5 text-xs font-medium" style={{ color: 'var(--accent)' }}>
-              Summary
-            </div>
-            <p className="text-sm leading-relaxed" style={{ color: 'var(--text-secondary)' }}>{task.ai_summary}</p>
+          <div
+            className="bevel-sunken px-2 py-1.5 flex flex-col gap-1"
+            style={{ background: '#001A20' }}
+          >
+            <div className="text-xs font-bold neon-cyan-text">▶ AI РЕЗЮМЕ</div>
+            <p className="text-xs leading-relaxed" style={{ color: '#B8F3FF' }}>
+              {task.ai_summary}
+            </p>
           </div>
         )}
 
-        {/* Description */}
         {task.description && (
-          <div className="flex flex-col gap-1.5">
-            <p className="text-xs font-medium uppercase tracking-wide" style={{ color: 'var(--text-muted)' }}>Description</p>
-            <p className="text-sm leading-relaxed whitespace-pre-wrap" style={{ color: 'var(--text-secondary)' }}>
+          <div
+            className="bevel-sunken flex flex-col gap-1 px-2 py-1.5"
+            style={{ background: 'var(--bg-card)' }}
+          >
+            <p className="text-xs font-bold" style={{ color: 'var(--text-muted)' }}>ОПИСАНИЕ</p>
+            <p className="text-xs leading-relaxed whitespace-pre-wrap" style={{ color: 'var(--text-primary)' }}>
               {task.description}
             </p>
           </div>
         )}
 
-        {/* Timestamps */}
-        <div className="flex flex-col gap-1">
-          <p className="text-xs font-mono" style={{ color: 'var(--text-muted)' }}>
-            Created · {new Date(task.created_at).toLocaleString()}
-          </p>
+        {/* Timestamps — без года */}
+        <div
+          className="bevel-well flex flex-col gap-0.5 px-2 py-1.5 text-xs font-mono"
+          style={{ background: 'var(--bg-surface)', color: 'var(--text-muted)' }}
+        >
+          <span>создано  · {formatDateTime(task.created_at)} ({formatRelative(task.created_at)})</span>
           {task.resolved_at && (
-            <p className="text-xs font-mono" style={{ color: 'var(--text-muted)' }}>
-              Resolved · {new Date(task.resolved_at).toLocaleString()}
-            </p>
+            <span>выполнено · {formatDateTime(task.resolved_at)}</span>
           )}
-          <p className="text-xs font-mono" style={{ color: 'var(--text-muted)' }}>
-            ID · {task.id.slice(0, 8)}
-          </p>
+          <span>id       · {task.id.slice(0, 8)}</span>
         </div>
 
         {/* Comments */}
         {task.comments.length > 0 && (
-          <div className="flex flex-col gap-3">
-            <p className="text-xs font-medium uppercase tracking-wide flex items-center gap-1.5" style={{ color: 'var(--text-muted)' }}>
-              <MessageSquare size={12} /> Comments
+          <div className="flex flex-col gap-1">
+            <p className="text-xs font-bold flex items-center gap-1" style={{ color: 'var(--text-muted)' }}>
+              <MessageSquare size={11} /> КОММЕНТАРИИ ({task.comments.length})
             </p>
             {task.comments.map((c) => (
-              <div key={c.id} className="rounded-lg p-3 flex flex-col gap-1" style={{ background: 'var(--bg-card)', border: '1px solid var(--border)' }}>
-                <p className="text-sm leading-relaxed whitespace-pre-wrap" style={{ color: 'var(--text-primary)' }}>{c.text}</p>
+              <div key={c.id} className="bevel-sunken px-2 py-1 flex flex-col gap-0.5" style={{ background: 'var(--bg-card)' }}>
+                <p className="text-xs leading-relaxed whitespace-pre-wrap" style={{ color: 'var(--text-primary)' }}>
+                  {c.text}
+                </p>
                 <p className="text-xs font-mono" style={{ color: 'var(--text-muted)' }}>
-                  {new Date(c.created_at).toLocaleString()}
+                  {formatRelative(c.created_at)}
                 </p>
               </div>
             ))}
@@ -174,11 +208,11 @@ function TaskDrawerContent({ task, onClose }: { task: Task; onClose: () => void 
       </div>
 
       {/* Comment input */}
-      <div className="px-5 py-3 flex gap-2" style={{ borderTop: '1px solid var(--border)' }}>
+      <div className="flex gap-1.5 p-2" style={{ borderTop: '1px solid var(--border-subtle)' }}>
         <input
-          className="flex-1 h-9 px-3 rounded-lg text-sm outline-none"
-          style={{ background: 'var(--bg-card)', border: '1px solid var(--border)', color: 'var(--text-primary)' }}
-          placeholder="Add a comment…"
+          className="bevel-sunken flex-1 h-6 px-1.5 text-xs outline-none font-mono"
+          style={{ background: 'var(--bg-input)', color: 'var(--text-primary)' }}
+          placeholder="добавить комментарий..."
           value={commentText}
           onChange={(e) => setCommentText(e.target.value)}
           onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleAddComment(); } }}
@@ -190,19 +224,19 @@ function TaskDrawerContent({ task, onClose }: { task: Task; onClose: () => void 
           onClick={handleAddComment}
           loading={addComment.isPending}
           disabled={!commentText.trim()}
-          style={{ width: 36, padding: 0 }}
+          style={{ width: 32, padding: 0 }}
         >
-          <Send size={14} />
+          <Send size={12} />
         </Button>
       </div>
 
       {/* Actions */}
-      <div className="px-5 py-3 flex gap-2" style={{ borderTop: '1px solid var(--border)' }}>
-        <Button variant="secondary" size="sm" onClick={() => setEditing(true)} className="flex-1 gap-1.5">
-          <Edit2 size={13} /> Edit
+      <div className="flex gap-1.5 p-2" style={{ borderTop: '1px solid var(--border-subtle)' }}>
+        <Button variant="secondary" size="sm" onClick={() => setEditing(true)} className="flex-1">
+          <Edit2 size={11} /> изменить
         </Button>
-        <Button variant="danger" size="sm" onClick={handleArchive} loading={archiveTask.isPending} className="gap-1.5">
-          <Archive size={13} /> Archive
+        <Button variant="danger" size="sm" onClick={handleArchive} loading={archiveTask.isPending}>
+          <Archive size={11} /> в архив
         </Button>
       </div>
     </div>

@@ -22,10 +22,25 @@ export function useToast() {
   return ctx;
 }
 
-const ICONS: Record<ToastType, ReactNode> = {
-  success: <CheckCircle size={15} style={{ color: 'var(--success)', flexShrink: 0 }} />,
-  error:   <AlertCircle size={15} style={{ color: 'var(--danger)',  flexShrink: 0 }} />,
-  info:    <Info        size={15} style={{ color: 'var(--accent)',  flexShrink: 0 }} />,
+const CONFIG: Record<ToastType, { icon: ReactNode; color: string; tag: string; glow: string }> = {
+  success: {
+    icon:  <CheckCircle size={12} />,
+    color: 'var(--accent)',
+    tag:   '[ок]',
+    glow:  'var(--accent-glow)',
+  },
+  error: {
+    icon:  <AlertCircle size={12} />,
+    color: 'var(--danger)',
+    tag:   '[ошибка]',
+    glow:  'rgba(255,0,60,0.5)',
+  },
+  info: {
+    icon:  <Info size={12} />,
+    color: 'var(--info)',
+    tag:   '[инфо]',
+    glow:  'rgba(0,229,255,0.5)',
+  },
 };
 
 export function ToastProvider({ children }: { children: ReactNode }) {
@@ -42,33 +57,38 @@ export function ToastProvider({ children }: { children: ReactNode }) {
   return (
     <ToastContext.Provider value={{ toast }}>
       {children}
-      <div className="fixed top-4 right-4 z-50 flex flex-col gap-2 pointer-events-none" style={{ maxWidth: 340 }}>
+      <div className="fixed top-3 right-3 z-50 flex flex-col gap-2 pointer-events-none" style={{ maxWidth: 340 }}>
         <AnimatePresence initial={false}>
-          {toasts.map((t) => (
-            <motion.div
-              key={t.id}
-              initial={{ opacity: 0, y: -12, scale: 0.95 }}
-              animate={{ opacity: 1, y: 0,   scale: 1    }}
-              exit={{    opacity: 0,            scale: 0.95 }}
-              transition={{ duration: 0.2, ease: 'easeOut' }}
-              className="pointer-events-auto flex items-center gap-3 px-4 py-3 rounded-lg text-sm"
-              style={{
-                background: 'var(--bg-elevated)',
-                border:     '1px solid var(--border)',
-                boxShadow:  'var(--shadow-card)',
-                color:      'var(--text-primary)',
-              }}
-            >
-              {ICONS[t.type]}
-              <span className="flex-1 leading-snug">{t.message}</span>
-              <button
-                onClick={() => remove(t.id)}
-                className="opacity-40 hover:opacity-80 transition-opacity ml-1 flex-shrink-0"
+          {toasts.map((t) => {
+            const cfg = CONFIG[t.type];
+            return (
+              <motion.div
+                key={t.id}
+                initial={{ opacity: 0, x: 16, scale: 0.97 }}
+                animate={{ opacity: 1, x: 0,  scale: 1    }}
+                exit={{    opacity: 0, x: 16, scale: 0.97 }}
+                transition={{ duration: 0.15 }}
+                className="pointer-events-auto flex items-center gap-2 px-3 py-2 font-mono text-xs"
+                style={{
+                  background: 'rgba(5, 8, 5, 0.96)',
+                  border: `1px solid ${cfg.color}`,
+                  boxShadow: `0 0 0 1px ${cfg.color}, 0 0 18px ${cfg.glow}`,
+                  color: 'var(--text-primary)',
+                }}
               >
-                <X size={13} />
-              </button>
-            </motion.div>
-          ))}
+                <span style={{ color: cfg.color, textShadow: `0 0 6px ${cfg.glow}` }}>{cfg.icon}</span>
+                <span style={{ color: cfg.color, fontWeight: 600 }}>{cfg.tag}</span>
+                <span className="flex-1 leading-tight">{t.message}</span>
+                <button
+                  onClick={() => remove(t.id)}
+                  className="flex-shrink-0"
+                  style={{ background: 'transparent', border: 'none', color: 'var(--text-muted)', cursor: 'pointer' }}
+                >
+                  <X size={11} />
+                </button>
+              </motion.div>
+            );
+          })}
         </AnimatePresence>
       </div>
     </ToastContext.Provider>

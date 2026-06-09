@@ -22,14 +22,14 @@ export function VoiceCapture() {
 
   const handleStop = async () => {
     const blob = await stopRecording();
-    if (!blob) { toast('No audio recorded', 'error'); return; }
+    if (!blob) { toast('Аудио не записано', 'error'); return; }
     setProcessing(true);
     try {
       const { transcript: t, preview: p } = await parseVoice(blob);
       setTranscript(t);
       setPreview(p);
     } catch {
-      toast('Voice parsing failed', 'error');
+      toast('Не удалось обработать голос', 'error');
     } finally {
       setProcessing(false);
     }
@@ -46,10 +46,10 @@ export function VoiceCapture() {
         ai_summary:  p.summary,
         source_type: 'voice',
       });
-      toast('Task created from voice');
+      toast('Задача создана из голоса');
       closeCapture();
     } catch {
-      toast('Failed to create task', 'error');
+      toast('Не удалось создать задачу', 'error');
     }
   };
 
@@ -90,12 +90,12 @@ export function VoiceCapture() {
       {/* Status text */}
       <div className="text-center">
         {state === 'idle' && !processing && (
-          <p className="text-sm" style={{ color: 'var(--text-secondary)' }}>
-            Press and hold to record
+          <p className="text-sm font-mono" style={{ color: 'var(--text-secondary)' }}>
+            зажмите кнопку для записи
           </p>
         )}
         {isRecording && (
-          <p className="text-sm font-medium" style={{ color: 'var(--accent)' }}>Recording…</p>
+          <p className="text-sm font-mono font-medium neon-text">запись…</p>
         )}
         {processing && <LoadingDots />}
         {error && <p className="text-sm" style={{ color: 'var(--danger)' }}>{error}</p>}
@@ -135,8 +135,8 @@ export function VoiceCapture() {
         </button>
       )}
 
-      <p className="text-xs text-center" style={{ color: 'var(--text-muted)' }}>
-        Hold the button while speaking · Release to process
+      <p className="text-xs font-mono text-center" style={{ color: 'var(--text-muted)' }}>
+        удерживайте кнопку · отпустите для обработки
       </p>
     </div>
   );

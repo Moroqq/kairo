@@ -1,6 +1,5 @@
 import { ReactNode, useEffect } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
-import { X } from 'lucide-react';
 
 interface DrawerProps {
   open: boolean;
@@ -10,7 +9,7 @@ interface DrawerProps {
   width?: number;
 }
 
-export function Drawer({ open, onClose, title, children, width = 420 }: DrawerProps) {
+export function Drawer({ open, onClose, title, children, width = 400 }: DrawerProps) {
   useEffect(() => {
     const handler = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose(); };
     if (open) document.addEventListener('keydown', handler);
@@ -23,40 +22,30 @@ export function Drawer({ open, onClose, title, children, width = 420 }: DrawerPr
         <>
           <motion.div
             className="fixed inset-0 z-40"
-            style={{ background: 'rgba(0,0,0,0.3)' }}
+            style={{ background: 'rgba(0,0,0,0.6)' }}
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            transition={{ duration: 0.2 }}
+            transition={{ duration: 0.15 }}
             onClick={onClose}
           />
           <motion.div
-            className="fixed top-0 right-0 bottom-0 z-40 flex flex-col"
+            className="fixed top-3 right-3 bottom-3 z-40 flex flex-col"
             style={{
               width,
-              background: 'var(--bg-surface)',
-              borderLeft: '1px solid var(--border)',
-              boxShadow: 'var(--shadow-elevated)',
+              background: 'rgba(8, 12, 8, 0.97)',
+              border: '1px solid var(--accent)',
+              boxShadow: '0 0 0 1px var(--accent), 0 0 32px var(--accent-glow), -8px 0 32px rgba(0,0,0,0.8)',
             }}
-            initial={{ x: width }}
-            animate={{ x: 0 }}
-            exit={{ x: width }}
-            transition={{ duration: 0.25, ease: 'easeOut' }}
+            initial={{ x: width + 20, opacity: 0 }}
+            animate={{ x: 0, opacity: 1 }}
+            exit={{ x: width + 20, opacity: 0 }}
+            transition={{ duration: 0.2, ease: 'easeOut' }}
           >
-            <div
-              className="flex items-center justify-between px-5 py-4 flex-shrink-0"
-              style={{ borderBottom: '1px solid var(--border)' }}
-            >
-              <h3 className="font-semibold" style={{ color: 'var(--text-primary)' }}>
-                {title ?? 'Details'}
-              </h3>
-              <button
-                onClick={onClose}
-                className="p-1 rounded-lg transition-opacity hover:opacity-60"
-                style={{ color: 'var(--text-muted)' }}
-              >
-                <X size={16} />
-              </button>
+            <div className="titlebar">
+              <span className="neon-text">●</span>
+              <span className="flex-1 truncate">{title ?? 'details'}</span>
+              <button className="titlebar-btn" onClick={onClose} title="Close">✕</button>
             </div>
             <div className="flex-1 overflow-y-auto">{children}</div>
           </motion.div>

@@ -19,8 +19,12 @@ export function PriorityBadge({ priority, showLabel = true }: PriorityBadgeProps
 export function PriorityStripe({ priority }: { priority: Priority }) {
   return (
     <div
-      className="absolute left-0 top-0 bottom-0 w-1 rounded-l-card"
-      style={{ background: PRIORITY_CONFIG[priority].color }}
+      className="absolute left-0 top-0 bottom-0"
+      style={{
+        width: 4,
+        background: PRIORITY_CONFIG[priority].color,
+        boxShadow: `0 0 6px ${PRIORITY_CONFIG[priority].glow}, inset 0 0 2px rgba(255,255,255,0.5)`,
+      }}
     />
   );
 }
