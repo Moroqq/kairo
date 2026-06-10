@@ -4,7 +4,8 @@ import {
   DragEndEvent,
   DragOverlay,
   DragStartEvent,
-  PointerSensor,
+  MouseSensor,
+  TouchSensor,
   useSensor,
   useSensors,
 } from '@dnd-kit/core';
@@ -31,7 +32,10 @@ export function KanbanBoard() {
   useDeadlineWatcher(allTasks);
 
   const sensors = useSensors(
-    useSensor(PointerSensor, { activationConstraint: { distance: 6 } })
+    // Desktop: тащим мышью сразу (порог 6px).
+    useSensor(MouseSensor, { activationConstraint: { distance: 6 } }),
+    // Touch: быстрый свайп прокручивает доску, долгое нажатие (200мс) начинает drag.
+    useSensor(TouchSensor, { activationConstraint: { delay: 200, tolerance: 8 } }),
   );
 
   const filteredTasks = (allTasks ?? []).filter((t) => {
@@ -119,7 +123,7 @@ export function KanbanBoard() {
       <div className="flex flex-col h-full">
         {/* KAIRO MATRIX header */}
         <div
-          className="flex items-center gap-4 px-3 py-2 font-mono"
+          className="flex items-center gap-4 px-3 py-2 font-mono overflow-x-auto flex-shrink-0"
           style={{
             background: 'linear-gradient(90deg, rgba(0,255,65,0.05) 0%, transparent 70%)',
             borderBottom: '1px solid var(--border-subtle)',

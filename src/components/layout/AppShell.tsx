@@ -1,11 +1,13 @@
 import { ReactNode, useEffect, useState } from 'react';
 import { Sidebar } from './Sidebar';
+import { BottomNav } from './BottomNav';
 import { Header } from './Header';
 import { MatrixRain } from './MatrixRain';
 import { TaskDrawer } from '@/components/task/TaskDrawer';
 import { CaptureModal } from '@/components/capture/CaptureModal';
 import { useUIStore } from '@/stores/ui.store';
 import { useTasks } from '@/hooks/useTasks';
+import { useIsMobile } from '@/hooks/useMediaQuery';
 import { initNotifications } from '@/services/notifications.service';
 import { isOverdue } from '@/hooks/useDeadlineWatcher';
 
@@ -17,6 +19,7 @@ interface AppShellProps {
 
 export function AppShell({ children }: AppShellProps) {
   const openCapture = useUIStore((s) => s.openCapture);
+  const isMobile = useIsMobile();
   const { data: tasks } = useTasks();
 
   const active   = (tasks ?? []).filter((t) => t.status !== 'Resolved' && t.status !== 'Archived');
@@ -32,29 +35,36 @@ export function AppShell({ children }: AppShellProps) {
     .sort((a, b) => a - b)[0];
 
   return (
-    <div className="win-desktop h-full flex flex-col p-3 gap-3 relative">
-      <MatrixRain />
+    <div className={`win-desktop h-full flex flex-col relative ${isMobile ? '' : 'p-3 gap-3'}`}>
+      <MatrixRain mobile={isMobile} />
 
       <div
         className="bevel-raised flex-1 flex flex-col min-h-0 relative"
         style={{
           background: 'rgba(5, 5, 5, 0.92)',
-          boxShadow: 'var(--shadow-elevated)',
+          boxShadow: isMobile ? 'none' : 'var(--shadow-elevated)',
+          border: isMobile ? 'none' : undefined,
           zIndex: 3,
         }}
       >
         {/* Terminal title bar */}
         <div className="titlebar">
           <span className="neon-text">●</span>
-          <span className="flex-1 truncate cursor-blink">[kairo@matrix:~]$ task_manager --status=работает</span>
-          <button className="titlebar-btn" title="Свернуть">_</button>
-          <button className="titlebar-btn" title="Развернуть">□</button>
-          <button className="titlebar-btn" title="Закрыть">✕</button>
+          <span className="flex-1 truncate cursor-blink">
+            {isMobile ? '[kairo@matrix:~]$' : '[kairo@matrix:~]$ task_manager --status=работает'}
+          </span>
+          {!isMobile && (
+            <>
+              <button className="titlebar-btn" title="Свернуть">_</button>
+              <button className="titlebar-btn" title="Развернуть">□</button>
+              <button className="titlebar-btn" title="Закрыть">✕</button>
+            </>
+          )}
         </div>
 
         {/* Body */}
-        <div className="flex flex-1 min-h-0" style={{ padding: 8, gap: 8 }}>
-          <Sidebar />
+        <div className="flex flex-1 min-h-0" style={{ padding: isMobile ? 4 : 8, gap: 8 }}>
+          {!isMobile && <Sidebar />}
 
           <div className="flex flex-col flex-1 min-w-0 min-h-0 gap-2">
             <Header />
@@ -65,20 +75,23 @@ export function AppShell({ children }: AppShellProps) {
             >
               {children}
 
-              <button
-                onClick={openCapture}
-                className="bevel-raised absolute bottom-3 right-3 z-30 flex items-center gap-2 px-3 h-8 text-xs font-medium"
-                style={{ background: 'var(--bg-surface)' }}
-                title="Новая задача (N)"
-              >
-                <span className="neon-text" style={{ fontSize: 14, lineHeight: 1 }}>+</span>
-                <span style={{ color: 'var(--text-primary)' }}>новая задача</span>
-              </button>
+              {!isMobile && (
+                <button
+                  onClick={openCapture}
+                  className="bevel-raised absolute bottom-3 right-3 z-30 flex items-center gap-2 px-3 h-8 text-xs font-medium"
+                  style={{ background: 'var(--bg-surface)' }}
+                  title="Новая задача (N)"
+                >
+                  <span className="neon-text" style={{ fontSize: 14, lineHeight: 1 }}>+</span>
+                  <span style={{ color: 'var(--text-primary)' }}>новая задача</span>
+                </button>
+              )}
             </main>
           </div>
         </div>
 
-        {/* Status bar */}
+        {/* Status bar — desktop only (на мобиле вместо него BottomNav) */}
+        {!isMobile && (
         <div
           className="flex items-center gap-2 px-2 py-1 text-xs"
           style={{ background: '#020402', borderTop: '1px solid var(--border-subtle)' }}
@@ -122,6 +135,9 @@ export function AppShell({ children }: AppShellProps) {
             <Clock />
           </span>
         </div>
+        )}
+
+        {isMobile && <BottomNav />}
       </div>
 
       <TaskDrawer />

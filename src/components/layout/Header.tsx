@@ -1,11 +1,13 @@
 import { Search, Lock, X } from 'lucide-react';
 import { useUIStore } from '@/stores/ui.store';
 import { useAuthStore } from '@/stores/auth.store';
+import { useIsMobile } from '@/hooks/useMediaQuery';
 
 export function Header() {
   const searchQuery = useUIStore((s) => s.searchQuery);
   const setSearch   = useUIStore((s) => s.setSearch);
   const lock        = useAuthStore((s) => s.lock);
+  const isMobile    = useIsMobile();
 
   return (
     <div
@@ -20,7 +22,7 @@ export function Header() {
           border: '1px solid var(--border-subtle)',
         }}
       >
-        <span className="neon-text font-mono" style={{ fontSize: 11 }}>поиск&nbsp;»</span>
+        {!isMobile && <span className="neon-text font-mono" style={{ fontSize: 11 }}>поиск&nbsp;»</span>}
         <Search size={11} style={{ color: 'var(--text-muted)', flexShrink: 0 }} />
         <input
           className="flex-1 h-full bg-transparent text-xs outline-none font-mono"
@@ -50,7 +52,7 @@ export function Header() {
         title="Заблокировать сессию"
       >
         <Lock size={11} />
-        блок
+        {!isMobile && 'блок'}
       </button>
     </div>
   );

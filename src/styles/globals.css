@@ -363,3 +363,20 @@ input[type="date"]::-webkit-calendar-picker-indicator {
 .btn-flat:not(:disabled):active {
   transform: translateY(1px);
 }
+
+/* ============================================================
+   MOBILE (≤767px) — тач-оптимизация
+   ============================================================ */
+@media (max-width: 767px) {
+  /* 16px на инпутах — иначе iOS Safari зумит при фокусе */
+  input, textarea, select { font-size: 16px; }
+
+  /* Убираем vignette/scanlines overlay — на маленьком экране мешают читаемости */
+  .win-desktop::after { display: none; }
+
+  /* Тоньше скроллбары прячем — на тач они не нужны */
+  ::-webkit-scrollbar { width: 0; height: 0; }
+
+  /* Быстрый тап без 300ms-задержки */
+  a, button, [role="button"] { touch-action: manipulation; }
+}

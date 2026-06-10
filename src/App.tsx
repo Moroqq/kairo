@@ -5,6 +5,7 @@ import { ToastProvider } from '@/components/ui/Toast';
 import { AppShell } from '@/components/layout/AppShell';
 import { LockScreen } from '@/pages/LockScreen';
 import { Dashboard } from '@/pages/Dashboard';
+import { CalendarPage } from '@/pages/CalendarPage';
 import { EventLog } from '@/pages/EventLog';
 
 const queryClient = new QueryClient({
@@ -30,8 +31,9 @@ export default function App() {
         <BrowserRouter>
           <AppShell>
             <Routes>
-              <Route path="/"    element={<Dashboard />} />
-              <Route path="/log" element={<EventLog />} />
+              <Route path="/"         element={<Dashboard />} />
+              <Route path="/calendar" element={<CalendarPage />} />
+              <Route path="/log"      element={<EventLog />} />
               <Route path="*"    element={<Navigate to="/" replace />} />
             </Routes>
           </AppShell>

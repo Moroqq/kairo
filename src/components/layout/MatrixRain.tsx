@@ -3,7 +3,7 @@ import { useEffect, useRef } from 'react';
 /**
  * Matrix code rain — canvas-based, ~24fps. Rendered behind UI (.matrix-canvas).
  */
-export function MatrixRain() {
+export function MatrixRain({ mobile = false }: { mobile?: boolean }) {
   const ref = useRef<HTMLCanvasElement>(null);
 
   useEffect(() => {
@@ -17,7 +17,7 @@ export function MatrixRain() {
       '0123456789' +
       '!@#$%^&*+=<>{}[]/\\|';
 
-    const FONT_SIZE = 14;
+    const FONT_SIZE = mobile ? 20 : 14;   // крупнее глифы → меньше колонок на мобиле
     let cols = 0;
     let drops: number[] = [];
     let speeds: number[] = [];
@@ -42,7 +42,7 @@ export function MatrixRain() {
 
     let raf = 0;
     let last = 0;
-    const STEP = 1000 / 24;
+    const STEP = 1000 / (mobile ? 15 : 24);   // ниже fps на мобиле
 
     const frame = (now: number) => {
       raf = requestAnimationFrame(frame);
@@ -87,7 +87,7 @@ export function MatrixRain() {
       cancelAnimationFrame(raf);
       window.removeEventListener('resize', resize);
     };
-  }, []);
+  }, [mobile]);
 
   return <canvas ref={ref} className="matrix-canvas" />;
 }

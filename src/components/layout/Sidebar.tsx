@@ -1,11 +1,7 @@
 import { NavLink } from 'react-router-dom';
-import { LayoutDashboard, ScrollText, ChevronLeft, ChevronRight } from 'lucide-react';
+import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { useUIStore } from '@/stores/ui.store';
-
-const NAV = [
-  { to: '/',    label: 'панель',   cmd: 'panel', icon: LayoutDashboard },
-  { to: '/log', label: 'события',  cmd: 'logs',  icon: ScrollText      },
-];
+import { NAV } from './nav';
 
 export function Sidebar() {
   const collapsed = useUIStore((s) => s.sidebarCollapsed);
