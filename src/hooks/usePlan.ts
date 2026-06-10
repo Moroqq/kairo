@@ -1,7 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
-  getDayItems, getMonthSummary, getMonthItems, getPatterns,
-  addItem, updateItem, deleteItem,
+  getDayItems, getMonthSummary, getMonthItems, getPatterns, getArchive,
+  addItem, updateItem, deleteItem, carryOverTo,
   togglePlanDone, removeOccurrence, detachOccurrence,
   createPattern, updatePattern, togglePattern, deletePattern,
   type PlanItemInput, type PatternInput,
@@ -68,6 +68,14 @@ export function usePatterns() {
   });
 }
 
+export function useArchive() {
+  return useQuery({
+    queryKey: [...PLAN_KEY, 'archive'],
+    queryFn: () => getArchive(),
+    staleTime: 5_000,
+  });
+}
+
 /* ─── мутации: пункты ──────────────────────────────────────────────────── */
 
 export const useAddPlanItem    = () => usePlanMutation((input: PlanItemInput) => addItem(input));
@@ -77,6 +85,18 @@ export const useTogglePlanDone = () => usePlanMutation((item: DisplayItem) => to
 export const useUpdatePlanItem = () =>
   usePlanMutation(({ id, updates }: { id: string; updates: Parameters<typeof updateItem>[1] }) =>
     updateItem(id, updates));
+
+/** Перенос невыполненного на дату. Возвращает число перенесённых (через mutateAsync). */
+export function useCarryOver() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (date: string) => carryOverTo(date),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: PLAN_KEY });
+      qc.invalidateQueries({ queryKey: TASKS_KEY });
+    },
+  });
+}
 
 export const useRemoveOccurrence = () =>
   usePlanMutation(({ patternId, date }: { patternId: string; date: string }) =>

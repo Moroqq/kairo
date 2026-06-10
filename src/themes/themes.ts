@@ -1,6 +1,8 @@
 import type { KanbanColumnId } from '@/types';
 
-export type ThemeId = 'matrix' | 'command' | 'obsidian' | 'paper' | 'nord' | 'samurai';
+export type ThemeId =
+  | 'matrix' | 'command' | 'obsidian' | 'paper' | 'nord' | 'samurai'
+  | 'claude' | 'clay';
 
 export interface ThemeDef {
   id: ThemeId;
@@ -8,6 +10,8 @@ export interface ThemeDef {
   tagline: string;
   /** Матричный дождь + scanlines (только для matrix). */
   fx: boolean;
+  /** «Мягкий» визуальный язык: сан-сериф-шрифт, скруглённые углы, без неон-свечения. */
+  soft?: boolean;
   /** CSS custom properties — полный набор, чтобы переключение туда-обратно было чистым. */
   vars: Record<string, string>;
   /** «Личность» интерфейса: лексика меняется вместе с темой. */
@@ -227,6 +231,75 @@ export const THEMES: Record<ThemeId, ThemeDef> = {
     },
     preview: ['#0A0606', '#E5484D', '#E8B54A'],
   },
+
+  claude: {
+    id: 'claude',
+    name: 'CLAUDE',
+    tagline: 'тёплый крем · глина · сан-сериф',
+    fx: false,
+    soft: true,
+    vars: {
+      ...matrixVars,
+      '--bg-base': '#F5F4EE', '--bg-surface': '#FAF9F5', '--bg-card': '#FFFFFF',
+      '--bg-elevated': '#EFEDE4', '--bg-input': '#FFFFFF',
+      '--border': 'rgba(60,55,45,0.14)', '--border-strong': 'rgba(60,55,45,0.30)',
+      '--border-subtle': 'rgba(60,55,45,0.07)', '--border-danger': 'rgba(192,57,43,0.45)',
+      '--text-primary': '#3D3D3A', '--text-secondary': '#5C5A52', '--text-muted': '#8A8578',
+      '--text-dim': '#B6B0A2', '--text-bright': '#1F1E1D',
+      '--accent': '#D97757', '--accent-soft': '#C25E3F',
+      '--accent-glow': 'rgba(217,119,87,0.28)', '--accent-dim': 'rgba(217,119,87,0.10)',
+      '--success': '#5B8A4E', '--warning': '#C8821E', '--danger': '#C0392B', '--info': '#3B7EA1',
+      '--shadow-card': '0 1px 2px rgba(0,0,0,0.06)',
+      '--shadow-elevated': '0 1px 3px rgba(0,0,0,0.10), 0 12px 32px rgba(0,0,0,0.12)',
+      '--desktop-bg': '#ECEAE1', '--shell-bg': '#FAF9F5',
+      '--panel-bg': 'rgba(245,244,238,0.92)', '--statusbar-bg': '#F0EEE6',
+      '--overlay-bg': '#FFFFFF', '--titlebar-bg': '#FAF9F5',
+      '--well-bg': 'rgba(60,55,45,0.04)',
+      '--font-ui': "'Söhne', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif",
+      '--radius': '10px', '--radius-pill': '999px',
+    },
+    vocab: {
+      titlebar: 'Kairo',
+      titlebarShort: 'Kairo',
+      columns: { todo: 'Входящие', inprogress: 'В работе', blocked: 'Ожидание', done: 'Готово' },
+    },
+    preview: ['#F5F4EE', '#D97757', '#3D3D3A'],
+  },
+
+  clay: {
+    id: 'clay',
+    name: 'CLAUDE NOIR',
+    tagline: 'тёмная тема Claude · графит · глина',
+    fx: false,
+    soft: true,
+    vars: {
+      ...matrixVars,
+      // Тёплый графит как в тёмной теме claude.ai
+      '--bg-base': '#262624', '--bg-surface': '#30302E', '--bg-card': '#353532',
+      '--bg-elevated': '#3D3C39', '--bg-input': '#1F1E1D',
+      '--border': 'rgba(235,230,220,0.10)', '--border-strong': 'rgba(235,230,220,0.24)',
+      '--border-subtle': 'rgba(235,230,220,0.06)', '--border-danger': 'rgba(232,107,90,0.5)',
+      '--text-primary': '#ECEAE3', '--text-secondary': '#C2BFB6', '--text-muted': '#908D83',
+      '--text-dim': '#5E5B52', '--text-bright': '#FAF9F5',
+      '--accent': '#D97757', '--accent-soft': '#C96442',
+      '--accent-glow': 'rgba(217,119,87,0.35)', '--accent-dim': 'rgba(217,119,87,0.13)',
+      '--success': '#7FB069', '--warning': '#D9A441', '--danger': '#E86B5A', '--info': '#6FA8DC',
+      '--shadow-card': '0 1px 2px rgba(0,0,0,0.3)',
+      '--shadow-elevated': '0 1px 3px rgba(0,0,0,0.4), 0 12px 32px rgba(0,0,0,0.5)',
+      '--desktop-bg': '#1A1916', '--shell-bg': '#262624',
+      '--panel-bg': '#30302E', '--statusbar-bg': '#1F1E1D',
+      '--overlay-bg': '#30302E', '--titlebar-bg': '#262624',
+      '--well-bg': 'rgba(0,0,0,0.20)',
+      '--font-ui': "'Söhne', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif",
+      '--radius': '10px', '--radius-pill': '999px',
+    },
+    vocab: {
+      titlebar: 'Kairo',
+      titlebarShort: 'Kairo',
+      columns: { todo: 'Входящие', inprogress: 'В работе', blocked: 'Ожидание', done: 'Готово' },
+    },
+    preview: ['#262624', '#D97757', '#ECEAE3'],
+  },
 };
 
 export const THEME_LIST: ThemeDef[] = Object.values(THEMES);
@@ -236,4 +309,5 @@ export function applyTheme(t: ThemeDef): void {
   const root = document.documentElement;
   for (const [k, v] of Object.entries(t.vars)) root.style.setProperty(k, v);
   root.classList.toggle('no-fx', !t.fx);
+  root.classList.toggle('soft', !!t.soft);
 }

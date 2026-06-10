@@ -14,7 +14,10 @@ import type {
 
 const PRIORITY_RANK: Record<Priority, number> = { A: 0, B: 1, C: 2, D: 3 };
 
-function sortDisplay(a: DisplayItem, b: DisplayItem): number {
+function sortDisplay(
+  a: { time: string | null; priority: Priority },
+  b: { time: string | null; priority: Priority },
+): number {
   // Сначала со временем (по возрастанию), затем без времени; внутри — по приоритету
   if (a.time && b.time) {
     if (a.time !== b.time) return a.time < b.time ? -1 : 1;
@@ -260,6 +263,23 @@ export function deleteItem(id: string): void {
   writeItems(readItems().filter((i) => i.id !== id));
 }
 
+/**
+ * Перенести все незавершённые реальные пункты из прошлых дней на дату `date`.
+ * Повторы-шаблоны не трогаем (они рекуррентны). Возвращает число перенесённых.
+ */
+export function carryOverTo(date: string): number {
+  const items = readItems();
+  let moved = 0;
+  for (const i of items) {
+    if (!i.done && i.date < date) {
+      i.date = date;
+      moved++;
+    }
+  }
+  if (moved > 0) writeItems(items);
+  return moved;
+}
+
 /* ─── мутации: вхождения шаблонов ──────────────────────────────────────── */
 
 function upsertOverride(patternId: string, date: string, patch: Partial<PatternOverride>): void {
@@ -374,4 +394,63 @@ export function deletePattern(id: string): void {
 export function getPatterns(): RecurrencePattern[] {
   return readPatterns().sort((a, b) =>
     new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+}
+
+/* ─── архив выполненного ───────────────────────────────────────────────── */
+
+export interface ArchiveEntry {
+  id: string;
+  title: string;
+  time: string | null;
+  priority: Priority;
+  kind: 'item' | 'occurrence' | 'task';
+}
+
+export interface ArchiveDay {
+  date: string;            // 'YYYY-MM-DD'
+  entries: ArchiveEntry[];
+}
+
+/**
+ * Всё выполненное, сгруппированное по дням (новые сверху): пункты плана,
+ * отмеченные вхождения шаблонов и закрытые канбан-задачи.
+ * `limitDays` — максимум дней с записями в результате.
+ */
+export function getArchive(limitDays = 90): ArchiveDay[] {
+  const byDate = new Map<string, ArchiveEntry[]>();
+  const push = (date: string, entry: ArchiveEntry) => {
+    const arr = byDate.get(date) ?? [];
+    arr.push(entry);
+    byDate.set(date, arr);
+  };
+
+  for (const i of readItems()) {
+    if (!i.done) continue;
+    push(i.date, { id: i.id, title: i.title, time: i.time, priority: i.priority, kind: 'item' });
+  }
+
+  const patternById = new Map(readPatterns().map((p) => [p.id, p]));
+  for (const o of readOverrides()) {
+    if (!o.done || o.skipped) continue;
+    const p = patternById.get(o.pattern_id);
+    if (!p) continue;
+    push(o.date, {
+      id:       occurrenceId(o.pattern_id, o.date),
+      title:    p.title,
+      time:     p.time,
+      priority: p.priority,
+      kind:     'occurrence',
+    });
+  }
+
+  for (const t of readTasks()) {
+    if (t.status !== 'Resolved') continue;
+    const date = toISODate(new Date(t.resolved_at ?? t.created_at));
+    push(date, { id: `task:${t.id}`, title: t.title, time: null, priority: t.priority, kind: 'task' });
+  }
+
+  return [...byDate.entries()]
+    .sort(([a], [b]) => (a < b ? 1 : -1))
+    .slice(0, limitDays)
+    .map(([date, entries]) => ({ date, entries: entries.sort(sortDisplay) }));
 }

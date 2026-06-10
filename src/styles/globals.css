@@ -53,6 +53,9 @@
   --radius-card:    0px;
   --radius-sm:      0px;
   --radius-pill:    0px;
+  /* Скругление и шрифт интерфейса — переопределяются «мягкими» темами (claude/clay) */
+  --radius:         0px;
+  --font-ui:        "JetBrains Mono", "Fira Code", "IBM Plex Mono", "Lucida Console", "Consolas", monospace;
 
   --shadow-card:    0 0 0 1px var(--border);
   --shadow-elevated:
@@ -80,7 +83,7 @@ html.no-fx .win-desktop::after { display: none; }
 html, body, #root { height: 100%; overflow: hidden; background: var(--bg-base); }
 
 body {
-  font-family: "JetBrains Mono", "Fira Code", "IBM Plex Mono", "Lucida Console", "Consolas", monospace;
+  font-family: var(--font-ui);
   font-size: 12px;
   line-height: 1.5;
   color: var(--text-primary);
@@ -127,6 +130,7 @@ body {
   border: 1px solid var(--border);
   background: var(--bg-surface);
   box-shadow: none;
+  border-radius: var(--radius);
   transition: border-color var(--transition), box-shadow var(--transition), background var(--transition);
 }
 
@@ -134,18 +138,21 @@ body {
   border: 1px solid var(--border-subtle);
   background: var(--bg-input);
   box-shadow: inset 0 0 0 1px rgba(0,0,0,0.4);
+  border-radius: var(--radius);
 }
 
 .bevel-well {
   border: 1px solid var(--border-subtle);
   background: var(--bg-surface);
   box-shadow: none;
+  border-radius: var(--radius);
 }
 
 .bevel-pressed {
   border: 1px solid var(--accent);
   background: var(--accent-dim);
   box-shadow: inset 0 0 12px var(--accent-glow);
+  border-radius: var(--radius);
 }
 
 /* Hover/focus на интерактивных raised */
@@ -259,9 +266,9 @@ select:focus-visible {
 /* ============================================================
    RADIUS OVERRIDES (наследие)
    ============================================================ */
-.rounded-card, .rounded-lg, .rounded-md, .rounded-xl, .rounded-2xl, .rounded-3xl,
+html:not(.soft) :is(.rounded-card, .rounded-lg, .rounded-md, .rounded-xl, .rounded-2xl, .rounded-3xl,
 .rounded-full, .rounded-l-card, .rounded-r-card, .rounded-l-lg, .rounded-r-lg,
-.rounded-t-lg, .rounded-b-lg {
+.rounded-t-lg, .rounded-b-lg) {
   border-radius: 0 !important;
 }
 
@@ -304,6 +311,11 @@ input, textarea, [data-selectable] { user-select: text; }
   font-size: 11px;
 }
 
+/* Рукописный шрифт для «Листка» (поддерживает кириллицу) */
+.font-hand {
+  font-family: "Caveat", "Segoe Script", cursive;
+}
+
 /* ============================================================
    ANIMATIONS
    ============================================================ */
@@ -339,7 +351,10 @@ input, textarea, select {
   font-family: inherit;
   color: var(--text-primary);
   background: var(--bg-input);
+  border-radius: var(--radius);
 }
+
+.btn-flat { border-radius: var(--radius); }
 
 /* Date-input в Chromium — невидимая иконка стрелки → красим в зелёный */
 input[type="date"]::-webkit-calendar-picker-indicator {
@@ -376,6 +391,55 @@ input[type="date"]::-webkit-calendar-picker-indicator {
 .btn-flat:not(:disabled):active {
   transform: translateY(1px);
 }
+
+/* ============================================================
+   SOFT THEMES (claude / clay) — сан-сериф, скругления, без неона
+   ============================================================ */
+html.soft .neon-text,
+html.soft .neon-cyan-text,
+html.soft .neon-mag-text,
+html.soft .neon-green-text,
+html.soft .neon-pink-text,
+html.soft .neon-yellow-text { text-shadow: none; }
+
+html.soft .cursor-blink::after { content: none; }
+
+html.soft .titlebar {
+  text-transform: none;
+  letter-spacing: 0;
+  text-shadow: none;
+  font-weight: 600;
+}
+
+/* Мягкие focus-кольца без неон-свечения */
+html.soft button.bevel-raised:focus-visible,
+html.soft input:focus-visible,
+html.soft textarea:focus-visible,
+html.soft select:focus-visible {
+  border-color: var(--accent) !important;
+  box-shadow: 0 0 0 2px var(--accent-dim);
+}
+html.soft button.bevel-raised:not(:disabled):hover,
+html.soft a.bevel-raised:hover {
+  box-shadow: 0 0 0 1px var(--accent);
+}
+
+/* Hover-строки и flat-кнопки без зелёного glow */
+html.soft .row-hover:hover { background: var(--accent-dim) !important; }
+html.soft .btn-flat:not(:disabled):hover {
+  box-shadow: 0 0 0 1px var(--accent);
+  text-shadow: none;
+}
+html.soft .btn-flat[data-variant="primary"]:not(:disabled):hover {
+  box-shadow: 0 0 0 1px var(--accent);
+}
+
+/* Выделение текста — светлый текст на акценте */
+html.soft ::selection { background: var(--accent); color: #fff; }
+
+/* Скруглённые скроллбары и трек под мягкую палитру */
+html.soft ::-webkit-scrollbar-thumb { border-radius: 999px; background: var(--border-strong); }
+html.soft ::-webkit-scrollbar-track { background: var(--bg-elevated); border-left: none; }
 
 /* ============================================================
    MOBILE (≤767px) — тач-оптимизация

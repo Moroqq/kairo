@@ -1,12 +1,14 @@
 import { useState } from 'react';
-import { Plus, X } from 'lucide-react';
-import { fromISODate } from '@/lib/date';
+import { Plus, X, ArrowDownToLine } from 'lucide-react';
+import { fromISODate, todayISO } from '@/lib/date';
 import { Modal } from '@/components/ui/Modal';
 import { useUIStore } from '@/stores/ui.store';
+import { useToast } from '@/components/ui/Toast';
 import {
   useDayItems, usePatterns,
   useAddPlanItem, useUpdatePlanItem, useDeletePlanItem,
   useTogglePlanDone, useRemoveOccurrence, useDetachOccurrence,
+  useCarryOver,
 } from '@/hooks/usePlan';
 import type { DisplayItem } from '@/types/plan';
 import { PlanItemRow } from './PlanItemRow';
@@ -27,6 +29,7 @@ export function DayView({ date, onClose }: Props) {
   const { data: items } = useDayItems(date);
   const { data: patterns } = usePatterns();
   const setActiveTaskId = useUIStore((s) => s.setActiveTaskId);
+  const { toast } = useToast();
 
   const addItem    = useAddPlanItem();
   const updateItem = useUpdatePlanItem();
@@ -34,6 +37,7 @@ export function DayView({ date, onClose }: Props) {
   const toggleDone = useTogglePlanDone();
   const removeOcc  = useRemoveOccurrence();
   const detachOcc  = useDetachOccurrence();
+  const carryOver  = useCarryOver();
 
   const [editing, setEditing] = useState<Editing>(null);
 
@@ -41,6 +45,12 @@ export function DayView({ date, onClose }: Props) {
   const title = d.toLocaleDateString('ru-RU', { weekday: 'long', day: 'numeric', month: 'long' });
   const list = items ?? [];
   const doneCount = list.filter((i) => i.done).length;
+  const isToday = date === todayISO();
+
+  const handleCarryOver = async () => {
+    const moved = await carryOver.mutateAsync(date);
+    toast(moved > 0 ? `перенесено: ${moved}` : 'нечего переносить', moved > 0 ? 'success' : 'info');
+  };
 
   const handleDelete = (item: DisplayItem) => {
     if (item.kind === 'item') deleteItem.mutate(item.id);
@@ -92,6 +102,18 @@ export function DayView({ date, onClose }: Props) {
           </span>
         )}
         <div className="flex-1" />
+        {isToday && (
+          <button
+            type="button"
+            onClick={handleCarryOver}
+            disabled={carryOver.isPending}
+            className="bevel-raised flex items-center gap-1 px-2 text-xs"
+            style={{ minHeight: 32, background: 'var(--bg-surface)', color: 'var(--text-secondary)' }}
+            title="перенести незавершённое с прошлых дней на сегодня"
+          >
+            <ArrowDownToLine size={13} /> перенести
+          </button>
+        )}
         <button
           type="button"
           onClick={() => setEditing({ mode: 'add' })}

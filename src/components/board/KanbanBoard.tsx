@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import {
   DndContext,
   DragEndEvent,
@@ -16,6 +16,8 @@ import { useTasks, useUpdateStatus } from '@/hooks/useTasks';
 import { useDeadlineWatcher } from '@/hooks/useDeadlineWatcher';
 import { useUIStore } from '@/stores/ui.store';
 import { useToast } from '@/components/ui/Toast';
+import { useIsMobile } from '@/hooks/useMediaQuery';
+import { useTheme } from '@/stores/theme.store';
 import { KANBAN_COLUMNS } from '@/types';
 import type { Task, KanbanColumnId, TaskStatus } from '@/types';
 
@@ -26,8 +28,12 @@ export function KanbanBoard() {
   const searchQuery  = useUIStore((s) => s.searchQuery);
   const filterPrio   = useUIStore((s) => s.filterPriority);
   const filterCat    = useUIStore((s) => s.filterCategory);
+  const isMobile     = useIsMobile();
+  const vocab        = useTheme().vocab;
 
   const [draggingTask, setDraggingTask] = useState<Task | null>(null);
+  const [activeCol, setActiveCol] = useState<KanbanColumnId>('todo');
+  const touchStartX = useRef<number | null>(null);
 
   useDeadlineWatcher(allTasks);
 
@@ -93,6 +99,68 @@ export function KanbanBoard() {
       <div className="flex-1 flex flex-col items-center justify-center gap-2">
         <AlertCircle size={20} style={{ color: 'var(--danger)' }} />
         <p className="text-sm font-mono" style={{ color: 'var(--text-muted)' }}>не удалось загрузить задачи</p>
+      </div>
+    );
+  }
+
+  // ─── Мобайл: вкладки-колонки (одна колонка на весь экран, свайп между ними) ───
+  if (isMobile) {
+    const idx = KANBAN_COLUMNS.findIndex((c) => c.id === activeCol);
+    const switchBy = (delta: number) => {
+      const next = (idx + delta + KANBAN_COLUMNS.length) % KANBAN_COLUMNS.length;
+      setActiveCol(KANBAN_COLUMNS[next].id);
+    };
+    const activeColumn = KANBAN_COLUMNS[idx] ?? KANBAN_COLUMNS[0];
+
+    return (
+      <div className="flex flex-col h-full min-h-0">
+        {/* Tabs */}
+        <div className="flex flex-shrink-0" style={{ borderBottom: '1px solid var(--border-subtle)' }}>
+          {KANBAN_COLUMNS.map((col) => {
+            const active = col.id === activeCol;
+            const count = getColumnTasks(col.id).length;
+            return (
+              <button
+                key={col.id}
+                type="button"
+                onClick={() => setActiveCol(col.id)}
+                className="flex-1 flex flex-col items-center justify-center gap-0.5 min-w-0"
+                style={{
+                  minHeight: 48,
+                  background: active ? 'var(--accent-dim)' : 'transparent',
+                  borderBottom: `2px solid ${active ? 'var(--accent)' : 'transparent'}`,
+                  color: active ? 'var(--accent)' : 'var(--text-muted)',
+                  cursor: 'pointer',
+                }}
+              >
+                <span
+                  className="truncate"
+                  style={{ fontSize: 10, fontWeight: 700, letterSpacing: 0.5, textTransform: 'uppercase', maxWidth: '100%', padding: '0 2px' }}
+                >
+                  {vocab.columns[col.id] ?? col.title}
+                </span>
+                <span className="font-mono" style={{ fontSize: 9 }}>
+                  [{count.toString().padStart(2, '0')}]
+                </span>
+              </button>
+            );
+          })}
+        </div>
+
+        {/* Active column */}
+        <div
+          className="flex-1 min-h-0 p-2"
+          onTouchStart={(e) => { touchStartX.current = e.touches[0].clientX; }}
+          onTouchEnd={(e) => {
+            if (touchStartX.current === null) return;
+            const dx = e.changedTouches[0].clientX - touchStartX.current;
+            touchStartX.current = null;
+            if (dx > 50) switchBy(-1);
+            else if (dx < -50) switchBy(1);
+          }}
+        >
+          <KanbanColumn column={activeColumn} tasks={getColumnTasks(activeColumn.id)} fullWidth />
+        </div>
       </div>
     );
   }

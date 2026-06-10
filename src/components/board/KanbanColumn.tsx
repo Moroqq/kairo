@@ -7,9 +7,11 @@ import type { Task, KanbanColumn as KanbanColumnType } from '@/types';
 interface KanbanColumnProps {
   column: KanbanColumnType;
   tasks: Task[];
+  /** Колонка во всю ширину и высоту (мобильный режим вкладок). */
+  fullWidth?: boolean;
 }
 
-export function KanbanColumn({ column, tasks }: KanbanColumnProps) {
+export function KanbanColumn({ column, tasks, fullWidth }: KanbanColumnProps) {
   const { setNodeRef, isOver } = useDroppable({ id: column.id });
   const vocab = useTheme().vocab;
 
@@ -22,8 +24,8 @@ export function KanbanColumn({ column, tasks }: KanbanColumnProps) {
 
   return (
     <div
-      className="flex flex-col flex-shrink-0"
-      style={{ width: 280 }}
+      className={`flex flex-col ${fullWidth ? 'h-full' : 'flex-shrink-0'}`}
+      style={{ width: fullWidth ? '100%' : 280 }}
     >
       {/* Column header */}
       <div

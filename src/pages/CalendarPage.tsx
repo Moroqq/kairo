@@ -1,5 +1,4 @@
 import { useState } from 'react';
-import { AnimatePresence, motion } from 'framer-motion';
 import { CalendarClock } from 'lucide-react';
 import { todayISO, fromISODate } from '@/lib/date';
 import { useIsMobile } from '@/hooks/useMediaQuery';
@@ -17,7 +16,6 @@ export function CalendarPage() {
     return { year: d.getFullYear(), month: d.getMonth() };
   });
   const [patternsOpen, setPatternsOpen] = useState(false);
-  const [sheetOpen, setSheetOpen] = useState(false); // mobile day-sheet
 
   const goPrev = () =>
     setCursor((c) => (c.month === 0 ? { year: c.year - 1, month: 11 } : { ...c, month: c.month - 1 }));
@@ -31,7 +29,6 @@ export function CalendarPage() {
 
   const handleSelect = (date: string) => {
     setSelectedDate(date);
-    if (isMobile) setSheetOpen(true);
   };
 
   return (
@@ -61,12 +58,17 @@ export function CalendarPage() {
 
       {/* Body */}
       {isMobile ? (
-        <div className="flex-1 min-h-0 overflow-y-auto">
-          <MonthGrid
-            year={cursor.year} month={cursor.month}
-            selectedDate={selectedDate} onSelect={handleSelect}
-            onPrev={goPrev} onNext={goNext} onToday={goToday}
-          />
+        <div className="flex flex-col flex-1 min-h-0">
+          <div className="flex-shrink-0" style={{ borderBottom: '1px solid var(--border-subtle)' }}>
+            <MonthGrid
+              year={cursor.year} month={cursor.month}
+              selectedDate={selectedDate} onSelect={handleSelect}
+              onPrev={goPrev} onNext={goNext} onToday={goToday}
+            />
+          </div>
+          <div className="flex-1 min-h-0">
+            <DayView date={selectedDate} />
+          </div>
         </div>
       ) : (
         <div className="flex flex-1 min-h-0">
@@ -82,34 +84,6 @@ export function CalendarPage() {
           </div>
         </div>
       )}
-
-      {/* Mobile day sheet */}
-      <AnimatePresence>
-        {isMobile && sheetOpen && (
-          <motion.div
-            className="fixed inset-0 z-40 flex flex-col justify-end"
-            initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-            transition={{ duration: 0.12 }}
-            onClick={() => setSheetOpen(false)}
-          >
-            <div className="absolute inset-0" style={{ background: 'rgba(0,0,0,0.75)' }} />
-            <motion.div
-              className="relative flex flex-col"
-              style={{
-                maxHeight: '80vh',
-                background: 'var(--overlay-bg)',
-                borderTop: '1px solid var(--accent)',
-                boxShadow: '0 0 32px var(--accent-glow)',
-              }}
-              initial={{ y: '100%' }} animate={{ y: 0 }} exit={{ y: '100%' }}
-              transition={{ duration: 0.2, ease: 'easeOut' }}
-              onClick={(e) => e.stopPropagation()}
-            >
-              <DayView date={selectedDate} onClose={() => setSheetOpen(false)} />
-            </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
 
       <PatternManager open={patternsOpen} onClose={() => setPatternsOpen(false)} />
     </div>

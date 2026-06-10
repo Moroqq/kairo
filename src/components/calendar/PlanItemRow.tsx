@@ -1,6 +1,8 @@
 import { Check, Pencil, Trash2, Repeat, ListChecks, Clock } from 'lucide-react';
+import { motion, type PanInfo } from 'framer-motion';
 import { PRIORITY_CONFIG } from '@/types';
 import type { DisplayItem } from '@/types/plan';
+import { useIsMobile } from '@/hooks/useMediaQuery';
 
 interface Props {
   item: DisplayItem;
@@ -9,26 +11,32 @@ interface Props {
   onDelete: () => void;
 }
 
-/** Строка пункта плана: чекбокс «сделано», время, название, приоритет, действия. */
+const SWIPE_THRESHOLD = 80;
+
+/** Строка пункта плана: чекбокс «сделано», время, название, приоритет, действия.
+ *  На мобиле — свайп вправо = «сделано», влево = удалить/убрать. */
 export function PlanItemRow({ item, onToggle, onEdit, onDelete }: Props) {
   const cfg = PRIORITY_CONFIG[item.priority];
+  const isMobile  = useIsMobile();
   const recurring = item.kind === 'occurrence';
   const isTask    = item.kind === 'task';
   const isOverdue = isTask && item.overdue;
+  const canDelete = !isTask; // задачу канбана из календаря не удаляем
 
-  return (
-    <div
-      className="row-hover flex items-center gap-2 px-2 group"
-      style={{
-        minHeight: 44,
-        background: 'var(--well-bg)',
-        borderLeft: `3px solid ${isOverdue ? 'var(--danger)' : cfg.color}`,
-        border: `1px solid ${isOverdue ? 'var(--border-danger)' : 'var(--border-subtle)'}`,
-        borderLeftWidth: 3,
-        opacity: item.done ? 0.55 : 1,
-        boxShadow: isOverdue ? 'inset 0 0 12px rgba(255,0,60,0.08)' : 'none',
-      }}
-    >
+  const rowStyle: React.CSSProperties = {
+    minHeight: 44,
+    // На мобиле — непрозрачный фон, чтобы слой действий не просвечивал до свайпа
+    background: isMobile ? 'var(--bg-card)' : 'var(--well-bg)',
+    borderLeft: `3px solid ${isOverdue ? 'var(--danger)' : cfg.color}`,
+    border: `1px solid ${isOverdue ? 'var(--border-danger)' : 'var(--border-subtle)'}`,
+    borderLeftWidth: 3,
+    borderRadius: 'var(--radius)',
+    opacity: item.done ? 0.55 : 1,
+    boxShadow: isOverdue ? 'inset 0 0 12px rgba(255,0,60,0.08)' : 'none',
+  };
+
+  const inner = (
+    <>
       {/* Checkbox */}
       <button
         type="button"
@@ -39,6 +47,7 @@ export function PlanItemRow({ item, onToggle, onEdit, onDelete }: Props) {
           border: `1px solid ${item.done ? 'var(--accent)' : 'var(--border)'}`,
           background: item.done ? 'var(--accent-dim)' : 'transparent',
           color: 'var(--accent)',
+          borderRadius: 'var(--radius)',
         }}
         title={item.done ? 'снять отметку' : 'отметить выполненным'}
       >
@@ -47,10 +56,7 @@ export function PlanItemRow({ item, onToggle, onEdit, onDelete }: Props) {
 
       {/* Time */}
       {item.time && (
-        <span
-          className="font-mono flex-shrink-0"
-          style={{ fontSize: 11, color: 'var(--text-bright)', minWidth: 38 }}
-        >
+        <span className="font-mono flex-shrink-0" style={{ fontSize: 11, color: 'var(--text-bright)', minWidth: 38 }}>
           {item.time}
         </span>
       )}
@@ -90,14 +96,10 @@ export function PlanItemRow({ item, onToggle, onEdit, onDelete }: Props) {
         />
       )}
       {isOverdue && (
-        <Clock
-          size={12}
-          style={{ color: 'var(--danger)', flexShrink: 0 }}
-          aria-label="просрочено"
-        />
+        <Clock size={12} style={{ color: 'var(--danger)', flexShrink: 0 }} aria-label="просрочено" />
       )}
 
-      {/* Actions */}
+      {/* Actions — на мобиле прячем (свайп), оставляем только правку */}
       <div className="flex items-center gap-0.5 flex-shrink-0">
         <button
           type="button"
@@ -108,7 +110,7 @@ export function PlanItemRow({ item, onToggle, onEdit, onDelete }: Props) {
         >
           <Pencil size={13} />
         </button>
-        {!isTask && (
+        {!isTask && !isMobile && (
           <button
             type="button"
             onClick={onDelete}
@@ -120,6 +122,49 @@ export function PlanItemRow({ item, onToggle, onEdit, onDelete }: Props) {
           </button>
         )}
       </div>
+    </>
+  );
+
+  // Десктоп — обычная строка с кнопками
+  if (!isMobile) {
+    return (
+      <div className="row-hover flex items-center gap-2 px-2 group" style={rowStyle}>
+        {inner}
+      </div>
+    );
+  }
+
+  // Мобайл — свайп влево/вправо
+  const handleDragEnd = (_e: unknown, info: PanInfo) => {
+    if (info.offset.x > SWIPE_THRESHOLD) onToggle();
+    else if (info.offset.x < -SWIPE_THRESHOLD && canDelete) onDelete();
+  };
+
+  return (
+    <div style={{ position: 'relative', borderRadius: 'var(--radius)', overflow: 'hidden' }}>
+      {/* Слой действий под строкой */}
+      <div
+        className="absolute inset-0 flex items-center justify-between px-4"
+        style={{ background: 'var(--bg-elevated)' }}
+      >
+        <Check size={18} style={{ color: 'var(--success)' }} />
+        {canDelete
+          ? <Trash2 size={18} style={{ color: 'var(--danger)' }} />
+          : <span style={{ width: 18 }} />}
+      </div>
+
+      {/* Сама строка — перетаскивается по X */}
+      <motion.div
+        className="flex items-center gap-2 px-2"
+        style={{ ...rowStyle, touchAction: 'pan-y' }}
+        drag="x"
+        dragConstraints={{ left: 0, right: 0 }}
+        dragElastic={0.6}
+        dragMomentum={false}
+        onDragEnd={handleDragEnd}
+      >
+        {inner}
+      </motion.div>
     </div>
   );
 }
