@@ -6,6 +6,7 @@ import { MatrixRain } from './MatrixRain';
 import { TaskDrawer } from '@/components/task/TaskDrawer';
 import { CaptureModal } from '@/components/capture/CaptureModal';
 import { useUIStore } from '@/stores/ui.store';
+import { useTheme } from '@/stores/theme.store';
 import { useTasks } from '@/hooks/useTasks';
 import { useIsMobile } from '@/hooks/useMediaQuery';
 import { initNotifications } from '@/services/notifications.service';
@@ -20,6 +21,7 @@ interface AppShellProps {
 export function AppShell({ children }: AppShellProps) {
   const openCapture = useUIStore((s) => s.openCapture);
   const isMobile = useIsMobile();
+  const theme = useTheme();
   const { data: tasks } = useTasks();
 
   const active   = (tasks ?? []).filter((t) => t.status !== 'Resolved' && t.status !== 'Archived');
@@ -36,12 +38,12 @@ export function AppShell({ children }: AppShellProps) {
 
   return (
     <div className={`win-desktop h-full flex flex-col relative ${isMobile ? '' : 'p-3 gap-3'}`}>
-      <MatrixRain mobile={isMobile} />
+      {theme.fx && <MatrixRain mobile={isMobile} />}
 
       <div
         className="bevel-raised flex-1 flex flex-col min-h-0 relative"
         style={{
-          background: 'rgba(5, 5, 5, 0.92)',
+          background: 'var(--shell-bg)',
           boxShadow: isMobile ? 'none' : 'var(--shadow-elevated)',
           border: isMobile ? 'none' : undefined,
           zIndex: 3,
@@ -51,7 +53,7 @@ export function AppShell({ children }: AppShellProps) {
         <div className="titlebar">
           <span className="neon-text">●</span>
           <span className="flex-1 truncate cursor-blink">
-            {isMobile ? '[kairo@matrix:~]$' : '[kairo@matrix:~]$ task_manager --status=работает'}
+            {isMobile ? theme.vocab.titlebarShort : theme.vocab.titlebar}
           </span>
           {!isMobile && (
             <>
@@ -71,7 +73,7 @@ export function AppShell({ children }: AppShellProps) {
 
             <main
               className="bevel-sunken flex-1 overflow-hidden flex flex-col relative"
-              style={{ background: 'rgba(0,0,0,0.5)' }}
+              style={{ background: 'var(--well-bg)' }}
             >
               {children}
 
@@ -94,7 +96,7 @@ export function AppShell({ children }: AppShellProps) {
         {!isMobile && (
         <div
           className="flex items-center gap-2 px-2 py-1 text-xs"
-          style={{ background: '#020402', borderTop: '1px solid var(--border-subtle)' }}
+          style={{ background: 'var(--statusbar-bg)', borderTop: '1px solid var(--border-subtle)' }}
         >
           <span className="flex items-center gap-1.5">
             <span className="led led-blink" />

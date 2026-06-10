@@ -33,7 +33,7 @@ export function Drawer({ open, onClose, title, children, width = 400 }: DrawerPr
             className="fixed top-3 right-3 bottom-3 z-40 flex flex-col"
             style={{
               width,
-              background: 'rgba(8, 12, 8, 0.97)',
+              background: 'var(--overlay-bg)',
               border: '1px solid var(--accent)',
               boxShadow: '0 0 0 1px var(--accent), 0 0 32px var(--accent-glow), -8px 0 32px rgba(0,0,0,0.8)',
             }}

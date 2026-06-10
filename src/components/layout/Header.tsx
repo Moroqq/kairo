@@ -1,18 +1,21 @@
-import { Search, Lock, X } from 'lucide-react';
+import { useState } from 'react';
+import { Search, Lock, X, Palette } from 'lucide-react';
 import { useUIStore } from '@/stores/ui.store';
 import { useAuthStore } from '@/stores/auth.store';
 import { useIsMobile } from '@/hooks/useMediaQuery';
+import { ThemePicker } from '@/components/ui/ThemePicker';
 
 export function Header() {
   const searchQuery = useUIStore((s) => s.searchQuery);
   const setSearch   = useUIStore((s) => s.setSearch);
   const lock        = useAuthStore((s) => s.lock);
   const isMobile    = useIsMobile();
+  const [themesOpen, setThemesOpen] = useState(false);
 
   return (
     <div
       className="bevel-raised flex items-center gap-2 px-2 py-1.5"
-      style={{ background: 'rgba(8, 12, 8, 0.7)' }}
+      style={{ background: 'var(--panel-bg)' }}
     >
       {/* Search field — terminal-prompt look */}
       <div
@@ -44,6 +47,17 @@ export function Header() {
         )}
       </div>
 
+      {/* Theme */}
+      <button
+        onClick={() => setThemesOpen(true)}
+        className="bevel-raised flex items-center gap-1.5 h-7 px-2.5 text-xs"
+        style={{ background: 'var(--bg-surface)', color: 'var(--text-secondary)' }}
+        title="Режим оформления"
+      >
+        <Palette size={11} />
+        {!isMobile && 'тема'}
+      </button>
+
       {/* Lock */}
       <button
         onClick={lock}
@@ -54,6 +68,8 @@ export function Header() {
         <Lock size={11} />
         {!isMobile && 'блок'}
       </button>
+
+      <ThemePicker open={themesOpen} onClose={() => setThemesOpen(false)} />
     </div>
   );
 }

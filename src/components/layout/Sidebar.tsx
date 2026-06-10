@@ -12,7 +12,7 @@ export function Sidebar() {
       className="bevel-raised flex flex-col flex-shrink-0 h-full"
       style={{
         width: collapsed ? 44 : 180,
-        background: 'rgba(8, 12, 8, 0.7)',
+        background: 'var(--panel-bg)',
         padding: 6,
         gap: 4,
       }}

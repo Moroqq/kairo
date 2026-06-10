@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Plus, X } from 'lucide-react';
 import { fromISODate } from '@/lib/date';
 import { Modal } from '@/components/ui/Modal';
+import { useUIStore } from '@/stores/ui.store';
 import {
   useDayItems, usePatterns,
   useAddPlanItem, useUpdatePlanItem, useDeletePlanItem,
@@ -25,6 +26,7 @@ type Editing =
 export function DayView({ date, onClose }: Props) {
   const { data: items } = useDayItems(date);
   const { data: patterns } = usePatterns();
+  const setActiveTaskId = useUIStore((s) => s.setActiveTaskId);
 
   const addItem    = useAddPlanItem();
   const updateItem = useUpdatePlanItem();
@@ -42,7 +44,17 @@ export function DayView({ date, onClose }: Props) {
 
   const handleDelete = (item: DisplayItem) => {
     if (item.kind === 'item') deleteItem.mutate(item.id);
-    else removeOcc.mutate({ patternId: item.pattern_id, date });
+    else if (item.kind === 'occurrence') removeOcc.mutate({ patternId: item.pattern_id, date });
+    // kind === 'task' → удалять из календаря не даём (это задача канбана)
+  };
+
+  /** Открыть редактирование. Для task — переходим в TaskDrawer вместо локальной формы. */
+  const handleEdit = (item: DisplayItem) => {
+    if (item.kind === 'task') {
+      setActiveTaskId(item.task_id);
+      return;
+    }
+    setEditing({ mode: 'edit', item });
   };
 
   const handleSave = (values: PlanFormValues) => {
@@ -50,13 +62,14 @@ export function DayView({ date, onClose }: Props) {
       const item = editing.item;
       if (item.kind === 'item') {
         updateItem.mutate({ id: item.id, updates: values });
-      } else {
+      } else if (item.kind === 'occurrence') {
         // Правка вхождения шаблона → отвязываем на этот день
         const pattern = patterns?.find((p) => p.id === item.pattern_id);
         if (pattern) {
           detachOcc.mutate({ pattern, date, edits: { ...values, done: item.done } });
         }
       }
+      // kind === 'task' сюда не попадает — обрабатывается в handleEdit
     } else {
       addItem.mutate({ date, ...values });
     }
@@ -113,7 +126,7 @@ export function DayView({ date, onClose }: Props) {
               key={item.id}
               item={item}
               onToggle={() => toggleDone.mutate(item)}
-              onEdit={() => setEditing({ mode: 'edit', item })}
+              onEdit={() => handleEdit(item)}
               onDelete={() => handleDelete(item)}
             />
           ))

@@ -24,7 +24,7 @@ export function EventLog() {
 
   return (
     <div className="flex-1 overflow-y-auto" style={{ padding: 12 }}>
-      <div style={{ border: '1px solid var(--border)', background: 'rgba(0,0,0,0.5)' }}>
+      <div style={{ border: '1px solid var(--border)', background: 'var(--well-bg)' }}>
         {/* Header */}
         <div
           className="flex items-center gap-2 px-3 py-1.5 text-xs"
@@ -43,7 +43,7 @@ export function EventLog() {
         <div
           className="flex items-center px-3 py-1 font-mono"
           style={{
-            background: 'rgba(0,255,65,0.04)',
+            background: 'var(--accent-dim)',
             borderBottom: '1px solid var(--border-subtle)',
             fontSize: 10,
             color: 'var(--text-muted)',

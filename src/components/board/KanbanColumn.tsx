@@ -1,6 +1,7 @@
 import { useDroppable } from '@dnd-kit/core';
 import { AnimatePresence } from 'framer-motion';
 import { TaskCard } from '@/components/task/TaskCard';
+import { useTheme } from '@/stores/theme.store';
 import type { Task, KanbanColumn as KanbanColumnType } from '@/types';
 
 interface KanbanColumnProps {
@@ -10,6 +11,7 @@ interface KanbanColumnProps {
 
 export function KanbanColumn({ column, tasks }: KanbanColumnProps) {
   const { setNodeRef, isOver } = useDroppable({ id: column.id });
+  const vocab = useTheme().vocab;
 
   const sorted = [...tasks].sort((a, b) => {
     if (a.deadline && b.deadline) return new Date(a.deadline).getTime() - new Date(b.deadline).getTime();
@@ -27,7 +29,7 @@ export function KanbanColumn({ column, tasks }: KanbanColumnProps) {
       <div
         className="flex items-center justify-between px-2 h-7"
         style={{
-          background: 'rgba(8, 12, 8, 0.6)',
+          background: 'var(--panel-bg)',
           borderTop: '1px solid var(--border)',
           borderLeft: '1px solid var(--border)',
           borderRight: '1px solid var(--border)',
@@ -44,7 +46,7 @@ export function KanbanColumn({ column, tasks }: KanbanColumnProps) {
               textShadow: isOver ? '0 0 8px var(--accent-glow)' : 'none',
             }}
           >
-            {column.title}
+            {vocab.columns[column.id] ?? column.title}
           </span>
         </div>
         <span
@@ -63,10 +65,10 @@ export function KanbanColumn({ column, tasks }: KanbanColumnProps) {
         ref={setNodeRef}
         className="flex flex-col gap-2 flex-1 p-2 overflow-y-auto"
         style={{
-          background: isOver ? 'rgba(0, 255, 65, 0.06)' : 'rgba(0, 0, 0, 0.35)',
+          background: isOver ? 'var(--accent-dim)' : 'var(--well-bg)',
           border: '1px solid var(--border)',
           borderTopColor: 'var(--border-subtle)',
-          boxShadow: isOver ? 'inset 0 0 20px rgba(0, 255, 65, 0.15)' : 'none',
+          boxShadow: isOver ? 'inset 0 0 20px var(--accent-glow)' : 'none',
           minHeight: 120,
           transition: 'background 160ms, box-shadow 160ms',
         }}

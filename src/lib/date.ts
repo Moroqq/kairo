@@ -18,6 +18,16 @@ export function fromISODate(iso: string): Date {
   return new Date(y, (m ?? 1) - 1, d ?? 1);
 }
 
+/**
+ * 'YYYY-MM-DD' → ISO-строка конца этого дня в локальной таймзоне (23:59:59.999).
+ * Используется как дедлайн: «сегодня» означает «до конца сегодняшнего дня»,
+ * а не полночь UTC (которая в +3 уже наступила и делает задачу мгновенно просрочённой).
+ */
+export function deadlineISOFromDate(iso: string): string {
+  const [y, m, d] = iso.split('-').map(Number);
+  return new Date(y, (m ?? 1) - 1, d ?? 1, 23, 59, 59, 999).toISOString();
+}
+
 /** Сегодня в формате 'YYYY-MM-DD'. */
 export function todayISO(): string {
   return toISODate(new Date());

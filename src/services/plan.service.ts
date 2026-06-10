@@ -3,7 +3,9 @@ import {
   readPatterns, writePatterns,
   readOverrides, writeOverrides,
 } from '@/lib/plan-storage';
-import { weekdayOf } from '@/lib/date';
+import { readTasks } from '@/lib/storage';
+import { updateTaskStatus } from '@/services/tasks.service';
+import { weekdayOf, toISODate } from '@/lib/date';
 import type {
   PlanItem, RecurrencePattern, PatternOverride, DisplayItem, Priority,
 } from '@/types/plan';
@@ -62,6 +64,25 @@ export function getDayItems(date: string): DisplayItem[] {
     });
   }
 
+  // Канбан-задачи с дедлайном на эту дату (локально)
+  const todayMs = Date.now();
+  for (const t of readTasks()) {
+    if (t.status === 'Archived' || !t.deadline) continue;
+    if (toISODate(new Date(t.deadline)) !== date) continue;
+    result.push({
+      kind:     'task',
+      id:       `task:${t.id}`,
+      task_id:  t.id,
+      date,
+      title:    t.title,
+      note:     t.description,
+      time:     null,
+      priority: t.priority,
+      done:     t.status === 'Resolved',
+      overdue:  new Date(t.deadline).getTime() < todayMs && t.status !== 'Resolved',
+    });
+  }
+
   return result.sort(sortDisplay);
 }
 
@@ -98,6 +119,101 @@ export function getMonthSummary(
     }
     if (total > 0) out[date] = { total, done };
   }
+
+  // Канбан-задачи: добавляем как пункты на дату их дедлайна
+  const dateSet = new Set(dates);
+  for (const t of readTasks()) {
+    if (t.status === 'Archived' || !t.deadline) continue;
+    const taskDate = toISODate(new Date(t.deadline));
+    if (!dateSet.has(taskDate)) continue;
+    const row = out[taskDate] ?? { total: 0, done: 0 };
+    row.total++;
+    if (t.status === 'Resolved') row.done++;
+    out[taskDate] = row;
+  }
+
+  return out;
+}
+
+/**
+ * Полные списки пунктов для каждой переданной даты — одним проходом по хранилищу.
+ * Возвращает `Record<'YYYY-MM-DD', DisplayItem[]>`; пустые дни отсутствуют в результате.
+ *
+ * Используется месячной сеткой для рендера мини-полосок в ячейках.
+ */
+export function getMonthItems(dates: string[]): Record<string, DisplayItem[]> {
+  const allItems     = readItems();
+  const allPatterns  = readPatterns();
+  const allOverrides = readOverrides();
+  const allTasks     = readTasks();
+  const todayMs      = Date.now();
+
+  // Группируем по дате — чтобы не сканировать массивы для каждого из 42 дней.
+  const itemsByDate = new Map<string, PlanItem[]>();
+  for (const i of allItems) {
+    const arr = itemsByDate.get(i.date) ?? [];
+    arr.push(i);
+    itemsByDate.set(i.date, arr);
+  }
+
+  const tasksByDate = new Map<string, typeof allTasks>();
+  for (const t of allTasks) {
+    if (t.status === 'Archived' || !t.deadline) continue;
+    const d = toISODate(new Date(t.deadline));
+    const arr = tasksByDate.get(d) ?? [];
+    arr.push(t);
+    tasksByDate.set(d, arr);
+  }
+
+  const dateSet = new Set(dates);
+  const out: Record<string, DisplayItem[]> = {};
+
+  for (const date of dateSet) {
+    const wd = weekdayOf(date);
+    const result: DisplayItem[] = [];
+
+    // PlanItem
+    for (const i of itemsByDate.get(date) ?? []) {
+      result.push({ ...i, kind: 'item' });
+    }
+
+    // Pattern occurrences
+    for (const p of allPatterns) {
+      if (!p.active || !p.weekdays.includes(wd)) continue;
+      const ov = findOverride(allOverrides, p.id, date);
+      if (ov?.skipped) continue;
+      result.push({
+        kind:       'occurrence',
+        id:         occurrenceId(p.id, date),
+        pattern_id: p.id,
+        date,
+        title:      p.title,
+        note:       p.note,
+        time:       p.time,
+        priority:   p.priority,
+        done:       Boolean(ov?.done),
+      });
+    }
+
+    // Канбан-задачи с дедлайном на эту дату
+    for (const t of tasksByDate.get(date) ?? []) {
+      result.push({
+        kind:     'task',
+        id:       `task:${t.id}`,
+        task_id:  t.id,
+        date,
+        title:    t.title,
+        note:     t.description,
+        time:     null,
+        priority: t.priority,
+        done:     t.status === 'Resolved',
+        overdue:  new Date(t.deadline!).getTime() < todayMs && t.status !== 'Resolved',
+      });
+    }
+
+    if (result.length > 0) out[date] = result.sort(sortDisplay);
+  }
+
   return out;
 }
 
@@ -158,11 +274,14 @@ function upsertOverride(patternId: string, date: string, patch: Partial<PatternO
 }
 
 /** Универсальный toggle «сделано» для любого DisplayItem. */
-export function togglePlanDone(item: DisplayItem): void {
+export async function togglePlanDone(item: DisplayItem): Promise<void> {
   if (item.kind === 'item') {
     updateItem(item.id, { done: !item.done });
-  } else {
+  } else if (item.kind === 'occurrence') {
     upsertOverride(item.pattern_id, item.date, { done: !item.done });
+  } else {
+    // kind === 'task' — меняем статус канбан-задачи
+    await updateTaskStatus(item.task_id, item.done ? 'In Progress' : 'Resolved');
   }
 }
 

@@ -1,6 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
-  getDayItems, getMonthSummary, getPatterns,
+  getDayItems, getMonthSummary, getMonthItems, getPatterns,
   addItem, updateItem, deleteItem,
   togglePlanDone, removeOccurrence, detachOccurrence,
   createPattern, updatePattern, togglePattern, deletePattern,
@@ -10,13 +10,21 @@ import { monthGrid, toISODate } from '@/lib/date';
 import type { DisplayItem, RecurrencePattern } from '@/types/plan';
 
 const PLAN_KEY = ['plan'] as const;
+const TASKS_KEY = ['tasks'] as const;
 
-/** Любая мутация планировщика инвалидирует весь поддерево 'plan'. */
-function usePlanMutation<TArgs>(fn: (args: TArgs) => void) {
+/**
+ * Любая мутация планировщика инвалидирует поддерево 'plan'.
+ * Дополнительно инвалидируем 'tasks', потому что getDayItems/getMonthSummary
+ * читают и канбан-задачи — а togglePlanDone для task-айтема меняет их статус.
+ */
+function usePlanMutation<TArgs>(fn: (args: TArgs) => unknown | Promise<unknown>) {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: async (args: TArgs) => fn(args),
-    onSuccess: () => qc.invalidateQueries({ queryKey: PLAN_KEY }),
+    mutationFn: async (args: TArgs) => { await fn(args); },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: PLAN_KEY });
+      qc.invalidateQueries({ queryKey: TASKS_KEY });
+    },
   });
 }
 
@@ -36,6 +44,17 @@ export function useMonthSummary(year: number, month: number) {
     queryFn: () => {
       const dates = monthGrid(year, month).flat().map(toISODate);
       return getMonthSummary(dates);
+    },
+    staleTime: 5_000,
+  });
+}
+
+export function useMonthItems(year: number, month: number) {
+  return useQuery({
+    queryKey: [...PLAN_KEY, 'month-items', year, month],
+    queryFn: () => {
+      const dates = monthGrid(year, month).flat().map(toISODate);
+      return getMonthItems(dates);
     },
     staleTime: 5_000,
   });

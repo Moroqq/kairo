@@ -1,9 +1,13 @@
+import { useEffect } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { useAuthStore } from '@/stores/auth.store';
+import { useTheme } from '@/stores/theme.store';
+import { applyTheme } from '@/themes/themes';
 import { ToastProvider } from '@/components/ui/Toast';
 import { AppShell } from '@/components/layout/AppShell';
 import { LockScreen } from '@/pages/LockScreen';
+import { FocusPage } from '@/pages/FocusPage';
 import { Dashboard } from '@/pages/Dashboard';
 import { CalendarPage } from '@/pages/CalendarPage';
 import { EventLog } from '@/pages/EventLog';
@@ -16,6 +20,10 @@ const queryClient = new QueryClient({
 
 export default function App() {
   const isUnlocked = useAuthStore((s) => s.isUnlocked);
+  const theme = useTheme();
+
+  // Тема применяется до раннего return — работает и на lock-экране
+  useEffect(() => applyTheme(theme), [theme]);
 
   if (!isUnlocked) {
     return (
@@ -31,10 +39,11 @@ export default function App() {
         <BrowserRouter>
           <AppShell>
             <Routes>
-              <Route path="/"         element={<Dashboard />} />
+              <Route path="/"         element={<FocusPage />} />
+              <Route path="/board"    element={<Dashboard />} />
               <Route path="/calendar" element={<CalendarPage />} />
               <Route path="/log"      element={<EventLog />} />
-              <Route path="*"    element={<Navigate to="/" replace />} />
+              <Route path="*"         element={<Navigate to="/" replace />} />
             </Routes>
           </AppShell>
         </BrowserRouter>

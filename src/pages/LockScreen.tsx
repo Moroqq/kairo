@@ -11,6 +11,7 @@ import { motion } from 'framer-motion';
 import { Button } from '@/components/ui/Button';
 import { MatrixRain } from '@/components/layout/MatrixRain';
 import { useAuthStore } from '@/stores/auth.store';
+import { useTheme } from '@/stores/theme.store';
 
 const storage = {
   get: (key: string) => localStorage.getItem(`kairo_auth_${key}`),
@@ -142,6 +143,7 @@ function MaskedPasswordInput({
 
 export function LockScreen() {
   const unlock = useAuthStore((s) => s.unlock);
+  const theme  = useTheme();
   const [isSetup,  setIsSetup]  = useState<boolean | null>(null);
   const [password, setPassword] = useState('');
   const [confirm,  setConfirm]  = useState('');
@@ -207,7 +209,7 @@ export function LockScreen() {
 
   return (
     <div className="win-desktop h-full flex items-center justify-center relative">
-      <MatrixRain />
+      {theme.fx && <MatrixRain />}
 
       <motion.div
         initial={{ opacity: 0, scale: 0.97 }}
@@ -216,7 +218,7 @@ export function LockScreen() {
         className="flex flex-col relative"
         style={{
           width: 380,
-          background: 'rgba(5, 8, 5, 0.95)',
+          background: 'var(--overlay-bg)',
           border: '1px solid var(--accent)',
           boxShadow: '0 0 0 1px var(--accent), 0 0 40px var(--accent-glow), 0 0 100px rgba(0,255,65,0.15)',
           zIndex: 5,

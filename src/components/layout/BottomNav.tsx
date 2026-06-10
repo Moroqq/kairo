@@ -12,7 +12,7 @@ export function BottomNav() {
       className="flex items-stretch flex-shrink-0"
       style={{
         height: 56,
-        background: '#020402',
+        background: 'var(--statusbar-bg)',
         borderTop: '1px solid var(--border)',
         paddingBottom: 'env(safe-area-inset-bottom)',
       }}

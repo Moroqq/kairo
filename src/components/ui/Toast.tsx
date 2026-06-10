@@ -70,7 +70,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
                 transition={{ duration: 0.15 }}
                 className="pointer-events-auto flex items-center gap-2 px-3 py-2 font-mono text-xs"
                 style={{
-                  background: 'rgba(5, 8, 5, 0.96)',
+                  background: 'var(--overlay-bg)',
                   border: `1px solid ${cfg.color}`,
                   boxShadow: `0 0 0 1px ${cfg.color}, 0 0 18px ${cfg.glow}`,
                   color: 'var(--text-primary)',

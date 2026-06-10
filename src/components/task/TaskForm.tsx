@@ -4,6 +4,7 @@ import { STATUS_LABELS } from '@/types';
 import { Input, Textarea } from '@/components/ui/Input';
 import { DayMonthInput } from '@/components/ui/DayMonthInput';
 import { Button } from '@/components/ui/Button';
+import { deadlineISOFromDate } from '@/lib/date';
 
 const STATUSES: TaskStatus[] = ['New', 'In Progress', 'Waiting Response', 'Escalation', 'Blocked', 'Resolved'];
 
@@ -28,7 +29,7 @@ export function TaskForm({ task, onSave, onCancel, loading }: TaskFormProps) {
       description: description.trim() || null,
       category:    category.trim()    || null,
       status,
-      deadline:    deadline ? new Date(deadline).toISOString() : null,
+      deadline:    deadline ? deadlineISOFromDate(deadline) : null,
     });
   };
 

@@ -44,7 +44,7 @@ export function TaskCard({ task }: TaskCardProps) {
     transform:  CSS.Translate.toString(transform),
     opacity:    isDragging ? 0.7 : 1,
     cursor:     isDragging ? 'grabbing' : 'default',
-    background: '#0A0F0A',
+    background: 'var(--bg-card)',
     border:     '1px solid var(--border)',
     boxShadow:  isDragging
       ? '0 0 0 1px var(--accent), 0 0 20px var(--accent-glow), 0 4px 16px rgba(0,0,0,0.6)'

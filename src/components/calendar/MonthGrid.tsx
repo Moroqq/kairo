@@ -1,7 +1,10 @@
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { monthGrid, toISODate, todayISO } from '@/lib/date';
 import { MONTHS_RU, WEEKDAYS_RU, WEEKDAY_ORDER } from '@/types/plan';
-import { useMonthSummary } from '@/hooks/usePlan';
+import type { DisplayItem } from '@/types/plan';
+import { PRIORITY_CONFIG } from '@/types';
+import { useMonthItems } from '@/hooks/usePlan';
+import { useIsMobile } from '@/hooks/useMediaQuery';
 
 interface Props {
   year: number;
@@ -14,9 +17,12 @@ interface Props {
 }
 
 export function MonthGrid({ year, month, selectedDate, onSelect, onPrev, onNext, onToday }: Props) {
-  const { data: summary } = useMonthSummary(year, month);
+  const { data: itemsByDate } = useMonthItems(year, month);
+  const isMobile = useIsMobile();
   const weeks = monthGrid(year, month);
   const today = todayISO();
+
+  const MAX_VISIBLE = isMobile ? 2 : 3;
 
   return (
     <div className="flex flex-col h-full min-h-0">
@@ -67,59 +73,142 @@ export function MonthGrid({ year, month, selectedDate, onSelect, onPrev, onNext,
       </div>
 
       {/* Day cells */}
-      <div className="grid flex-1 min-h-0" style={{ gridTemplateColumns: 'repeat(7, 1fr)', gridAutoRows: '1fr', gap: 2, padding: 2 }}>
+      <div
+        className="grid flex-1 min-h-0"
+        style={{
+          gridTemplateColumns: 'repeat(7, 1fr)',
+          gridAutoRows: '1fr',
+          gap: 2,
+          padding: 2,
+        }}
+      >
         {weeks.flat().map((d) => {
           const iso = toISODate(d);
           const inMonth = d.getMonth() === month;
           const isToday = iso === today;
           const isSelected = iso === selectedDate;
-          const s = summary?.[iso];
-          const allDone = s && s.done === s.total;
+          const dayItems = itemsByDate?.[iso] ?? [];
+          const hasOverdue = dayItems.some((i) => i.kind === 'task' && i.overdue && !i.done);
+          const total = dayItems.length;
+          const visible = dayItems.slice(0, MAX_VISIBLE);
+          const hiddenCount = total - visible.length;
 
           return (
             <button
               key={iso}
               type="button"
               onClick={() => onSelect(iso)}
-              className="flex flex-col items-stretch p-1 transition-colors"
+              className="flex flex-col items-stretch transition-colors text-left"
               style={{
-                minHeight: 44,
+                minHeight: 64,
                 background: isSelected ? 'var(--accent-dim)' : 'transparent',
-                border: `1px solid ${isSelected ? 'var(--accent)' : isToday ? 'var(--border-strong)' : 'var(--border-subtle)'}`,
+                border: `1px solid ${
+                  isSelected ? 'var(--accent)'
+                  : hasOverdue ? 'var(--border-danger)'
+                  : isToday ? 'var(--border-strong)'
+                  : 'var(--border-subtle)'
+                }`,
+                boxShadow: hasOverdue && !isSelected ? 'inset 0 0 12px rgba(255,0,60,0.08)' : 'none',
                 opacity: inMonth ? 1 : 0.35,
                 cursor: 'pointer',
+                padding: '3px 4px 4px',
+                gap: 2,
+                overflow: 'hidden',
               }}
             >
-              <span
-                className="font-mono"
-                style={{
-                  fontSize: 12,
-                  textAlign: 'left',
-                  color: isToday ? 'var(--accent)' : 'var(--text-primary)',
-                  fontWeight: isToday ? 700 : 400,
-                  textShadow: isToday ? '0 0 6px var(--accent-glow)' : 'none',
-                }}
-              >
-                {d.getDate()}
-              </span>
-              {s && (
-                <span className="flex items-center gap-1 mt-auto" style={{ minHeight: 12 }}>
-                  <span
-                    style={{
-                      width: 6, height: 6, flexShrink: 0,
-                      background: allDone ? 'var(--text-muted)' : 'var(--accent)',
-                      boxShadow: allDone ? 'none' : '0 0 4px var(--accent-glow)',
-                    }}
-                  />
-                  <span className="font-mono" style={{ fontSize: 9, color: 'var(--text-muted)' }}>
-                    {s.done}/{s.total}
-                  </span>
+              {/* Day number */}
+              <div className="flex items-center justify-between" style={{ minHeight: 14 }}>
+                <span
+                  className="font-mono"
+                  style={{
+                    fontSize: 11,
+                    color: isToday ? 'var(--accent)' : 'var(--text-primary)',
+                    fontWeight: isToday ? 700 : 400,
+                    textShadow: isToday ? '0 0 6px var(--accent-glow)' : 'none',
+                    lineHeight: 1,
+                  }}
+                >
+                  {d.getDate()}
                 </span>
+                {total > 0 && (
+                  <span
+                    className="font-mono"
+                    style={{
+                      fontSize: 8,
+                      color: 'var(--text-dim)',
+                      lineHeight: 1,
+                    }}
+                  >
+                    {dayItems.filter((i) => i.done).length}/{total}
+                  </span>
+                )}
+              </div>
+
+              {/* Item mini-bars */}
+              {visible.length > 0 && (
+                <div className="flex flex-col" style={{ gap: 1 }}>
+                  {visible.map((item) => (
+                    <MiniBar key={item.id} item={item} />
+                  ))}
+                  {hiddenCount > 0 && (
+                    <span
+                      className="font-mono"
+                      style={{
+                        fontSize: 8,
+                        color: 'var(--text-muted)',
+                        paddingLeft: 4,
+                        lineHeight: 1.1,
+                      }}
+                    >
+                      +{hiddenCount}
+                    </span>
+                  )}
+                </div>
               )}
             </button>
           );
         })}
       </div>
+    </div>
+  );
+}
+
+/* ──────────────────────────────────────────────────────────── */
+
+function MiniBar({ item }: { item: DisplayItem }) {
+  const cfg = PRIORITY_CONFIG[item.priority];
+  const overdue = item.kind === 'task' && item.overdue && !item.done;
+  const stripeColor = overdue ? 'var(--danger)' : cfg.color;
+  const stripeGlow  = overdue ? 'rgba(255,0,60,0.6)' : `${cfg.color}80`;
+
+  return (
+    <div
+      className="font-mono"
+      style={{
+        display: 'flex',
+        alignItems: 'center',
+        gap: 3,
+        fontSize: 9,
+        lineHeight: 1.15,
+        paddingLeft: 4,
+        borderLeft: `2px solid ${stripeColor}`,
+        boxShadow: overdue ? `-1px 0 4px ${stripeGlow}` : 'none',
+        color: item.done ? 'var(--text-dim)' : 'var(--text-secondary)',
+        textDecoration: item.done ? 'line-through' : 'none',
+        opacity: item.done ? 0.6 : 1,
+        whiteSpace: 'nowrap',
+        overflow: 'hidden',
+        textOverflow: 'ellipsis',
+        minHeight: 11,
+      }}
+      title={item.title}
+    >
+      {item.time && (
+        <span style={{ color: 'var(--accent)', flexShrink: 0 }}>{item.time}</span>
+      )}
+      <span style={{ overflow: 'hidden', textOverflow: 'ellipsis' }}>
+        {item.title}
+      </span>
     </div>
   );
 }

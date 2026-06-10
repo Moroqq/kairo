@@ -44,7 +44,10 @@ export interface PatternOverride {
 }
 
 /**
- * Элемент списка дня — либо реальный PlanItem, либо виртуальное вхождение шаблона.
+ * Элемент списка дня. Три источника:
+ *   - 'item'       — реальный PlanItem ежедневника
+ *   - 'occurrence' — виртуальное вхождение шаблона-расписания
+ *   - 'task'       — задача из канбана с дедлайном на этот день
  * `kind` различает их: от этого зависит, как сохранять отметку/удаление.
  */
 export type DisplayItem =
@@ -59,6 +62,18 @@ export type DisplayItem =
       time: string | null;
       priority: Priority;
       done: boolean;
+    }
+  | {
+      kind: 'task';
+      id: string;            // виртуальный id: `task:${task.id}`
+      task_id: string;
+      date: string;
+      title: string;
+      note: string | null;
+      time: string | null;   // не используем (у Task нет HH:MM)
+      priority: Priority;
+      done: boolean;
+      overdue: boolean;
     };
 
 // Индекс = Date.getDay(). Отображаемый порядок — понедельник-первый.

@@ -3,6 +3,7 @@ import type { TaskPreview } from '@/types';
 import { Button } from '@/components/ui/Button';
 import { Input, Textarea } from '@/components/ui/Input';
 import { DayMonthInput } from '@/components/ui/DayMonthInput';
+import { deadlineISOFromDate } from '@/lib/date';
 
 interface ParsedPreviewProps {
   preview: TaskPreview;
@@ -68,7 +69,7 @@ export function ParsedPreview({ preview, onConfirm, onBack, loading }: ParsedPre
         <DayMonthInput
           label="срок"
           value={deadlineValue}
-          onChange={(v) => update('deadline', v ? new Date(v).toISOString() : null)}
+          onChange={(v) => update('deadline', v ? deadlineISOFromDate(v) : null)}
           data-selectable
         />
       </div>

@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/Button';
 import { useCreateTask } from '@/hooks/useTasks';
 import { useToast } from '@/components/ui/Toast';
 import { useUIStore } from '@/stores/ui.store';
+import { deadlineISOFromDate } from '@/lib/date';
 
 export function ManualCapture() {
   const [title,       setTitle]       = useState('');
@@ -24,7 +25,7 @@ export function ManualCapture() {
         description: description.trim() || undefined,
         priority:    'C',
         category:    category.trim() || undefined,
-        deadline:    deadline ? new Date(deadline).toISOString() : null,
+        deadline:    deadline ? deadlineISOFromDate(deadline) : null,
       });
       toast('Задача создана');
       closeCapture();

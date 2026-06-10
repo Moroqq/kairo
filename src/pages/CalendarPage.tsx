@@ -39,7 +39,7 @@ export function CalendarPage() {
       {/* Toolbar */}
       <div
         className="flex items-center gap-2 px-3 flex-shrink-0 font-mono"
-        style={{ minHeight: 40, borderBottom: '1px solid var(--border-subtle)', background: 'linear-gradient(90deg, rgba(0,255,65,0.05) 0%, transparent 70%)' }}
+        style={{ minHeight: 40, borderBottom: '1px solid var(--border-subtle)', background: 'linear-gradient(90deg, var(--accent-dim) 0%, transparent 70%)' }}
       >
         <span className="neon-text" style={{ fontSize: 13, fontWeight: 700, letterSpacing: 2 }}>
           ПЛАН
@@ -97,7 +97,7 @@ export function CalendarPage() {
               className="relative flex flex-col"
               style={{
                 maxHeight: '80vh',
-                background: 'rgba(8, 12, 8, 0.98)',
+                background: 'var(--overlay-bg)',
                 borderTop: '1px solid var(--accent)',
                 boxShadow: '0 0 32px var(--accent-glow)',
               }}

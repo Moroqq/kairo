@@ -33,7 +33,7 @@ export function Modal({ open, onClose, title, children, width = 520 }: ModalProp
             style={{
               width,
               maxHeight: 'calc(100vh - 80px)',
-              background: 'rgba(8, 12, 8, 0.96)',
+              background: 'var(--overlay-bg)',
               border: '1px solid var(--accent)',
               boxShadow: '0 0 0 1px var(--accent), 0 0 32px var(--accent-glow), 0 8px 40px rgba(0,0,0,0.8)',
             }}
