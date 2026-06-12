@@ -311,9 +311,9 @@ input, textarea, [data-selectable] { user-select: text; }
   font-size: 11px;
 }
 
-/* Рукописный шрифт для «Листка» (поддерживает кириллицу) */
+/* Шрифт «Листка» — обычный моноширинный, как и весь интерфейс */
 .font-hand {
-  font-family: "Caveat", "Segoe Script", cursive;
+  font-family: "JetBrains Mono", "Fira Code", "IBM Plex Mono", monospace;
 }
 
 /* ============================================================

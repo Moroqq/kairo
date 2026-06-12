@@ -41,7 +41,7 @@ export function SheetLine({ item, onToggle, onDelete }: Props) {
         <span
           className="font-hand truncate"
           style={{
-            fontSize: 21,
+            fontSize: 14,
             lineHeight: `${LINE_HEIGHT}px`,
             color: item.done ? 'var(--text-dim)' : 'var(--text-primary)',
             transition: 'color 200ms',

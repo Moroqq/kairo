@@ -67,7 +67,7 @@ export function DailySheet({ date }: Props) {
           className="flex items-end justify-between gap-2"
           style={{ padding: '14px 16px 6px 56px', borderBottom: '2px solid var(--border)' }}
         >
-          <span className="font-hand" style={{ fontSize: 28, fontWeight: 600, color: 'var(--text-bright)', lineHeight: 1.1 }}>
+          <span className="font-hand" style={{ fontSize: 17, fontWeight: 600, color: 'var(--text-bright)', lineHeight: 1.1 }}>
             {heading}
           </span>
           <span className="font-mono flex-shrink-0" style={{ fontSize: 10, color: 'var(--text-muted)', paddingBottom: 6 }}>
@@ -92,7 +92,7 @@ export function DailySheet({ date }: Props) {
           />
 
           {list.length === 0 && (
-            <p className="font-hand" style={{ fontSize: 19, color: 'var(--text-dim)', lineHeight: `${LINE_HEIGHT}px` }}>
+            <p className="font-hand" style={{ fontSize: 12, color: 'var(--text-dim)', lineHeight: `${LINE_HEIGHT}px` }}>
               пока пусто — запиши что-нибудь…
             </p>
           )}
@@ -112,7 +112,7 @@ export function DailySheet({ date }: Props) {
             <input
               className="font-hand flex-1 min-w-0 outline-none"
               style={{
-                fontSize: 20,
+                fontSize: 13,
                 height: '100%',
                 background: 'transparent',
                 border: 'none',

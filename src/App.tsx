@@ -11,6 +11,7 @@ import { FocusPage } from '@/pages/FocusPage';
 import { Dashboard } from '@/pages/Dashboard';
 import { CalendarPage } from '@/pages/CalendarPage';
 import { TodoPage } from '@/pages/TodoPage';
+import { WeeksPage } from '@/pages/WeeksPage';
 import { EventLog } from '@/pages/EventLog';
 
 const queryClient = new QueryClient({
@@ -44,6 +45,7 @@ export default function App() {
               <Route path="/board"    element={<Dashboard />} />
               <Route path="/calendar" element={<CalendarPage />} />
               <Route path="/todo"     element={<TodoPage />} />
+              <Route path="/weeks"    element={<WeeksPage />} />
               <Route path="/log"      element={<EventLog />} />
               <Route path="*"         element={<Navigate to="/" replace />} />
             </Routes>

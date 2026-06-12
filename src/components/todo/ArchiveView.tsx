@@ -37,7 +37,7 @@ export function ArchiveView() {
             }}
           >
             <div className="flex items-baseline justify-between gap-2" style={{ marginBottom: 4 }}>
-              <span className="font-hand" style={{ fontSize: 22, fontWeight: 600, color: 'var(--text-secondary)' }}>
+              <span className="font-hand" style={{ fontSize: 14, fontWeight: 600, color: 'var(--text-secondary)' }}>
                 {heading}
               </span>
               <span className="font-mono" style={{ fontSize: 10, color: 'var(--text-dim)' }}>
@@ -53,7 +53,7 @@ export function ArchiveView() {
                 />
                 <span
                   className="font-hand truncate flex-1 min-w-0"
-                  style={{ fontSize: 18, color: 'var(--text-muted)', textDecoration: 'line-through', textDecorationColor: 'var(--text-dim)' }}
+                  style={{ fontSize: 12, color: 'var(--text-muted)', textDecoration: 'line-through', textDecorationColor: 'var(--text-dim)' }}
                 >
                   {e.title}
                 </span>

@@ -6,10 +6,11 @@ import { Calendar } from './scenes/Calendar';
 import { Sheet } from './scenes/Sheet';
 import { Themes } from './scenes/Themes';
 import { Outro } from './scenes/Outro';
+import { Credits } from './scenes/Credits';
 
 const T = 12; // длительность перехода
 
-// Сцены: 87+117+117+117+102+60 = 600; минус 5 переходов по 12 = 540 кадров (18s @ 30fps)
+// Сцены: 87+117+117+117+102+60+66 = 666; минус 6 переходов по 12 = 594 кадра (~20s @ 30fps)
 const SCENES = [
   { C: Intro,    d: 87 },
   { C: Board,    d: 117 },
@@ -17,6 +18,7 @@ const SCENES = [
   { C: Sheet,    d: 117 },
   { C: Themes,   d: 102 },
   { C: Outro,    d: 60 },
+  { C: Credits,  d: 80 },
 ];
 
 export const PROMO_DURATION = SCENES.reduce((s, x) => s + x.d, 0) - (SCENES.length - 1) * T;
