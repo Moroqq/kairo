@@ -1,4 +1,4 @@
-import { Target, LayoutDashboard, CalendarDays, NotebookPen, BarChart3, ScrollText } from 'lucide-react';
+import { Target, LayoutDashboard, CalendarDays, NotebookPen, BarChart3, Wallet, ScrollText } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 
 export interface NavEntry {
@@ -15,5 +15,6 @@ export const NAV: NavEntry[] = [
   { to: '/calendar', label: 'план',    cmd: 'plan',  icon: CalendarDays     },
   { to: '/todo',     label: 'листок',  cmd: 'todo',  icon: NotebookPen      },
   { to: '/weeks',    label: 'итоги',   cmd: 'weeks', icon: BarChart3        },
+  { to: '/expenses', label: 'траты',   cmd: 'spend', icon: Wallet           },
   { to: '/log',      label: 'события', cmd: 'logs',  icon: ScrollText       },
 ];

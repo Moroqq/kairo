@@ -80,7 +80,7 @@ html.no-fx .matrix-canvas { display: none; }
 html.no-fx .win-desktop::after { display: none; }
 
 * { box-sizing: border-box; margin: 0; padding: 0; }
-html, body, #root { height: 100%; overflow: hidden; background: var(--bg-base); }
+html, body, #root { height: 100%; height: 100dvh; overflow: hidden; background: var(--bg-base); }
 
 body {
   font-family: var(--font-ui);
@@ -445,8 +445,15 @@ html.soft ::-webkit-scrollbar-track { background: var(--bg-elevated); border-lef
    MOBILE (≤767px) — тач-оптимизация
    ============================================================ */
 @media (max-width: 767px) {
-  /* 16px на инпутах — иначе iOS Safari зумит при фокусе */
-  input, textarea, select { font-size: 16px; }
+  /* 16px на инпутах — иначе iOS Safari зумит при фокусе.
+     !important перебивает инлайновые fontSize в полях (DailySheet и т.п.) */
+  input, textarea, select { font-size: 16px !important; }
+
+  /* safe-area-inset-top: на iPhone с чёлкой титул-бар лезет под системную строку */
+  .titlebar {
+    padding-top: env(safe-area-inset-top);
+    height: calc(24px + env(safe-area-inset-top));
+  }
 
   /* Убираем vignette/scanlines overlay — на маленьком экране мешают читаемости */
   .win-desktop::after { display: none; }

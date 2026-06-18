@@ -115,28 +115,40 @@ export function TaskCard({ task }: TaskCardProps) {
               disabled={updateStatus.isPending}
               className="advance-btn flex items-center justify-center flex-shrink-0"
               style={{
-                width: 22,
-                height: 18,
+                /* Тач-зона ≥44px, при этом видимая рамка остаётся компактной (внутренний span).
+                   Прозрачный padding расширяет hit-area, не распирая строку визуально. */
+                width: 44,
+                height: 44,
+                margin: -13,
                 background: 'transparent',
-                border: '1px solid var(--border)',
+                border: 'none',
                 color: 'var(--accent)',
                 cursor: updateStatus.isPending ? 'wait' : 'pointer',
                 padding: 0,
-                transition: 'all 140ms ease-out',
               }}
               title={`следующий этап: ${NEXT_LABELS[nextStatus] ?? nextStatus}`}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.background  = 'var(--accent-dim)';
-                e.currentTarget.style.borderColor = 'var(--accent)';
-                e.currentTarget.style.boxShadow   = '0 0 0 1px var(--accent), 0 0 10px var(--accent-glow)';
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.background  = 'transparent';
-                e.currentTarget.style.borderColor = 'var(--border)';
-                e.currentTarget.style.boxShadow   = 'none';
-              }}
             >
-              <ChevronRight size={12} />
+              <span
+                className="flex items-center justify-center"
+                style={{
+                  width: 22,
+                  height: 18,
+                  border: '1px solid var(--border)',
+                  transition: 'all 140ms ease-out',
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.background  = 'var(--accent-dim)';
+                  e.currentTarget.style.borderColor = 'var(--accent)';
+                  e.currentTarget.style.boxShadow   = '0 0 0 1px var(--accent), 0 0 10px var(--accent-glow)';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.background  = 'transparent';
+                  e.currentTarget.style.borderColor = 'var(--border)';
+                  e.currentTarget.style.boxShadow   = 'none';
+                }}
+              >
+                <ChevronRight size={12} />
+              </span>
             </button>
           )}
         </div>

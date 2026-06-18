@@ -1,5 +1,6 @@
 import { ReactNode, useEffect } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
+import { useIsMobile } from '@/hooks/useMediaQuery';
 
 interface ModalProps {
   open: boolean;
@@ -10,6 +11,8 @@ interface ModalProps {
 }
 
 export function Modal({ open, onClose, title, children, width = 520 }: ModalProps) {
+  const isMobile = useIsMobile();
+
   useEffect(() => {
     const handler = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose(); };
     if (open) document.addEventListener('keydown', handler);
@@ -20,7 +23,7 @@ export function Modal({ open, onClose, title, children, width = 520 }: ModalProp
     <AnimatePresence>
       {open && (
         <motion.div
-          className="fixed inset-0 z-50 flex items-center justify-center"
+          className={`fixed inset-0 z-50 flex justify-center ${isMobile ? 'items-end' : 'items-center'}`}
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
@@ -31,15 +34,16 @@ export function Modal({ open, onClose, title, children, width = 520 }: ModalProp
           <motion.div
             className="relative z-10 flex flex-col"
             style={{
-              width,
-              maxHeight: 'calc(100vh - 80px)',
+              width: isMobile ? '100%' : width,
+              maxWidth: isMobile ? '100%' : undefined,
+              maxHeight: isMobile ? '90dvh' : 'calc(100vh - 80px)',
               background: 'var(--overlay-bg)',
               border: '1px solid var(--accent)',
               boxShadow: '0 0 0 1px var(--accent), 0 0 32px var(--accent-glow), 0 8px 40px rgba(0,0,0,0.8)',
             }}
-            initial={{ opacity: 0, scale: 0.96, y: 8 }}
-            animate={{ opacity: 1, scale: 1, y: 0 }}
-            exit={{ opacity: 0, scale: 0.96 }}
+            initial={isMobile ? { y: '100%' } : { opacity: 0, scale: 0.96, y: 8 }}
+            animate={isMobile ? { y: 0 } : { opacity: 1, scale: 1, y: 0 }}
+            exit={isMobile ? { y: '100%' } : { opacity: 0, scale: 0.96 }}
             transition={{ duration: 0.16, ease: 'easeOut' }}
             onClick={(e) => e.stopPropagation()}
           >

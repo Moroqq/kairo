@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect, useRef } from 'react';
 import { Image, Upload, X } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { LoadingDots } from '@/components/ui/Spinner';
@@ -17,6 +17,13 @@ export function ImageCapture() {
   const { toast }   = useToast();
   const createTask  = useCreateTask();
   const closeCapture = useUIStore((s) => s.closeCapture);
+
+  // Освобождаем blob-URL предпросмотра при смене картинки / размонтировании.
+  // Cleanup получает предыдущий imgUrl по замыканию — покрывает все set-сайты, включая сброс в null.
+  useEffect(() => {
+    if (!imgUrl) return;
+    return () => URL.revokeObjectURL(imgUrl);
+  }, [imgUrl]);
 
   const processFile = useCallback(async (file: File) => {
     if (!file.type.startsWith('image/')) { toast('Поддерживаются только изображения', 'error'); return; }

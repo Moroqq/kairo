@@ -1,5 +1,6 @@
 import { ReactNode, useEffect } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
+import { useIsMobile } from '@/hooks/useMediaQuery';
 
 interface DrawerProps {
   open: boolean;
@@ -10,6 +11,8 @@ interface DrawerProps {
 }
 
 export function Drawer({ open, onClose, title, children, width = 400 }: DrawerProps) {
+  const isMobile = useIsMobile();
+
   useEffect(() => {
     const handler = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose(); };
     if (open) document.addEventListener('keydown', handler);
@@ -30,16 +33,18 @@ export function Drawer({ open, onClose, title, children, width = 400 }: DrawerPr
             onClick={onClose}
           />
           <motion.div
-            className="fixed top-3 right-3 bottom-3 z-40 flex flex-col"
+            className={isMobile ? 'fixed left-0 right-0 bottom-0 z-40 flex flex-col' : 'fixed top-3 right-3 bottom-3 z-40 flex flex-col'}
             style={{
-              width,
+              width: isMobile ? '100%' : width,
+              height: isMobile ? '88dvh' : undefined,
+              top: isMobile ? 'auto' : undefined,
               background: 'var(--overlay-bg)',
               border: '1px solid var(--accent)',
               boxShadow: '0 0 0 1px var(--accent), 0 0 32px var(--accent-glow), -8px 0 32px rgba(0,0,0,0.8)',
             }}
-            initial={{ x: width + 20, opacity: 0 }}
-            animate={{ x: 0, opacity: 1 }}
-            exit={{ x: width + 20, opacity: 0 }}
+            initial={isMobile ? { y: '100%', opacity: 0 } : { x: width + 20, opacity: 0 }}
+            animate={isMobile ? { y: 0, opacity: 1 } : { x: 0, opacity: 1 }}
+            exit={isMobile ? { y: '100%', opacity: 0 } : { x: width + 20, opacity: 0 }}
             transition={{ duration: 0.2, ease: 'easeOut' }}
           >
             <div className="titlebar">

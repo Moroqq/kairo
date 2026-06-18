@@ -1,4 +1,4 @@
-import { useState, useRef, useCallback } from 'react';
+import { useState, useRef, useCallback, useEffect } from 'react';
 
 export type RecorderState = 'idle' | 'recording' | 'processing';
 
@@ -20,9 +20,11 @@ export function useAudioRecorder(): UseAudioRecorderReturn {
   const analyserRef      = useRef<AnalyserNode | null>(null);
   const animFrameRef     = useRef<number | null>(null);
   const streamRef        = useRef<MediaStream | null>(null);
+  const audioCtxRef      = useRef<AudioContext | null>(null);
 
   const startVolumeMonitor = (stream: MediaStream) => {
     const ctx      = new AudioContext();
+    audioCtxRef.current = ctx;
     const source   = ctx.createMediaStreamSource(stream);
     const analyser = ctx.createAnalyser();
     analyser.fftSize = 256;
@@ -41,8 +43,28 @@ export function useAudioRecorder(): UseAudioRecorderReturn {
 
   const stopVolumeMonitor = () => {
     if (animFrameRef.current) cancelAnimationFrame(animFrameRef.current);
+    analyserRef.current = null;
+    const ctx = audioCtxRef.current;
+    if (ctx && ctx.state !== 'closed') {
+      ctx.close().catch(() => {});
+    }
+    audioCtxRef.current = null;
     setVolume(0);
   };
+
+  // Cleanup на размонтировании: закрываем AudioContext и освобождаем поток
+  useEffect(() => {
+    return () => {
+      if (animFrameRef.current) cancelAnimationFrame(animFrameRef.current);
+      const ctx = audioCtxRef.current;
+      if (ctx && ctx.state !== 'closed') {
+        ctx.close().catch(() => {});
+      }
+      audioCtxRef.current = null;
+      streamRef.current?.getTracks().forEach((t) => t.stop());
+      streamRef.current = null;
+    };
+  }, []);
 
   const startRecording = useCallback(async () => {
     setError(null);
