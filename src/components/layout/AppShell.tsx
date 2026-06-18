@@ -1,6 +1,6 @@
 import { ReactNode, useEffect, useState } from 'react';
 import { Sidebar } from './Sidebar';
-import { BottomNav } from './BottomNav';
+import { MobileNavFab } from './MobileNavFab';
 import { Header } from './Header';
 import { MatrixRain } from './MatrixRain';
 import { TaskDrawer } from '@/components/task/TaskDrawer';
@@ -139,7 +139,7 @@ export function AppShell({ children }: AppShellProps) {
         </div>
         )}
 
-        {isMobile && <BottomNav />}
+        {isMobile && <MobileNavFab />}
       </div>
 
       <TaskDrawer />

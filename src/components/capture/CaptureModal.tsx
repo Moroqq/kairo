@@ -35,12 +35,13 @@ export function CaptureModal() {
                 active ? 'bevel-raised' : 'bevel-raised'
               }`}
               style={{
-                background: 'var(--bg-surface)',
-                color: active ? '#000' : 'var(--text-muted)',
+                background: active ? 'var(--accent-dim)' : 'var(--bg-surface)',
+                color: active ? 'var(--accent)' : 'var(--text-muted)',
                 fontWeight: active ? 700 : 500,
+                textShadow: active ? '0 0 6px var(--accent-glow)' : 'none',
                 marginBottom: active ? -2 : 0,
                 zIndex: active ? 2 : 1,
-                borderBottomColor: active ? 'var(--bg-surface)' : 'var(--edge-dark)',
+                borderBottomColor: active ? 'var(--accent-dim)' : 'var(--edge-dark)',
               }}
             >
               {tab.icon}

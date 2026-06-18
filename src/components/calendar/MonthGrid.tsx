@@ -22,36 +22,38 @@ export function MonthGrid({ year, month, selectedDate, onSelect, onPrev, onNext,
   const weeks = monthGrid(year, month);
   const today = todayISO();
 
-  const MAX_VISIBLE = isMobile ? 2 : 3;
+  const navBtn: React.CSSProperties = {
+    width: isMobile ? 44 : 36,
+    height: isMobile ? 44 : 36,
+    background: 'transparent',
+    border: '1px solid var(--border-subtle)',
+    color: 'var(--text-secondary)',
+    cursor: 'pointer',
+  };
 
   return (
-    <div className={`flex flex-col min-h-0 ${isMobile ? '' : 'h-full'}`}>
+    <div className="flex flex-col flex-1 min-h-0">
       {/* Month header */}
-      <div className="flex items-center gap-2 px-2 flex-shrink-0" style={{ minHeight: 44 }}>
-        <button
-          type="button" onClick={onPrev}
-          className="flex items-center justify-center" style={navBtn}
-          title="предыдущий месяц"
-        >
-          <ChevronLeft size={18} />
+      <div className="flex items-center gap-2 px-2 flex-shrink-0" style={{ minHeight: isMobile ? 52 : 44 }}>
+        <button type="button" onClick={onPrev} className="flex items-center justify-center" style={navBtn} title="предыдущий месяц">
+          <ChevronLeft size={isMobile ? 22 : 18} />
         </button>
-        <span className="neon-text flex-1 text-center" style={{ fontSize: 14, fontWeight: 700, letterSpacing: 2, textTransform: 'uppercase' }}>
+        <span
+          className="neon-text flex-1 text-center"
+          style={{ fontSize: isMobile ? 17 : 14, fontWeight: 700, letterSpacing: 2, textTransform: 'uppercase' }}
+        >
           {MONTHS_RU[month]} {year}
         </span>
         <button
           type="button" onClick={onToday}
-          className="bevel-raised flex items-center px-2 text-xs"
-          style={{ minHeight: 32, background: 'var(--bg-surface)', color: 'var(--text-secondary)' }}
+          className="bevel-raised flex items-center px-3 text-xs"
+          style={{ minHeight: isMobile ? 44 : 32, background: 'var(--bg-surface)', color: 'var(--text-secondary)' }}
           title="сегодня"
         >
           сегодня
         </button>
-        <button
-          type="button" onClick={onNext}
-          className="flex items-center justify-center" style={navBtn}
-          title="следующий месяц"
-        >
-          <ChevronRight size={18} />
+        <button type="button" onClick={onNext} className="flex items-center justify-center" style={navBtn} title="следующий месяц">
+          <ChevronRight size={isMobile ? 22 : 18} />
         </button>
       </div>
 
@@ -62,7 +64,7 @@ export function MonthGrid({ year, month, selectedDate, onSelect, onPrev, onNext,
             key={wd}
             className="text-center font-mono"
             style={{
-              fontSize: 10, padding: '4px 0',
+              fontSize: isMobile ? 11 : 10, padding: isMobile ? '6px 0' : '4px 0',
               color: wd === 0 || wd === 6 ? 'var(--text-muted)' : 'var(--text-dim)',
               textTransform: 'uppercase', letterSpacing: 1,
             }}
@@ -74,10 +76,10 @@ export function MonthGrid({ year, month, selectedDate, onSelect, onPrev, onNext,
 
       {/* Day cells */}
       <div
-        className={`grid ${isMobile ? '' : 'flex-1 min-h-0'}`}
+        className="grid flex-1 min-h-0"
         style={{
           gridTemplateColumns: 'repeat(7, 1fr)',
-          gridAutoRows: isMobile ? '46px' : '1fr',
+          gridAutoRows: isMobile ? 'minmax(58px, 1fr)' : '1fr',
           gap: 2,
           padding: 2,
         }}
@@ -90,8 +92,7 @@ export function MonthGrid({ year, month, selectedDate, onSelect, onPrev, onNext,
           const dayItems = itemsByDate?.[iso] ?? [];
           const hasOverdue = dayItems.some((i) => i.kind === 'task' && i.overdue && !i.done);
           const total = dayItems.length;
-          const visible = dayItems.slice(0, MAX_VISIBLE);
-          const hiddenCount = total - visible.length;
+          const doneCount = dayItems.filter((i) => i.done).length;
 
           return (
             <button
@@ -100,7 +101,7 @@ export function MonthGrid({ year, month, selectedDate, onSelect, onPrev, onNext,
               onClick={() => onSelect(iso)}
               className="flex flex-col items-stretch transition-colors text-left"
               style={{
-                minHeight: isMobile ? 0 : 64,
+                minHeight: isMobile ? 58 : 64,
                 background: isSelected ? 'var(--accent-dim)' : 'transparent',
                 border: `1px solid ${
                   isSelected ? 'var(--accent)'
@@ -111,8 +112,8 @@ export function MonthGrid({ year, month, selectedDate, onSelect, onPrev, onNext,
                 boxShadow: hasOverdue && !isSelected ? 'inset 0 0 12px rgba(255,0,60,0.08)' : 'none',
                 opacity: inMonth ? 1 : 0.35,
                 cursor: 'pointer',
-                padding: '3px 4px 4px',
-                gap: 2,
+                padding: isMobile ? '5px 5px 6px' : '3px 4px 4px',
+                gap: 3,
                 overflow: 'hidden',
               }}
             >
@@ -121,7 +122,7 @@ export function MonthGrid({ year, month, selectedDate, onSelect, onPrev, onNext,
                 <span
                   className="font-mono"
                   style={{
-                    fontSize: 11,
+                    fontSize: isMobile ? 15 : 11,
                     color: isToday ? 'var(--accent)' : 'var(--text-primary)',
                     fontWeight: isToday ? 700 : 400,
                     textShadow: isToday ? '0 0 6px var(--accent-glow)' : 'none',
@@ -131,39 +132,15 @@ export function MonthGrid({ year, month, selectedDate, onSelect, onPrev, onNext,
                   {d.getDate()}
                 </span>
                 {total > 0 && (
-                  <span
-                    className="font-mono"
-                    style={{
-                      fontSize: 8,
-                      color: 'var(--text-dim)',
-                      lineHeight: 1,
-                    }}
-                  >
-                    {dayItems.filter((i) => i.done).length}/{total}
+                  <span className="font-mono" style={{ fontSize: isMobile ? 10 : 8, color: 'var(--text-dim)', lineHeight: 1 }}>
+                    {doneCount}/{total}
                   </span>
                 )}
               </div>
 
-              {/* Item mini-bars */}
-              {visible.length > 0 && (
-                <div className="flex flex-col" style={{ gap: 1 }}>
-                  {visible.map((item) => (
-                    <MiniBar key={item.id} item={item} />
-                  ))}
-                  {hiddenCount > 0 && (
-                    <span
-                      className="font-mono"
-                      style={{
-                        fontSize: 8,
-                        color: 'var(--text-muted)',
-                        paddingLeft: 4,
-                        lineHeight: 1.1,
-                      }}
-                    >
-                      +{hiddenCount}
-                    </span>
-                  )}
-                </div>
+              {/* Items: точки на мобиле, мини-бары на десктопе */}
+              {total > 0 && (
+                isMobile ? <DayDots items={dayItems} /> : <DayBars items={dayItems} />
               )}
             </button>
           );
@@ -173,7 +150,61 @@ export function MonthGrid({ year, month, selectedDate, onSelect, onPrev, onNext,
   );
 }
 
-/* ──────────────────────────────────────────────────────────── */
+/* ── Мобайл: точки-индикаторы приоритета ──────────────────────── */
+
+function DayDots({ items }: { items: DisplayItem[] }) {
+  const MAX = 4;
+  // Просроченные/высокий приоритет — первыми
+  const sorted = [...items].sort((a, b) => {
+    const ao = a.kind === 'task' && a.overdue && !a.done ? 0 : 1;
+    const bo = b.kind === 'task' && b.overdue && !b.done ? 0 : 1;
+    return ao - bo;
+  });
+  const visible = sorted.slice(0, MAX);
+  const hidden = items.length - visible.length;
+
+  return (
+    <div className="flex flex-wrap items-center" style={{ gap: 3 }}>
+      {visible.map((item) => {
+        const overdue = item.kind === 'task' && item.overdue && !item.done;
+        const color = overdue ? 'var(--danger)' : PRIORITY_CONFIG[item.priority].color;
+        return (
+          <span
+            key={item.id}
+            style={{
+              width: 7, height: 7, borderRadius: '50%',
+              background: color,
+              opacity: item.done ? 0.35 : 1,
+              boxShadow: overdue ? '0 0 4px rgba(255,0,60,0.6)' : 'none',
+            }}
+          />
+        );
+      })}
+      {hidden > 0 && (
+        <span className="font-mono" style={{ fontSize: 9, color: 'var(--text-muted)', lineHeight: 1 }}>
+          +{hidden}
+        </span>
+      )}
+    </div>
+  );
+}
+
+/* ── Десктоп: текстовые мини-бары (как было) ──────────────────── */
+
+function DayBars({ items }: { items: DisplayItem[] }) {
+  const visible = items.slice(0, 3);
+  const hidden = items.length - visible.length;
+  return (
+    <div className="flex flex-col" style={{ gap: 1 }}>
+      {visible.map((item) => <MiniBar key={item.id} item={item} />)}
+      {hidden > 0 && (
+        <span className="font-mono" style={{ fontSize: 8, color: 'var(--text-muted)', paddingLeft: 4, lineHeight: 1.1 }}>
+          +{hidden}
+        </span>
+      )}
+    </div>
+  );
+}
 
 function MiniBar({ item }: { item: DisplayItem }) {
   const cfg = PRIORITY_CONFIG[item.priority];
@@ -185,38 +216,20 @@ function MiniBar({ item }: { item: DisplayItem }) {
     <div
       className="font-mono"
       style={{
-        display: 'flex',
-        alignItems: 'center',
-        gap: 3,
-        fontSize: 9,
-        lineHeight: 1.15,
-        paddingLeft: 4,
+        display: 'flex', alignItems: 'center', gap: 3,
+        fontSize: 9, lineHeight: 1.15, paddingLeft: 4,
         borderLeft: `2px solid ${stripeColor}`,
         boxShadow: overdue ? `-1px 0 4px ${stripeGlow}` : 'none',
         color: item.done ? 'var(--text-dim)' : 'var(--text-secondary)',
         textDecoration: item.done ? 'line-through' : 'none',
         opacity: item.done ? 0.6 : 1,
-        whiteSpace: 'nowrap',
-        overflow: 'hidden',
-        textOverflow: 'ellipsis',
+        whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
         minHeight: 11,
       }}
       title={item.title}
     >
-      {item.time && (
-        <span style={{ color: 'var(--accent)', flexShrink: 0 }}>{item.time}</span>
-      )}
-      <span style={{ overflow: 'hidden', textOverflow: 'ellipsis' }}>
-        {item.title}
-      </span>
+      {item.time && <span style={{ color: 'var(--accent)', flexShrink: 0 }}>{item.time}</span>}
+      <span style={{ overflow: 'hidden', textOverflow: 'ellipsis' }}>{item.title}</span>
     </div>
   );
 }
-
-const navBtn: React.CSSProperties = {
-  width: 36, height: 36,
-  background: 'transparent',
-  border: '1px solid var(--border-subtle)',
-  color: 'var(--text-secondary)',
-  cursor: 'pointer',
-};

@@ -463,4 +463,11 @@ html.soft ::-webkit-scrollbar-track { background: var(--bg-elevated); border-lef
 
   /* Быстрый тап без 300ms-задержки */
   a, button, [role="button"] { touch-action: manipulation; }
+
+  /* Масштаб типографики: 12px база слишком мелко для тача */
+  body { font-size: 14px; }
+  .font-mono { font-size: 13px; }
+
+  /* Тач-пол для контентных кнопок (не вешаем на все button — титул-бар 24px) */
+  .btn-flat { min-height: 44px; }
 }
