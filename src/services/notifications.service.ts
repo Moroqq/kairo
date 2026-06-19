@@ -6,7 +6,7 @@ export async function initNotifications(): Promise<void> {
 
 export async function notify(title: string, body: string): Promise<void> {
   if (!('Notification' in window) || Notification.permission !== 'granted') return;
-  new Notification(title, { body, icon: '/icon.png' });
+  new Notification(title, { body, icon: '/logo.png' });
 }
 
 export async function notifyDeadline(taskTitle: string, minutesLeft: number): Promise<void> {
