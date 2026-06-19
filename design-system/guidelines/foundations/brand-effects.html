@@ -1,0 +1,33 @@
+<!-- @dsCard group="Brand" viewport="700x180" name="Effects & motion" subtitle="LED status · scanlines · matrix rain · loaders" -->
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<link rel="stylesheet" href="../../styles.css">
+<style>
+  body { padding: 20px; display:flex; gap: 22px; align-items:stretch; font-family: var(--font-mono); font-size: 11px; }
+  .demo { flex:1; border: 1px solid var(--border); background: var(--bg-card); padding: 14px; display:flex; flex-direction:column; gap: 10px; justify-content:center; }
+  .lbl { font-size: 9px; color: var(--text-dim); }
+  .scan { position:relative; overflow:hidden; }
+  .scan::after { content:""; position:absolute; inset:0; pointer-events:none;
+    background: repeating-linear-gradient(0deg, transparent 0 2px, rgba(0,0,0,0.25) 2px 3px); }
+</style>
+</head>
+<body>
+  <div class="demo">
+    <div style="display:flex;align-items:center;gap:8px"><span class="led led-blink"></span><span class="neon-text">В СЕТИ</span></div>
+    <div style="display:flex;align-items:center;gap:8px"><span class="led led-red led-blink"></span><span class="neon-danger">ПРОСРОЧЕНО</span></div>
+    <div class="lbl">.led / .led-red / .led-blink</div>
+  </div>
+  <div class="demo">
+    <div class="dot-pulse" style="display:flex;gap:5px"><span></span><span></span><span></span></div>
+    <span style="color:var(--text-muted)">разбор…</span>
+    <div class="lbl">.dot-pulse loader</div>
+  </div>
+  <div class="demo scan" style="color:var(--text-bright)">
+    <span>scanline overlay</span>
+    <span style="color:var(--text-muted)">+ vignette on desktop</span>
+    <div class="lbl">.win-desktop::after</div>
+  </div>
+</body>
+</html>

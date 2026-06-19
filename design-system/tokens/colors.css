@@ -1,0 +1,55 @@
+/* ============================================================
+   KAIRO — COLOR TOKENS
+   Default palette = MATRIX theme: pure black ground, neon-green code.
+   Base values first, semantic aliases second. Alternate themes live in
+   themes.css and override these same custom properties under a scope.
+   ============================================================ */
+
+:root {
+  /* ---- Surfaces (darkest → lightest) ---- */
+  --bg-base:      #000000;   /* desktop / app ground */
+  --bg-surface:   #0A0A0A;   /* shell, panels */
+  --bg-card:      #0D110D;   /* cards, list rows */
+  --bg-elevated:  #121A12;   /* raised chips, hover fills */
+  --bg-input:     #050805;   /* form fields, wells */
+
+  /* ---- Borders (translucent accent, three weights + danger) ---- */
+  --border:        rgba(0, 255, 65, 0.18);
+  --border-strong: rgba(0, 255, 65, 0.45);
+  --border-subtle: rgba(0, 255, 65, 0.08);
+  --border-danger: rgba(255, 0, 60, 0.50);
+
+  /* ---- Text — contrast pyramid for long reading ---- */
+  --text-primary:   #D6F5D6;  /* body — soft dusty green */
+  --text-secondary: #8FCC8F;  /* secondary labels */
+  --text-muted:     #4A8A4A;  /* meta, captions */
+  --text-dim:       #2E5A2E;  /* hints, separators, prompts */
+  --text-bright:    #00FF41;  /* headings, numbers, accent lines */
+
+  /* ---- Accent (neon green) ---- */
+  --accent:       #00FF41;
+  --accent-soft:  #00B82E;
+  --accent-glow:  rgba(0, 255, 65, 0.55);
+  --accent-dim:   rgba(0, 255, 65, 0.10);
+
+  /* ---- Semantic ---- */
+  --success: #00FF41;
+  --warning: #FFD400;
+  --danger:  #FF003C;
+  --info:    #00E5FF;
+
+  /* ---- Priority scale (A → D) ---- */
+  --prio-a: #FF003C;  /* critical — red */
+  --prio-b: #FF9100;  /* high — amber */
+  --prio-c: #00B0FF;  /* normal — blue */
+  --prio-d: #4A8A4A;  /* low — muted green */
+
+  /* ---- Shell surfaces (composited backgrounds) ---- */
+  --desktop-bg:   #000000;
+  --shell-bg:     rgba(5, 5, 5, 0.92);
+  --panel-bg:     rgba(8, 12, 8, 0.70);
+  --statusbar-bg: #020402;
+  --overlay-bg:   rgba(8, 12, 8, 0.97);
+  --titlebar-bg:  linear-gradient(180deg, #0A0A0A 0%, #050505 100%);
+  --well-bg:      rgba(0, 0, 0, 0.45);
+}

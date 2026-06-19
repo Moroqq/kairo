@@ -1,0 +1,106 @@
+<!-- @template name="Kairo App" description="Full terminal task-manager shell — board, focus, daily sheet, 8 themes" -->
+<!DOCTYPE html>
+<html lang="ru" data-theme="">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Kairo</title>
+<link rel="stylesheet" href="../../styles.css">
+<style>
+  html, body { height: 100%; overflow: hidden; }
+  #app { height: 100dvh; }
+  .lucide { stroke-width: 2; }
+</style>
+</head>
+<body>
+<div id="app"></div>
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/lucide@0.511.0/dist/umd/lucide.min.js"></script>
+<script src="../../_ds_bundle.js"></script>
+<script src="data.js"></script>
+<script type="text/babel" src="shell.jsx"></script>
+<script type="text/babel" src="screens.jsx"></script>
+<script type="text/babel">
+const { MatrixRain, Sidebar, Header, StatusBar } = window.KairoShell;
+const { BoardScreen, FocusScreen, SheetScreen, Placeholder, CaptureModal, ThemePicker } = window.KairoScreens;
+const K = window.KAIRO;
+
+const NEXT_COL = { todo: 'inprogress', inprogress: 'done', blocked: 'inprogress' };
+
+function App() {
+  const [route, setRoute]   = React.useState('board');
+  const [search, setSearch] = React.useState('');
+  const [theme, setThemeState] = React.useState('');
+  const [soft, setSoft]     = React.useState(false);
+  const [capOpen, setCapOpen] = React.useState(false);
+  const [thOpen, setThOpen]   = React.useState(false);
+  const [tasks, setTasks]   = React.useState(K.TASKS);
+  const [focus, setFocus]   = React.useState(K.FOCUS);
+  const [sheet, setSheet]   = React.useState(K.SHEET);
+
+  const setTheme = (id) => {
+    setThemeState(id);
+    const def = K.THEMES.find(t => t.id === id);
+    setSoft(!!(def && def.soft));
+  };
+
+  const titlebar = {
+    '':        '[kairo@matrix:~]$ task_manager --status=работает',
+    command:   'KAIRO — Task Command', obsidian: 'KAIRO // OBSIDIAN', paper: 'KAIRO — планировщик',
+    nord:      'KAIRO — nord', samurai: 'KAIRO 侍 — свитки приказов', claude: 'Kairo', clay: 'Kairo',
+  }[theme] || 'KAIRO';
+
+  const advance = (id) => setTasks(ts => ts.map(t => t.id === id && NEXT_COL[t.col] ? { ...t, col: NEXT_COL[t.col] } : t));
+  const createTask = (d) => setTasks(ts => [{ id: K.nextId(), col: 'todo', created: 'только что', comments: 0, ...d }, ...ts]);
+  const toggleFocus = (id) => setFocus(fs => fs.map(i => i.id === id ? { ...i, done: !i.done } : i));
+  const toggleSheet = (id) => setSheet(ss => ss.map(i => i.id === id ? { ...i, done: !i.done } : i));
+  const addSheet = (title) => setSheet(ss => [...ss, { id: K.nextId(), title, done: false }]);
+
+  const active = tasks.filter(t => t.col !== 'done');
+  const stats = { total: tasks.length, open: active.length, done: tasks.filter(t => t.col === 'done').length, overdue: active.filter(t => t.deadlineState === 'overdue').length };
+  const showRain = theme === '';
+
+  let screen;
+  if (route === 'board') screen = <BoardScreen tasks={tasks} search={search} onAdvance={advance} />;
+  else if (route === 'focus') screen = <FocusScreen items={focus} onToggle={toggleFocus} />;
+  else if (route === 'todo') screen = <div style={{ flex: 1, overflowY: 'auto' }}><SheetScreen items={sheet} onToggle={toggleSheet} onAdd={addSheet} /></div>;
+  else screen = <Placeholder icon={K.NAV.find(n => n.id === route).icon} label={K.NAV.find(n => n.id === route).label} />;
+
+  return (
+    <div className="win-desktop" data-theme={theme} {...(soft ? { 'data-soft': '' } : {})} style={{ height: '100%', display: 'flex', flexDirection: 'column', padding: 12, gap: 12 }}>
+      {showRain && <MatrixRain />}
+      <div className="bevel-raised" style={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0, position: 'relative', background: 'var(--shell-bg)', boxShadow: 'var(--shadow-elevated)', zIndex: 3 }}>
+        <div className="titlebar">
+          <span className="neon-text">●</span>
+          <span className="cursor-blink" style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{titlebar}</span>
+          <button className="titlebar-btn" title="свернуть">_</button>
+          <button className="titlebar-btn" title="развернуть">□</button>
+          <button className="titlebar-btn" title="закрыть">✕</button>
+        </div>
+        <div style={{ display: 'flex', flex: 1, minHeight: 0, padding: 8, gap: 8 }}>
+          <Sidebar route={route} setRoute={setRoute} />
+          <div style={{ display: 'flex', flexDirection: 'column', flex: 1, minWidth: 0, minHeight: 0, gap: 8 }}>
+            <Header search={search} setSearch={setSearch} onTheme={() => setThOpen(true)} onCapture={() => setCapOpen(true)} />
+            <main className="bevel-sunken" style={{ flex: 1, overflow: 'hidden', display: 'flex', flexDirection: 'column', position: 'relative', background: 'var(--well-bg)' }}>
+              {screen}
+              <button onClick={() => setCapOpen(true)} className="bevel-raised" title="новая задача (N)"
+                style={{ position: 'absolute', bottom: 12, right: 12, zIndex: 30, display: 'flex', alignItems: 'center', gap: 8, padding: '0 12px', height: 32, fontSize: 11, background: 'var(--bg-surface)', cursor: 'pointer' }}>
+                <span className="neon-text" style={{ fontSize: 14, lineHeight: 1 }}>+</span>
+                <span style={{ color: 'var(--text-primary)' }}>новая задача</span>
+              </button>
+            </main>
+          </div>
+        </div>
+        <StatusBar stats={stats} />
+      </div>
+      <CaptureModal open={capOpen} onClose={() => setCapOpen(false)} onCreate={createTask} />
+      <ThemePicker open={thOpen} onClose={() => setThOpen(false)} theme={theme} setTheme={setTheme} />
+    </div>
+  );
+}
+ReactDOM.createRoot(document.getElementById('app')).render(<App />);
+</script>
+</body>
+</html>

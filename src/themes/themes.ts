@@ -56,6 +56,12 @@ const matrixVars: Record<string, string> = {
   '--shadow-card':    '0 0 0 1px var(--border)',
   '--shadow-elevated':'0 0 0 1px var(--border-strong), 0 0 32px rgba(0,255,65,0.18), 0 8px 32px rgba(0,0,0,0.8)',
 
+  /* Форма и шрифт — базовые (MATRIX острый, моно). Темы переопределяют.
+     Заданы в базе, чтобы переключение тем всегда сбрасывало значение. */
+  '--radius':       '0px',
+  '--radius-pill':  '0px',
+  '--font-ui':      '"JetBrains Mono", "Fira Code", "IBM Plex Mono", "Lucida Console", "Consolas", monospace',
+
   /* Поверхности оболочки */
   '--desktop-bg':     '#000000',
   '--shell-bg':       'rgba(5, 5, 5, 0.92)',
@@ -102,6 +108,7 @@ export const THEMES: Record<ThemeId, ThemeDef> = {
       '--panel-bg': 'rgba(16,26,44,0.8)', '--statusbar-bg': '#0A111E',
       '--overlay-bg': 'rgba(13,19,33,0.97)', '--titlebar-bg': '#0D1626',
       '--well-bg': 'rgba(4,8,16,0.5)',
+      '--radius': '6px', '--radius-pill': '999px',
     },
     vocab: {
       titlebar: 'KAIRO — Task Command',
@@ -132,6 +139,7 @@ export const THEMES: Record<ThemeId, ThemeDef> = {
       '--panel-bg': 'rgba(19,19,24,0.8)', '--statusbar-bg': '#0A0A0E',
       '--overlay-bg': 'rgba(19,19,24,0.97)', '--titlebar-bg': '#101016',
       '--well-bg': 'rgba(5,5,8,0.5)',
+      '--radius': '9px', '--radius-pill': '999px',
     },
     vocab: {
       titlebar: 'KAIRO // OBSIDIAN',
@@ -163,6 +171,7 @@ export const THEMES: Record<ThemeId, ThemeDef> = {
       '--panel-bg': 'rgba(250,250,248,0.9)', '--statusbar-bg': '#F0F0EC',
       '--overlay-bg': 'rgba(255,255,255,0.98)', '--titlebar-bg': '#FAFAF8',
       '--well-bg': 'rgba(0,0,0,0.04)',
+      '--radius': '6px', '--radius-pill': '999px',
     },
     vocab: {
       titlebar: 'KAIRO — планировщик',
@@ -193,6 +202,7 @@ export const THEMES: Record<ThemeId, ThemeDef> = {
       '--panel-bg': 'rgba(59,66,82,0.85)', '--statusbar-bg': '#272C36',
       '--overlay-bg': 'rgba(46,52,64,0.98)', '--titlebar-bg': '#2E3440',
       '--well-bg': 'rgba(30,34,43,0.5)',
+      '--radius': '5px', '--radius-pill': '999px',
     },
     vocab: {
       titlebar: 'KAIRO — nord',
@@ -223,6 +233,7 @@ export const THEMES: Record<ThemeId, ThemeDef> = {
       '--panel-bg': 'rgba(20,12,10,0.8)', '--statusbar-bg': '#0B0606',
       '--overlay-bg': 'rgba(20,12,10,0.97)', '--titlebar-bg': '#120A08',
       '--well-bg': 'rgba(6,3,3,0.5)',
+      '--radius': '2px', '--radius-pill': '999px',
     },
     vocab: {
       titlebar: 'KAIRO 侍 — свитки приказов',

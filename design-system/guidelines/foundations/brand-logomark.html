@@ -1,0 +1,26 @@
+<!-- @dsCard group="Brand" viewport="700x180" name="Terminal logomark [K]" subtitle="Type-set mark with blinking cursor" -->
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<link rel="stylesheet" href="../../styles.css">
+<style>
+  body { padding: 24px; display:flex; gap: 40px; align-items:center; font-family: var(--font-mono); }
+  .mark { display:flex; align-items:baseline; font-size: 56px; line-height:1; color: var(--accent); text-shadow: 0 0 10px var(--accent-glow); }
+  .mark .br { opacity: 0.45; font-weight: 400; }
+  .mark .k { font-weight: 700; letter-spacing: -0.02em; }
+  .cur { display:inline-block; width:14px; height:38px; margin-left:7px; background: var(--accent); box-shadow:0 0 8px var(--accent-glow); animation: led-blink 1s steps(1) infinite; }
+  .lbl { font-family: var(--font-mono); font-size: 10px; margin-top: 12px; color: var(--text-muted); }
+</style>
+</head>
+<body>
+  <div>
+    <div class="mark"><span class="br">[</span><span class="k">K</span><span class="br">]</span><span class="cur"></span></div>
+    <div class="lbl">used in promo / loading states</div>
+  </div>
+  <div style="font-family:var(--font-mono);font-size:12px;color:var(--text-secondary);line-height:1.8">
+    <div><span style="color:var(--text-dim)">titlebar →</span> <span class="neon-text">[kairo@matrix:~]$</span></div>
+    <div><span style="color:var(--text-dim)">tagline &nbsp;→</span> терминал для управления задачами</div>
+  </div>
+</body>
+</html>

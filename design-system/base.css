@@ -1,0 +1,45 @@
+/* ============================================================
+   KAIRO — BASE / RESET
+   Global element resets and the document ground. Kept minimal: the
+   terminal aesthetic is carried by tokens + effects.css utility classes.
+   ============================================================ */
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+html, body {
+  background: var(--bg-base);
+  color: var(--text-primary);
+}
+
+body {
+  font-family: var(--font-ui);
+  font-size: var(--text-sm);
+  line-height: var(--leading-base);
+  -webkit-font-smoothing: antialiased;
+  font-feature-settings: var(--font-features);   /* ligatures off */
+}
+
+/* Interactive text stays selectable; chrome does not */
+body { user-select: none; }
+input, textarea, [data-selectable] { user-select: text; }
+
+input, textarea, select, button {
+  font-family: inherit;
+  color: var(--text-primary);
+}
+
+a { color: var(--accent); text-decoration: none; }
+
+::selection { background: var(--accent); color: #000; text-shadow: none; }
+[data-soft] ::selection,
+[data-theme="claude"] ::selection,
+[data-theme="clay"] ::selection { color: #fff; }
+
+/* ---- Scrollbars — minimal terminal style ---- */
+::-webkit-scrollbar { width: 10px; height: 10px; }
+::-webkit-scrollbar-track { background: #050505; border-left: 1px solid var(--border-subtle); }
+::-webkit-scrollbar-thumb { background: var(--border); border: 2px solid #050505; }
+::-webkit-scrollbar-thumb:hover { background: var(--accent); box-shadow: 0 0 6px var(--accent-glow); }
+::-webkit-scrollbar-corner { background: #050505; }
+
+*:focus-visible { outline: none; }

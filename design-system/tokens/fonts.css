@@ -1,0 +1,23 @@
+/* ============================================================
+   KAIRO — WEBFONTS
+   Monospace terminal stack (JetBrains Mono / Fira Code / IBM Plex Mono).
+   Loaded from Google Fonts — the same families the product ships with.
+   "Soft" themes (claude / clay) fall back to a system sans stack.
+   ============================================================ */
+
+@import url("https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=Fira+Code:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap");
+
+/* ------------------------------------------------------------
+   Söhne — used by the two "soft" themes (claude / clay), matching
+   claude.ai's typeface. Söhne is proprietary and NOT bundled here,
+   so this face only resolves from a locally-installed copy; otherwise
+   the --font-ui fallback stack (system sans) renders. To ship it to
+   consumers, drop a licensed woff2 in assets/ and add a url() src below.
+   ------------------------------------------------------------ */
+@font-face {
+  font-family: "Söhne";
+  src: local("Söhne"), local("Soehne"), local("Söhne Buch"), local("Söhne Kräftig");
+  font-weight: 400 700;
+  font-style: normal;
+  font-display: swap;
+}

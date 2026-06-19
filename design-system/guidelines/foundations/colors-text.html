@@ -1,0 +1,24 @@
+<!-- @dsCard group="Colors" viewport="700x150" name="Text contrast pyramid" subtitle="Five reading weights from bright headings to dim hints" -->
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<link rel="stylesheet" href="../../styles.css">
+<style>
+  body { padding: 18px; background: var(--bg-base); }
+  .stack { display:flex; flex-direction:column; gap: 8px; font-family: var(--font-mono); font-size: 14px; }
+  .stack span { font-size: 10px; color: var(--text-dim); }
+  .line { display:flex; align-items:baseline; gap: 12px; }
+  .line b { font-weight: 500; min-width: 240px; display:inline-block; }
+</style>
+</head>
+<body>
+  <div class="stack">
+    <div class="line"><b style="color:var(--text-bright)">текст — bright heading 00FF41</b><span>--text-bright</span></div>
+    <div class="line"><b style="color:var(--text-primary)">текст — primary body D6F5D6</b><span>--text-primary</span></div>
+    <div class="line"><b style="color:var(--text-secondary)">текст — secondary 8FCC8F</b><span>--text-secondary</span></div>
+    <div class="line"><b style="color:var(--text-muted)">текст — muted meta 4A8A4A</b><span>--text-muted</span></div>
+    <div class="line"><b style="color:var(--text-dim)">текст — dim hint 2E5A2E</b><span>--text-dim</span></div>
+  </div>
+</body>
+</html>

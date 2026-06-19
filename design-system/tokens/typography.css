@@ -1,0 +1,45 @@
+/* ============================================================
+   KAIRO — TYPOGRAPHY TOKENS
+   One monospace family drives the entire interface. There is no
+   display/body split — hierarchy comes from size, weight, color and
+   letter-spacing, not from a second typeface. Soft themes swap --font-ui
+   for a sans stack; --font-mono always stays monospace.
+   ============================================================ */
+
+:root {
+  /* ---- Families ---- */
+  --font-ui:   "JetBrains Mono", "Fira Code", "IBM Plex Mono", "Lucida Console", "Consolas", monospace;
+  --font-mono: "JetBrains Mono", "Fira Code", "IBM Plex Mono", monospace;
+  /* "Hand" sheet writing reuses the mono stack — terminal look, no script font */
+  --font-hand: "JetBrains Mono", "Fira Code", "IBM Plex Mono", monospace;
+
+  /* ---- Sizes (px — UI is dense; 11–13px is the working range) ---- */
+  --text-2xs: 9px;    /* timestamps, micro-meta */
+  --text-xs:  11px;   /* default body / labels / mono */
+  --text-sm:  12px;   /* base font-size */
+  --text-md:  13px;   /* emphasised rows, sheet ink */
+  --text-lg:  15px;   /* section titles */
+  --text-xl:  17px;   /* sheet headings */
+  --text-2xl: 22px;   /* hero numbers */
+
+  /* ---- Weights ---- */
+  --weight-regular: 400;
+  --weight-medium:  500;
+  --weight-semibold:600;
+  --weight-bold:    700;
+
+  /* ---- Line heights ---- */
+  --leading-tight: 1.1;
+  --leading-snug:  1.35;
+  --leading-base:  1.5;
+
+  /* ---- Letter-spacing (terminal labels run wide; body runs tight) ---- */
+  --tracking-tight:  -0.02em;
+  --tracking-normal: 0;
+  --tracking-wide:   0.5px;
+  --tracking-wider:  1px;
+  --tracking-widest: 2px;
+
+  /* Disable ligatures — keeps the raw terminal look */
+  --font-features: "calt" 0;
+}

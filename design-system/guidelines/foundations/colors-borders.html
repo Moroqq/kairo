@@ -1,0 +1,24 @@
+<!-- @dsCard group="Colors" viewport="700x150" name="Borders" subtitle="Translucent accent at three weights + danger" -->
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<link rel="stylesheet" href="../../styles.css">
+<style>
+  body { padding: 18px; }
+  .row { display: flex; gap: 10px; }
+  .sw { flex: 1; }
+  .chip { height: 64px; background: var(--bg-surface); }
+  .lbl { font-family: var(--font-mono); font-size: 10px; margin-top: 6px; color: var(--text-secondary); }
+  .val { font-family: var(--font-mono); font-size: 9px; color: var(--text-dim); }
+</style>
+</head>
+<body>
+  <div class="row">
+    <div class="sw"><div class="chip" style="border:1px solid var(--border-subtle)"></div><div class="lbl">--border-subtle</div><div class="val">green 8%</div></div>
+    <div class="sw"><div class="chip" style="border:1px solid var(--border)"></div><div class="lbl">--border</div><div class="val">green 18%</div></div>
+    <div class="sw"><div class="chip" style="border:1px solid var(--border-strong)"></div><div class="lbl">--border-strong</div><div class="val">green 45%</div></div>
+    <div class="sw"><div class="chip" style="border:1px solid var(--border-danger)"></div><div class="lbl">--border-danger</div><div class="val">red 50%</div></div>
+  </div>
+</body>
+</html>

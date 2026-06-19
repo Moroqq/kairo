@@ -1,0 +1,24 @@
+<!-- @dsCard group="Colors" viewport="700x150" name="Priority scale A–D" subtitle="Task urgency, critical → low" -->
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<link rel="stylesheet" href="../../styles.css">
+<style>
+  body { padding: 18px; }
+  .row { display: flex; gap: 10px; }
+  .sw { flex: 1; text-align:center; }
+  .chip { height: 50px; border: 1px solid var(--border); display:flex; align-items:center; justify-content:center; font-family:var(--font-mono); font-weight:700; font-size:18px; color:#000; }
+  .lbl { font-family: var(--font-mono); font-size: 10px; margin-top: 6px; color: var(--text-secondary); }
+  .val { font-family: var(--font-mono); font-size: 9px; color: var(--text-dim); }
+</style>
+</head>
+<body>
+  <div class="row">
+    <div class="sw"><div class="chip" style="background:var(--prio-a)">A</div><div class="lbl">критично</div><div class="val">--prio-a · #FF003C</div></div>
+    <div class="sw"><div class="chip" style="background:var(--prio-b)">B</div><div class="lbl">высокий</div><div class="val">--prio-b · #FF9100</div></div>
+    <div class="sw"><div class="chip" style="background:var(--prio-c)">C</div><div class="lbl">обычный</div><div class="val">--prio-c · #00B0FF</div></div>
+    <div class="sw"><div class="chip" style="background:var(--prio-d)">D</div><div class="lbl">низкий</div><div class="val">--prio-d · #4A8A4A</div></div>
+  </div>
+</body>
+</html>

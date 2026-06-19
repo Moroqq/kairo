@@ -1,0 +1,25 @@
+<!-- @dsCard group="Colors" viewport="700x150" name="Surfaces" subtitle="Darkest ground → lightest fill, five steps" -->
+<!DOCTYPE html>
+<html data-theme="">
+<head>
+<meta charset="utf-8">
+<link rel="stylesheet" href="../../styles.css">
+<style>
+  body { padding: 18px; }
+  .row { display: flex; gap: 10px; }
+  .sw { flex: 1; }
+  .chip { height: 64px; border: 1px solid var(--border); }
+  .lbl { font-family: var(--font-mono); font-size: 10px; margin-top: 6px; color: var(--text-secondary); }
+  .val { font-family: var(--font-mono); font-size: 9px; color: var(--text-dim); }
+</style>
+</head>
+<body>
+  <div class="row">
+    <div class="sw"><div class="chip" style="background:var(--bg-base)"></div><div class="lbl">--bg-base</div><div class="val">#000000</div></div>
+    <div class="sw"><div class="chip" style="background:var(--bg-surface)"></div><div class="lbl">--bg-surface</div><div class="val">#0A0A0A</div></div>
+    <div class="sw"><div class="chip" style="background:var(--bg-card)"></div><div class="lbl">--bg-card</div><div class="val">#0D110D</div></div>
+    <div class="sw"><div class="chip" style="background:var(--bg-elevated)"></div><div class="lbl">--bg-elevated</div><div class="val">#121A12</div></div>
+    <div class="sw"><div class="chip" style="background:var(--bg-input)"></div><div class="lbl">--bg-input</div><div class="val">#050805</div></div>
+  </div>
+</body>
+</html>

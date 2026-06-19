@@ -1,0 +1,20 @@
+<!-- @dsCard group="Spacing" viewport="700x180" name="Shadows & glow" subtitle="Flat by default — glow rings carry elevation" -->
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<link rel="stylesheet" href="../../styles.css">
+<style>
+  body { padding: 26px 20px; display:flex; gap: 28px; align-items:center; }
+  .demo { text-align:center; }
+  .box { width: 120px; height: 60px; background: var(--bg-card); }
+  .lbl { font-family: var(--font-mono); font-size: 10px; margin-top: 12px; color: var(--text-secondary); }
+</style>
+</head>
+<body>
+  <div class="demo"><div class="box" style="box-shadow:var(--shadow-card)"></div><div class="lbl">--shadow-card</div></div>
+  <div class="demo"><div class="box" style="box-shadow:var(--shadow-glow)"></div><div class="lbl">--shadow-glow</div></div>
+  <div class="demo"><div class="box" style="box-shadow:var(--shadow-glow-lg)"></div><div class="lbl">--shadow-glow-lg</div></div>
+  <div class="demo"><div class="box" style="box-shadow:var(--shadow-elevated)"></div><div class="lbl">--shadow-elevated</div></div>
+</body>
+</html>

@@ -1,0 +1,52 @@
+/* ============================================================
+   KAIRO — SPACING, RADII, SHADOWS, MOTION
+   Sharp corners (0px) and flat surfaces define the terminal look.
+   "Glow" shadows replace traditional drop shadows: an accent ring plus a
+   soft neon bloom. Soft themes (claude / clay) re-enable rounding via
+   --radius and switch to conventional drop shadows.
+   ============================================================ */
+
+:root {
+  /* ---- Spacing scale (4px base grid) ---- */
+  --space-0:  0px;
+  --space-1:  2px;
+  --space-2:  4px;
+  --space-3:  6px;
+  --space-4:  8px;
+  --space-5:  12px;
+  --space-6:  16px;
+  --space-7:  24px;
+  --space-8:  32px;
+  --space-9:  48px;
+
+  /* ---- Radii — terminal = square. Each theme reshapes the UI by setting
+         --radius (and --radius-pill); --radius-sm / --radius-card follow it,
+         so one knob rounds buttons, inputs, cards, modals and task cards. ---- */
+  --radius:      0px;              /* the per-theme shape knob (themes.css) */
+  --radius-sm:   var(--radius);
+  --radius-card: var(--radius);
+  --radius-pill: 0px;             /* pills go 999px in rounded themes */
+
+  /* ---- Control sizing ---- */
+  --control-sm: 28px;   /* h-7 */
+  --control-md: 32px;   /* h-8 */
+  --control-lg: 40px;   /* h-10 */
+  --titlebar-h: 24px;
+  --touch-min:  44px;   /* minimum tap target */
+
+  /* ---- Borders ---- */
+  --border-w: 1px;
+
+  /* ---- Shadows — flat by default, glow on focus/active ---- */
+  --shadow-card: 0 0 0 1px var(--border);
+  --shadow-elevated:
+    0 0 0 1px var(--border-strong),
+    0 0 32px rgba(0, 255, 65, 0.18),
+    0 8px 32px rgba(0, 0, 0, 0.80);
+  --shadow-glow:    0 0 0 1px var(--accent), 0 0 12px var(--accent-glow);
+  --shadow-glow-lg: 0 0 0 1px var(--accent), 0 0 22px var(--accent);
+
+  /* ---- Motion ---- */
+  --transition: 160ms ease-out;       /* @kind other */
+  --transition-fast: 120ms ease-out;  /* @kind other */
+}

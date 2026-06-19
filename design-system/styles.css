@@ -1,0 +1,13 @@
+/* ============================================================
+   KAIRO DESIGN SYSTEM — global entry point
+   Consumers link THIS file only. It is an @import manifest — no rules
+   live here directly. Order matters: fonts → tokens → themes → base → effects.
+   ============================================================ */
+
+@import "./tokens/fonts.css";
+@import "./tokens/colors.css";
+@import "./tokens/typography.css";
+@import "./tokens/spacing.css";
+@import "./tokens/themes.css";
+@import "./base.css";
+@import "./effects.css";

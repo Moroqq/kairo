@@ -1,0 +1,319 @@
+{
+  "plugins": [
+    "react",
+    "import"
+  ],
+  "rules": {
+    "react/forbid-elements": [
+      "warn",
+      {
+        "forbid": []
+      }
+    ],
+    "no-restricted-imports": [
+      "warn",
+      {
+        "patterns": [
+          {
+            "group": [
+              "components/core/**",
+              "components/feedback/**",
+              "components/task/**",
+              "ui_kits/kairo/**"
+            ],
+            "message": "Import design-system components from 'index.js', not component internals."
+          }
+        ]
+      }
+    ],
+    "no-restricted-syntax": [
+      "warn",
+      {
+        "selector": "Literal[value=/#[0-9a-fA-F]{3,8}\\b/]",
+        "message": "Raw hex color — use a design-system color token via var()."
+      },
+      {
+        "selector": "Literal[value=/\\b\\d+px\\b/]",
+        "message": "Raw px value — use a design-system spacing token via var()."
+      },
+      {
+        "selector": "Literal[value=/font-family\\s*:\\s*(?!['\\\"]?(?:Söhne|JetBrains Mono|Fira Code|IBM Plex Mono))/i]",
+        "message": "Font not provided by the design system. Available: Söhne, JetBrains Mono, Fira Code, IBM Plex Mono."
+      },
+      {
+        "selector": "JSXOpeningElement[name.name='Badge'] > JSXAttribute > JSXIdentifier[name!=/^(?:color|bg|key|ref|className|style|children)$/]",
+        "message": "<Badge> doesn't accept that prop. Declared props: color, bg."
+      },
+      {
+        "selector": "JSXOpeningElement[name.name='Button'] > JSXAttribute > JSXIdentifier[name!=/^(?:variant|size|loading|icon|key|ref|className|style|children)$/]",
+        "message": "<Button> doesn't accept that prop. Declared props: variant, size, loading, icon."
+      },
+      {
+        "selector": "JSXOpeningElement[name.name='Button'] > JSXAttribute[name.name='variant'] > Literal[value!=/^(?:primary|secondary|ghost|danger)$/]",
+        "message": "<Button> variant must be one of 'primary' | 'secondary' | 'ghost' | 'danger'."
+      },
+      {
+        "selector": "JSXOpeningElement[name.name='Button'] > JSXAttribute[name.name='size'] > Literal[value!=/^(?:sm|md|lg)$/]",
+        "message": "<Button> size must be one of 'sm' | 'md' | 'lg'."
+      },
+      {
+        "selector": "JSXOpeningElement[name.name='Card'] > JSXAttribute > JSXIdentifier[name!=/^(?:title|well|interactive|onClose|bodyStyle|key|ref|className|style|children)$/]",
+        "message": "<Card> doesn't accept that prop. Declared props: title, well, interactive, onClose, bodyStyle."
+      },
+      {
+        "selector": "JSXOpeningElement[name.name='Input'] > JSXAttribute > JSXIdentifier[name!=/^(?:label|error|key|ref|className|style|children)$/]",
+        "message": "<Input> doesn't accept that prop. Declared props: label, error."
+      },
+      {
+        "selector": "JSXOpeningElement[name.name='KanbanColumn'] > JSXAttribute > JSXIdentifier[name!=/^(?:title|count|over|width|fullWidth|children|style|key|ref|className|style|children)$/]",
+        "message": "<KanbanColumn> doesn't accept that prop. Declared props: title, count, over, width, fullWidth, children, style."
+      },
+      {
+        "selector": "JSXOpeningElement[name.name='Modal'] > JSXAttribute > JSXIdentifier[name!=/^(?:open|onClose|title|width|children|key|ref|className|style|children)$/]",
+        "message": "<Modal> doesn't accept that prop. Declared props: open, onClose, title, width, children."
+      },
+      {
+        "selector": "JSXOpeningElement[name.name='PriorityBadge'] > JSXAttribute > JSXIdentifier[name!=/^(?:priority|showLabel|style|key|ref|className|style|children)$/]",
+        "message": "<PriorityBadge> doesn't accept that prop. Declared props: priority, showLabel, style."
+      },
+      {
+        "selector": "JSXOpeningElement[name.name='Spinner'] > JSXAttribute > JSXIdentifier[name!=/^(?:size|color|style|key|ref|className|style|children)$/]",
+        "message": "<Spinner> doesn't accept that prop. Declared props: size, color, style."
+      },
+      {
+        "selector": "JSXOpeningElement[name.name='TaskCard'] > JSXAttribute > JSXIdentifier[name!=/^(?:title|category|deadline|deadlineState|comments|createdLabel|urgent|onClick|onAdvance|advanceIcon|style|key|ref|className|style|children)$/]",
+        "message": "<TaskCard> doesn't accept that prop. Declared props: title, category, deadline, deadlineState, comments, createdLabel, urgent, onClick, onAdvance, advanceIcon, style."
+      },
+      {
+        "selector": "JSXOpeningElement[name.name='TaskCard'] > JSXAttribute[name.name='deadlineState'] > Literal[value!=/^(?:none|urgent|overdue)$/]",
+        "message": "<TaskCard> deadlineState must be one of 'none' | 'urgent' | 'overdue'."
+      },
+      {
+        "selector": "JSXOpeningElement[name.name='Toast'] > JSXAttribute > JSXIdentifier[name!=/^(?:type|icon|onClose|key|ref|className|style|children)$/]",
+        "message": "<Toast> doesn't accept that prop. Declared props: type, icon, onClose."
+      },
+      {
+        "selector": "JSXOpeningElement[name.name='Toast'] > JSXAttribute[name.name='type'] > Literal[value!=/^(?:success|error|info)$/]",
+        "message": "<Toast> type must be one of 'success' | 'error' | 'info'."
+      }
+    ]
+  },
+  "overrides": [
+    {
+      "files": [
+        "**/index.js"
+      ],
+      "rules": {
+        "no-restricted-imports": "off"
+      }
+    }
+  ],
+  "x-omelette": {
+    "components": {
+      "Badge": {
+        "replaces": []
+      },
+      "Button": {
+        "replaces": []
+      },
+      "Card": {
+        "replaces": []
+      },
+      "Input": {
+        "replaces": []
+      },
+      "KanbanColumn": {
+        "replaces": []
+      },
+      "Modal": {
+        "replaces": []
+      },
+      "PriorityBadge": {
+        "replaces": []
+      },
+      "Spinner": {
+        "replaces": []
+      },
+      "TaskCard": {
+        "replaces": []
+      },
+      "Toast": {
+        "replaces": []
+      }
+    },
+    "tokens": [
+      "--accent",
+      "--accent-dim",
+      "--accent-glow",
+      "--accent-soft",
+      "--bg-base",
+      "--bg-card",
+      "--bg-elevated",
+      "--bg-input",
+      "--bg-surface",
+      "--border",
+      "--border-danger",
+      "--border-strong",
+      "--border-subtle",
+      "--border-w",
+      "--control-lg",
+      "--control-md",
+      "--control-sm",
+      "--danger",
+      "--desktop-bg",
+      "--font-features",
+      "--font-hand",
+      "--font-mono",
+      "--font-ui",
+      "--info",
+      "--leading-base",
+      "--leading-snug",
+      "--leading-tight",
+      "--overlay-bg",
+      "--panel-bg",
+      "--prio-a",
+      "--prio-b",
+      "--prio-c",
+      "--prio-d",
+      "--radius",
+      "--radius-card",
+      "--radius-pill",
+      "--radius-sm",
+      "--shadow-card",
+      "--shadow-elevated",
+      "--shadow-glow",
+      "--shadow-glow-lg",
+      "--shell-bg",
+      "--space-0",
+      "--space-1",
+      "--space-2",
+      "--space-3",
+      "--space-4",
+      "--space-5",
+      "--space-6",
+      "--space-7",
+      "--space-8",
+      "--space-9",
+      "--statusbar-bg",
+      "--success",
+      "--text-2xl",
+      "--text-2xs",
+      "--text-bright",
+      "--text-dim",
+      "--text-lg",
+      "--text-md",
+      "--text-muted",
+      "--text-primary",
+      "--text-secondary",
+      "--text-sm",
+      "--text-xl",
+      "--text-xs",
+      "--titlebar-bg",
+      "--titlebar-h",
+      "--touch-min",
+      "--tracking-normal",
+      "--tracking-tight",
+      "--tracking-wide",
+      "--tracking-wider",
+      "--tracking-widest",
+      "--transition",
+      "--transition-fast",
+      "--warning",
+      "--weight-bold",
+      "--weight-medium",
+      "--weight-regular",
+      "--weight-semibold",
+      "--well-bg"
+    ],
+    "tokenKinds": {
+      "--bg-base": "color",
+      "--bg-surface": "color",
+      "--bg-card": "color",
+      "--bg-elevated": "color",
+      "--bg-input": "color",
+      "--border": "color",
+      "--border-strong": "color",
+      "--border-subtle": "color",
+      "--border-danger": "color",
+      "--text-primary": "font",
+      "--text-secondary": "font",
+      "--text-muted": "font",
+      "--text-dim": "font",
+      "--text-bright": "font",
+      "--accent": "color",
+      "--accent-soft": "color",
+      "--accent-glow": "color",
+      "--accent-dim": "color",
+      "--success": "color",
+      "--warning": "color",
+      "--danger": "color",
+      "--info": "color",
+      "--prio-a": "color",
+      "--prio-b": "color",
+      "--prio-c": "color",
+      "--prio-d": "color",
+      "--desktop-bg": "color",
+      "--shell-bg": "color",
+      "--panel-bg": "color",
+      "--statusbar-bg": "color",
+      "--overlay-bg": "color",
+      "--titlebar-bg": "color",
+      "--well-bg": "color",
+      "--font-ui": "font",
+      "--font-mono": "font",
+      "--font-hand": "font",
+      "--text-2xs": "font",
+      "--text-xs": "font",
+      "--text-sm": "font",
+      "--text-md": "font",
+      "--text-lg": "font",
+      "--text-xl": "font",
+      "--text-2xl": "font",
+      "--weight-regular": "font",
+      "--weight-medium": "font",
+      "--weight-semibold": "font",
+      "--weight-bold": "font",
+      "--leading-tight": "font",
+      "--leading-snug": "font",
+      "--leading-base": "font",
+      "--tracking-tight": "font",
+      "--tracking-normal": "font",
+      "--tracking-wide": "font",
+      "--tracking-wider": "font",
+      "--tracking-widest": "font",
+      "--font-features": "font",
+      "--space-0": "spacing",
+      "--space-1": "spacing",
+      "--space-2": "spacing",
+      "--space-3": "spacing",
+      "--space-4": "spacing",
+      "--space-5": "spacing",
+      "--space-6": "spacing",
+      "--space-7": "spacing",
+      "--space-8": "spacing",
+      "--space-9": "spacing",
+      "--radius": "radius",
+      "--radius-sm": "radius",
+      "--radius-card": "radius",
+      "--radius-pill": "radius",
+      "--control-sm": "spacing",
+      "--control-md": "spacing",
+      "--control-lg": "spacing",
+      "--titlebar-h": "spacing",
+      "--touch-min": "spacing",
+      "--border-w": "spacing",
+      "--shadow-card": "shadow",
+      "--shadow-elevated": "shadow",
+      "--shadow-glow": "shadow",
+      "--shadow-glow-lg": "shadow",
+      "--transition": "other",
+      "--transition-fast": "other"
+    },
+    "fontFamilies": [
+      "Fira Code",
+      "IBM Plex Mono",
+      "JetBrains Mono",
+      "Söhne"
+    ]
+  }
+}

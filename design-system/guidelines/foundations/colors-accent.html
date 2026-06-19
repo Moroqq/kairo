@@ -1,0 +1,25 @@
+<!-- @dsCard group="Colors" viewport="700x160" name="Accent — neon green" subtitle="The signature; glow is built from accent-glow" -->
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<link rel="stylesheet" href="../../styles.css">
+<style>
+  body { padding: 18px; }
+  .row { display: flex; gap: 10px; align-items: stretch; }
+  .sw { flex: 1; }
+  .chip { height: 64px; border: 1px solid var(--border); }
+  .lbl { font-family: var(--font-mono); font-size: 10px; margin-top: 6px; color: var(--text-secondary); }
+  .val { font-family: var(--font-mono); font-size: 9px; color: var(--text-dim); }
+  .glowbox { height: 64px; display:flex; align-items:center; justify-content:center; background:var(--bg-surface); border:1px solid var(--accent); box-shadow: var(--shadow-glow); }
+</style>
+</head>
+<body>
+  <div class="row">
+    <div class="sw"><div class="chip" style="background:var(--accent)"></div><div class="lbl">--accent</div><div class="val">#00FF41</div></div>
+    <div class="sw"><div class="chip" style="background:var(--accent-soft)"></div><div class="lbl">--accent-soft</div><div class="val">#00B82E</div></div>
+    <div class="sw"><div class="chip" style="background:var(--accent-dim)"></div><div class="lbl">--accent-dim</div><div class="val">10% green</div></div>
+    <div class="sw"><div class="glowbox neon-text" style="font-family:var(--font-mono);font-size:12px;">GLOW</div><div class="lbl">--accent-glow ring</div><div class="val">shadow-glow</div></div>
+  </div>
+</body>
+</html>

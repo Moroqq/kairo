@@ -1,0 +1,21 @@
+<!-- @dsCard group="Type" viewport="700x170" name="Terminal text treatments" subtitle="Neon glow · prompt prefixes · blinking cursor" -->
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<link rel="stylesheet" href="../../styles.css">
+<style>
+  body { padding: 20px; font-family: var(--font-mono); font-size: 14px; }
+  .line { padding: 5px 0; }
+  .dim { color: var(--text-dim); }
+  .muted { color: var(--text-muted); }
+</style>
+</head>
+<body>
+  <div class="line neon-text">.neon-text — glowing accent line</div>
+  <div class="line muted"><span class="dim">$ </span>focus<span class="muted"> — prompt prefix for commands</span></div>
+  <div class="line muted"><span style="color:var(--accent)">› </span>label<span class="muted"> — chevron field labels</span></div>
+  <div class="line"><span class="neon-danger">[ошибка]</span> <span class="muted">·</span> <span class="neon-text">[ок]</span> <span class="muted">·</span> <span style="color:var(--info)">[инфо]</span> <span class="dim">— bracket status tags</span></div>
+  <div class="line"><span style="color:var(--text-bright)">ввод команды</span><span class="cursor-blink"></span></div>
+</body>
+</html>

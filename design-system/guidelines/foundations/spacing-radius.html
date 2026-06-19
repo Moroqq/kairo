@@ -1,0 +1,20 @@
+<!-- @dsCard group="Spacing" viewport="700x160" name="Radius — per theme" subtitle="--radius reshapes the whole UI: 0px matrix → 9px obsidian → 10px claude" -->
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<link rel="stylesheet" href="../../styles.css">
+<style>
+  body { padding: 20px; display:flex; gap: 28px; align-items:center; }
+  .demo { text-align:center; }
+  .box { width: 96px; height: 64px; background: var(--bg-surface); border: 1px solid var(--accent); box-shadow: var(--shadow-glow); }
+  .lbl { font-family: var(--font-mono); font-size: 10px; margin-top: 8px; color: var(--text-secondary); }
+  .val { font-family: var(--font-mono); font-size: 9px; color: var(--text-dim); }
+</style>
+</head>
+<body>
+  <div class="demo"><div class="box" style="border-radius:0"></div><div class="lbl">--radius (default)</div><div class="val">0px · terminal</div></div>
+  <div class="demo"><div class="box" style="border-radius:10px"></div><div class="lbl">--radius (soft)</div><div class="val">10px · claude / clay</div></div>
+  <div class="demo"><div class="box" style="border-radius:999px;width:140px"></div><div class="lbl">--radius-pill (soft)</div><div class="val">999px</div></div>
+</body>
+</html>

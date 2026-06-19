@@ -264,12 +264,16 @@ select:focus-visible {
 }
 
 /* ============================================================
-   RADIUS OVERRIDES (наследие)
+   RADIUS OVERRIDES — Tailwind rounded-* подчиняются радиусу темы
+   (--radius). MATRIX = 0 (остро), остальные темы скругляют единообразно.
    ============================================================ */
 html:not(.soft) :is(.rounded-card, .rounded-lg, .rounded-md, .rounded-xl, .rounded-2xl, .rounded-3xl,
-.rounded-full, .rounded-l-card, .rounded-r-card, .rounded-l-lg, .rounded-r-lg,
+.rounded-l-card, .rounded-r-card, .rounded-l-lg, .rounded-r-lg,
 .rounded-t-lg, .rounded-b-lg) {
-  border-radius: 0 !important;
+  border-radius: var(--radius) !important;
+}
+html:not(.soft) .rounded-full {
+  border-radius: var(--radius-pill) !important;
 }
 
 /* ============================================================
