@@ -22,12 +22,30 @@ export function addExpense(input: ExpenseInput): Expense {
     amount:     input.amount,
     dayOfMonth: clampDay(input.dayOfMonth),
     note:       input.note ?? null,
+    paidPeriod: null,
     created_at: new Date().toISOString(),
   };
   const list = readExpenses();
   list.push(expense);
   writeExpenses(list);
   return expense;
+}
+
+/** Текущий месяц как 'YYYY-MM' (локально). */
+function currentPeriod(): string {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+}
+
+/** Отметить/снять «оплачено» в текущем месяце. В следующем месяце трата снова активна. */
+export function togglePaid(id: string): void {
+  const list = readExpenses();
+  const idx = list.findIndex((e) => e.id === id);
+  if (idx === -1) return;
+  const period = currentPeriod();
+  const paidNow = list[idx].paidPeriod === period;
+  list[idx] = { ...list[idx], paidPeriod: paidNow ? null : period };
+  writeExpenses(list);
 }
 
 export function updateExpense(
@@ -70,23 +88,34 @@ function nextPaymentDate(dayOfMonth: number): Date {
   return candidate;
 }
 
-/** Траты с датой следующей оплаты и счётчиком дней, отсортированные по близости. */
+/** Траты с датой следующей оплаты и счётчиком дней. Оплаченные — в конец списка. */
 export function getExpenseViews(): ExpenseView[] {
   const today = new Date();
   today.setHours(0, 0, 0, 0);
+  const period = currentPeriod();
 
   return readExpenses()
     .map((e) => {
       const next = nextPaymentDate(e.dayOfMonth);
       const daysUntil = Math.round((next.getTime() - today.getTime()) / 86_400_000);
-      return { ...e, nextPaymentISO: toISODate(next), daysUntil };
+      const paid = e.paidPeriod === period;
+      return { ...e, nextPaymentISO: toISODate(next), daysUntil, paid };
     })
-    .sort((a, b) => a.daysUntil - b.daysUntil);
+    .sort((a, b) => {
+      if (a.paid !== b.paid) return a.paid ? 1 : -1; // оплаченные вниз
+      return a.daysUntil - b.daysUntil;
+    });
 }
 
 /** Суммарный месячный расход. */
 export function monthlyTotal(): number {
   return readExpenses().reduce((sum, e) => sum + e.amount, 0);
+}
+
+/** Сколько ещё осталось оплатить в этом месяце (без уже отмеченных). */
+export function remainingTotal(): number {
+  const period = currentPeriod();
+  return readExpenses().reduce((sum, e) => sum + (e.paidPeriod === period ? 0 : e.amount), 0);
 }
 
 /* ─── helpers ──────────────────────────────────────────────────────────── */

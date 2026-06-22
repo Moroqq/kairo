@@ -23,8 +23,8 @@ export function MonthGrid({ year, month, selectedDate, onSelect, onPrev, onNext,
   const today = todayISO();
 
   const navBtn: React.CSSProperties = {
-    width: isMobile ? 44 : 36,
-    height: isMobile ? 44 : 36,
+    width: isMobile ? 44 : 42,
+    height: isMobile ? 44 : 42,
     background: 'transparent',
     border: '1px solid var(--border-subtle)',
     color: 'var(--text-secondary)',
@@ -34,26 +34,26 @@ export function MonthGrid({ year, month, selectedDate, onSelect, onPrev, onNext,
   return (
     <div className="flex flex-col flex-1 min-h-0">
       {/* Month header */}
-      <div className="flex items-center gap-2 px-2 flex-shrink-0" style={{ minHeight: isMobile ? 52 : 44 }}>
+      <div className="flex items-center gap-2 px-2 flex-shrink-0" style={{ minHeight: isMobile ? 52 : 52 }}>
         <button type="button" onClick={onPrev} className="flex items-center justify-center" style={navBtn} title="предыдущий месяц">
-          <ChevronLeft size={isMobile ? 22 : 18} />
+          <ChevronLeft size={isMobile ? 22 : 22} />
         </button>
         <span
           className="neon-text flex-1 text-center"
-          style={{ fontSize: isMobile ? 17 : 14, fontWeight: 700, letterSpacing: 2, textTransform: 'uppercase' }}
+          style={{ fontSize: isMobile ? 17 : 19, fontWeight: 700, letterSpacing: 2, textTransform: 'uppercase' }}
         >
           {MONTHS_RU[month]} {year}
         </span>
         <button
           type="button" onClick={onToday}
-          className="bevel-raised flex items-center px-3 text-xs"
-          style={{ minHeight: isMobile ? 44 : 32, background: 'var(--bg-surface)', color: 'var(--text-secondary)' }}
+          className="bevel-raised flex items-center px-3"
+          style={{ minHeight: isMobile ? 44 : 40, fontSize: isMobile ? 12 : 13, background: 'var(--bg-surface)', color: 'var(--text-secondary)' }}
           title="сегодня"
         >
           сегодня
         </button>
         <button type="button" onClick={onNext} className="flex items-center justify-center" style={navBtn} title="следующий месяц">
-          <ChevronRight size={isMobile ? 22 : 18} />
+          <ChevronRight size={isMobile ? 22 : 22} />
         </button>
       </div>
 
@@ -64,7 +64,7 @@ export function MonthGrid({ year, month, selectedDate, onSelect, onPrev, onNext,
             key={wd}
             className="text-center font-mono"
             style={{
-              fontSize: isMobile ? 11 : 10, padding: isMobile ? '6px 0' : '4px 0',
+              fontSize: isMobile ? 11 : 13, padding: isMobile ? '6px 0' : '7px 0',
               color: wd === 0 || wd === 6 ? 'var(--text-muted)' : 'var(--text-dim)',
               textTransform: 'uppercase', letterSpacing: 1,
             }}
@@ -101,7 +101,7 @@ export function MonthGrid({ year, month, selectedDate, onSelect, onPrev, onNext,
               onClick={() => onSelect(iso)}
               className="flex flex-col items-stretch transition-colors text-left"
               style={{
-                minHeight: isMobile ? 58 : 64,
+                minHeight: isMobile ? 58 : 76,
                 background: isSelected ? 'var(--accent-dim)' : 'transparent',
                 border: `1px solid ${
                   isSelected ? 'var(--accent)'
@@ -112,17 +112,17 @@ export function MonthGrid({ year, month, selectedDate, onSelect, onPrev, onNext,
                 boxShadow: hasOverdue && !isSelected ? 'inset 0 0 12px rgba(255,0,60,0.08)' : 'none',
                 opacity: inMonth ? 1 : 0.35,
                 cursor: 'pointer',
-                padding: isMobile ? '5px 5px 6px' : '3px 4px 4px',
+                padding: isMobile ? '5px 5px 6px' : '5px 7px 6px',
                 gap: 3,
                 overflow: 'hidden',
               }}
             >
               {/* Day number */}
-              <div className="flex items-center justify-between" style={{ minHeight: 14 }}>
+              <div className="flex items-center justify-between" style={{ minHeight: 16 }}>
                 <span
                   className="font-mono"
                   style={{
-                    fontSize: isMobile ? 15 : 11,
+                    fontSize: isMobile ? 15 : 15,
                     color: isToday ? 'var(--accent)' : 'var(--text-primary)',
                     fontWeight: isToday ? 700 : 400,
                     textShadow: isToday ? '0 0 6px var(--accent-glow)' : 'none',
@@ -132,7 +132,7 @@ export function MonthGrid({ year, month, selectedDate, onSelect, onPrev, onNext,
                   {d.getDate()}
                 </span>
                 {total > 0 && (
-                  <span className="font-mono" style={{ fontSize: isMobile ? 10 : 8, color: 'var(--text-dim)', lineHeight: 1 }}>
+                  <span className="font-mono" style={{ fontSize: isMobile ? 10 : 11, color: 'var(--text-dim)', lineHeight: 1 }}>
                     {doneCount}/{total}
                   </span>
                 )}
@@ -192,13 +192,13 @@ function DayDots({ items }: { items: DisplayItem[] }) {
 /* ── Десктоп: текстовые мини-бары (как было) ──────────────────── */
 
 function DayBars({ items }: { items: DisplayItem[] }) {
-  const visible = items.slice(0, 3);
+  const visible = items.slice(0, 4);
   const hidden = items.length - visible.length;
   return (
-    <div className="flex flex-col" style={{ gap: 1 }}>
+    <div className="flex flex-col" style={{ gap: 2 }}>
       {visible.map((item) => <MiniBar key={item.id} item={item} />)}
       {hidden > 0 && (
-        <span className="font-mono" style={{ fontSize: 8, color: 'var(--text-muted)', paddingLeft: 4, lineHeight: 1.1 }}>
+        <span className="font-mono" style={{ fontSize: 10, color: 'var(--text-muted)', paddingLeft: 5, lineHeight: 1.1 }}>
           +{hidden}
         </span>
       )}
@@ -216,15 +216,15 @@ function MiniBar({ item }: { item: DisplayItem }) {
     <div
       className="font-mono"
       style={{
-        display: 'flex', alignItems: 'center', gap: 3,
-        fontSize: 9, lineHeight: 1.15, paddingLeft: 4,
-        borderLeft: `2px solid ${stripeColor}`,
+        display: 'flex', alignItems: 'center', gap: 4,
+        fontSize: 12, lineHeight: 1.2, paddingLeft: 5,
+        borderLeft: `3px solid ${stripeColor}`,
         boxShadow: overdue ? `-1px 0 4px ${stripeGlow}` : 'none',
         color: item.done ? 'var(--text-dim)' : 'var(--text-secondary)',
         textDecoration: item.done ? 'line-through' : 'none',
         opacity: item.done ? 0.6 : 1,
         whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
-        minHeight: 11,
+        minHeight: 15,
       }}
       title={item.title}
     >

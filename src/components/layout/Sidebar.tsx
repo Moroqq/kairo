@@ -11,25 +11,25 @@ export function Sidebar() {
     <aside
       className="bevel-raised flex flex-col flex-shrink-0 h-full"
       style={{
-        width: collapsed ? 44 : 180,
+        width: collapsed ? 52 : 216,
         background: 'var(--panel-bg)',
-        padding: 6,
-        gap: 4,
+        padding: 8,
+        gap: 5,
       }}
     >
       {/* Brand */}
       <button
         onClick={toggle}
-        className="flex items-center gap-2 px-1.5 h-7 text-xs"
-        style={{ background: 'transparent', border: 'none', cursor: 'pointer' }}
+        className="flex items-center gap-2 px-1.5"
+        style={{ height: 40, background: 'transparent', border: 'none', cursor: 'pointer' }}
         title={collapsed ? 'Expand' : 'Collapse'}
       >
         {collapsed ? (
           <img
             src="/logo.png"
             alt="Kairo"
-            width={20}
-            height={20}
+            width={26}
+            height={26}
             style={{
               display: 'block',
               filter: 'drop-shadow(0 0 4px var(--accent-glow))',
@@ -40,8 +40,8 @@ export function Sidebar() {
             <img
               src="/logo.png"
               alt=""
-              width={18}
-              height={18}
+              width={24}
+              height={24}
               style={{
                 display: 'block',
                 filter: 'drop-shadow(0 0 4px var(--accent-glow))',
@@ -50,11 +50,11 @@ export function Sidebar() {
             />
             <span
               className="flex-1 text-left font-bold neon-text"
-              style={{ letterSpacing: 2, fontSize: 13 }}
+              style={{ letterSpacing: 2.5, fontSize: 17 }}
             >
               KAIRO
             </span>
-            <ChevronLeft size={12} style={{ color: 'var(--text-muted)' }} />
+            <ChevronLeft size={15} style={{ color: 'var(--text-muted)' }} />
           </>
         )}
       </button>
@@ -76,8 +76,10 @@ export function Sidebar() {
             key={to}
             to={to}
             end
-            className="flex items-center gap-2 px-2 h-7 text-xs select-none transition-colors"
+            className="flex items-center gap-2.5 px-2.5 select-none transition-colors"
             style={({ isActive }) => ({
+              height: 38,
+              fontSize: 14,
               background: isActive ? 'var(--accent-dim)' : 'transparent',
               color: isActive ? 'var(--accent)' : 'var(--text-secondary)',
               borderLeft: `2px solid ${isActive ? 'var(--accent)' : 'transparent'}`,
@@ -85,7 +87,7 @@ export function Sidebar() {
             })}
             title={collapsed ? label : undefined}
           >
-            <Icon size={13} style={{ flexShrink: 0 }} />
+            <Icon size={17} style={{ flexShrink: 0 }} />
             {!collapsed && (
               <span className="flex-1 truncate">
                 <span style={{ color: 'var(--text-dim)' }}>$ </span>

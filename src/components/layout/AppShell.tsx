@@ -80,11 +80,11 @@ export function AppShell({ children }: AppShellProps) {
               {!isMobile && (
                 <button
                   onClick={openCapture}
-                  className="bevel-raised absolute bottom-3 right-3 z-30 flex items-center gap-2 px-3 h-8 text-xs font-medium"
-                  style={{ background: 'var(--bg-surface)' }}
+                  className="bevel-raised absolute bottom-4 right-4 z-30 flex items-center gap-2 font-medium"
+                  style={{ background: 'var(--bg-surface)', height: 44, padding: '0 18px', fontSize: 14 }}
                   title="Новая задача (N)"
                 >
-                  <span className="neon-text" style={{ fontSize: 14, lineHeight: 1 }}>+</span>
+                  <span className="neon-text" style={{ fontSize: 20, lineHeight: 1 }}>+</span>
                   <span style={{ color: 'var(--text-primary)' }}>новая задача</span>
                 </button>
               )}

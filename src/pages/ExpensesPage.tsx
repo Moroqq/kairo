@@ -1,8 +1,8 @@
 import { useState } from 'react';
-import { Plus, Pencil, Trash2, CalendarClock } from 'lucide-react';
+import { Plus, Pencil, Trash2, CalendarClock, Check } from 'lucide-react';
 import { fromISODate } from '@/lib/date';
 import { Modal } from '@/components/ui/Modal';
-import { useExpenses, useAddExpense, useUpdateExpense, useDeleteExpense } from '@/hooks/useExpenses';
+import { useExpenses, useAddExpense, useUpdateExpense, useDeleteExpense, useTogglePaid } from '@/hooks/useExpenses';
 import { formatMoney } from '@/services/expense.service';
 import { ExpenseForm, type ExpenseFormValues } from '@/components/expense/ExpenseForm';
 import type { ExpenseView } from '@/types/expense';
@@ -27,11 +27,13 @@ export function ExpensesPage() {
   const addExpense    = useAddExpense();
   const updateExpense = useUpdateExpense();
   const deleteExpense = useDeleteExpense();
+  const togglePaid    = useTogglePaid();
 
   const [editing, setEditing] = useState<Editing>(null);
 
   const views = data?.views ?? [];
   const total = data?.total ?? 0;
+  const remaining = data?.remaining ?? 0;
 
   const handleSave = (values: ExpenseFormValues) => {
     if (editing?.mode === 'edit') {
@@ -67,15 +69,22 @@ export function ExpensesPage() {
 
         {/* Total */}
         <div
-          className="flex items-baseline justify-between px-3 py-2.5 mb-3"
+          className="flex items-center justify-between px-3 py-2.5 mb-3"
           style={{
             border: '1px solid var(--border-strong)',
             background: 'linear-gradient(90deg, var(--accent-dim) 0%, transparent 70%)',
           }}
         >
-          <span className="font-mono" style={{ fontSize: 11, letterSpacing: 1, color: 'var(--text-muted)' }}>
-            В МЕСЯЦ
-          </span>
+          <div className="flex flex-col">
+            <span className="font-mono" style={{ fontSize: 11, letterSpacing: 1, color: 'var(--text-muted)' }}>
+              В МЕСЯЦ
+            </span>
+            {remaining !== total && (
+              <span className="font-mono" style={{ fontSize: 10, color: 'var(--text-dim)' }}>
+                осталось {formatMoney(remaining)}
+              </span>
+            )}
+          </div>
           <span className="font-mono neon-text" style={{ fontSize: 20, fontWeight: 700 }}>
             {formatMoney(total)}
           </span>
@@ -101,30 +110,63 @@ export function ExpensesPage() {
                   minHeight: 52,
                   border: '1px solid var(--border-subtle)',
                   background: 'var(--well-bg)',
-                  borderLeft: `3px solid ${daysColor(e.daysUntil)}`,
+                  borderLeft: `3px solid ${e.paid ? 'var(--text-dim)' : daysColor(e.daysUntil)}`,
+                  opacity: e.paid ? 0.55 : 1,
                 }}
               >
+                {/* Чекбокс «оплачено» */}
+                <button
+                  type="button"
+                  onClick={() => togglePaid.mutate(e.id)}
+                  className="flex items-center justify-center flex-shrink-0"
+                  style={{
+                    width: 24, height: 24,
+                    border: `1px solid ${e.paid ? 'var(--accent)' : 'var(--border)'}`,
+                    background: e.paid ? 'var(--accent-dim)' : 'transparent',
+                    color: 'var(--accent)',
+                    borderRadius: 'var(--radius)',
+                    cursor: 'pointer',
+                  }}
+                  title={e.paid ? 'снять отметку (оплачено в этом месяце)' : 'отметить оплаченным'}
+                >
+                  {e.paid && <Check size={15} />}
+                </button>
+
                 {/* Name + note */}
                 <div className="flex flex-col min-w-0 flex-1">
-                  <span className="truncate" style={{ fontSize: 13, color: 'var(--text-primary)' }}>
+                  <span
+                    className="truncate"
+                    style={{
+                      fontSize: 13,
+                      color: e.paid ? 'var(--text-muted)' : 'var(--text-primary)',
+                      textDecoration: e.paid ? 'line-through' : 'none',
+                    }}
+                  >
                     {e.name}
                   </span>
                   <span className="font-mono flex items-center gap-1" style={{ fontSize: 10, color: 'var(--text-dim)' }}>
-                    <CalendarClock size={10} /> {dateStr} · {e.dayOfMonth}-го
+                    <CalendarClock size={10} /> {e.paid ? 'оплачено · ' : ''}{dateStr} · {e.dayOfMonth}-го
                   </span>
                 </div>
 
                 {/* Amount */}
-                <span className="font-mono flex-shrink-0" style={{ fontSize: 13, color: 'var(--text-bright)', fontWeight: 600 }}>
+                <span
+                  className="font-mono flex-shrink-0"
+                  style={{
+                    fontSize: 13, fontWeight: 600,
+                    color: e.paid ? 'var(--text-dim)' : 'var(--text-bright)',
+                    textDecoration: e.paid ? 'line-through' : 'none',
+                  }}
+                >
                   {formatMoney(e.amount)}
                 </span>
 
                 {/* Days until */}
                 <span
                   className="font-mono flex-shrink-0 text-right"
-                  style={{ fontSize: 11, minWidth: 56, color: daysColor(e.daysUntil), fontWeight: e.daysUntil <= 7 ? 700 : 400 }}
+                  style={{ fontSize: 11, minWidth: 56, color: e.paid ? 'var(--text-dim)' : daysColor(e.daysUntil), fontWeight: e.daysUntil <= 7 && !e.paid ? 700 : 400 }}
                 >
-                  {daysLabel(e.daysUntil)}
+                  {e.paid ? '✓' : daysLabel(e.daysUntil)}
                 </span>
 
                 {/* Actions */}

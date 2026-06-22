@@ -5,6 +5,8 @@ export interface Expense {
   amount: number;      // сумма в рублях
   dayOfMonth: number;  // 1..31 — день регулярной оплаты
   note: string | null;
+  /** Период, в котором трату отметили оплаченной: 'YYYY-MM'. В новом месяце снова активна. */
+  paidPeriod: string | null;
   created_at: string;
 }
 
@@ -12,4 +14,5 @@ export interface Expense {
 export interface ExpenseView extends Expense {
   nextPaymentISO: string;  // 'YYYY-MM-DD' ближайшей оплаты
   daysUntil: number;       // 0 = сегодня
+  paid: boolean;           // оплачено в текущем месяце
 }

@@ -15,6 +15,7 @@ function migrate(raw: any): Expense {
     amount:     Number.isFinite(Number(raw.amount)) ? Number(raw.amount) : 0,
     dayOfMonth: clampDay(raw.dayOfMonth),
     note:       raw.note ?? null,
+    paidPeriod: typeof raw.paidPeriod === 'string' ? raw.paidPeriod : null,
     created_at: raw.created_at || new Date().toISOString(),
   };
 }
