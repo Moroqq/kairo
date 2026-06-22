@@ -11,6 +11,7 @@ import { motion } from 'framer-motion';
 import { Button } from '@/components/ui/Button';
 import { PinPad } from '@/components/auth/PinPad';
 import { useAuthStore } from '@/stores/auth.store';
+import { useIsMobile } from '@/hooks/useMediaQuery';
 import {
   hasAccount, hasPin, getUsername,
   createAccount, verifyPassword, setPin, verifyPin,
@@ -21,6 +22,7 @@ type Step = 'loading' | 'register' | 'password' | 'pin' | 'setpin';
 
 export function LockScreen() {
   const unlock = useAuthStore((s) => s.unlock);
+  const isMobile = useIsMobile();
 
   const [step, setStep] = useState<Step>('loading');
 
@@ -39,12 +41,13 @@ export function LockScreen() {
   const [loading, setLoading] = useState(false);
   const busy = useRef(false);
 
-  // Начальный экран: нет аккаунта → регистрация; есть PIN → pin; иначе → пароль
+  // Начальный экран: нет аккаунта → регистрация; есть PIN (только мобайл) → pin; иначе → пароль.
+  // На десктопе PIN не используем — там просто компактное окно с паролем.
   useEffect(() => {
     if (!hasAccount()) setStep('register');
-    else if (hasPin()) setStep('pin');
+    else if (isMobile && hasPin()) setStep('pin');
     else setStep('password');
-  }, []);
+  }, [isMobile]);
 
   /* ─── Регистрация ───────────────────────────────────────── */
   const handleRegister = async () => {
@@ -56,7 +59,8 @@ export function LockScreen() {
     try {
       await createAccount(username, password);
       resetFields();
-      setStep('setpin');                  // предложить быстрый вход
+      if (isMobile) setStep('setpin');    // мобайл — предложить быстрый PIN
+      else unlock();                      // десктоп — сразу внутрь
     } catch {
       setError('ошибка шифрования, попробуйте снова');
     } finally {
@@ -72,8 +76,10 @@ export function LockScreen() {
       const ok = await verifyPassword(password);
       if (!ok) { setError('доступ запрещён'); setLoading(false); return; }
       resetFields();
-      if (hasPin()) unlock();             // PIN уже есть — сразу внутрь
-      else setStep('setpin');             // нет PIN — предложить настроить
+      // Десктоп: всегда сразу внутрь (PIN не используем).
+      // Мобайл: если PIN ещё не задан — предложить настроить.
+      if (!isMobile || hasPin()) unlock();
+      else setStep('setpin');
     } catch {
       setError('ошибка входа');
     } finally {
@@ -159,7 +165,7 @@ export function LockScreen() {
         transition={{ duration: 0.2, ease: 'easeOut' }}
         className="flex flex-col relative"
         style={{
-          width: isPinStep ? 340 : 380,
+          width: isMobile ? (isPinStep ? 340 : 380) : 300,
           maxWidth: '100%',
           background: 'var(--overlay-bg)',
           border: '1px solid var(--accent)',
@@ -172,20 +178,32 @@ export function LockScreen() {
           <span className="flex-1 truncate">{titlebar}</span>
         </div>
 
-        <div className="flex flex-col gap-3" style={{ padding: 16 }}>
-          {/* Лого */}
-          <div className="flex flex-col items-center gap-2" style={{ marginBottom: 4, marginTop: 4 }}>
-            <img
-              src="/logo.png" alt="Kairo" width={isPinStep ? 64 : 88} height={isPinStep ? 64 : 88}
-              style={{ display: 'block', filter: 'drop-shadow(0 0 18px var(--accent-glow)) drop-shadow(0 0 36px rgba(0,255,65,0.25))' }}
-            />
-            <div className="font-mono neon-text" style={{ fontSize: 11, letterSpacing: 6, fontWeight: 700 }}>
-              K A I R O
+        <div className="flex flex-col gap-3" style={{ padding: isMobile ? 16 : 14 }}>
+          {/* Лого: на мобиле — крупный блок, на десктопе — компактная строка */}
+          {isMobile ? (
+            <div className="flex flex-col items-center gap-2" style={{ marginBottom: 4, marginTop: 4 }}>
+              <img
+                src="/logo.png" alt="Kairo" width={isPinStep ? 64 : 88} height={isPinStep ? 64 : 88}
+                style={{ display: 'block', filter: 'drop-shadow(0 0 18px var(--accent-glow)) drop-shadow(0 0 36px rgba(0,255,65,0.25))' }}
+              />
+              <div className="font-mono neon-text" style={{ fontSize: 11, letterSpacing: 6, fontWeight: 700 }}>
+                K A I R O
+              </div>
+              <div className="font-mono" style={{ fontSize: 9, letterSpacing: 2, color: 'var(--text-dim)' }}>
+                — терминал задач —
+              </div>
             </div>
-            <div className="font-mono" style={{ fontSize: 9, letterSpacing: 2, color: 'var(--text-dim)' }}>
-              — терминал задач —
+          ) : (
+            <div className="flex items-center gap-2" style={{ marginBottom: 2 }}>
+              <img
+                src="/logo.png" alt="Kairo" width={28} height={28}
+                style={{ display: 'block', filter: 'drop-shadow(0 0 8px var(--accent-glow))' }}
+              />
+              <span className="font-mono neon-text" style={{ fontSize: 13, letterSpacing: 3, fontWeight: 700 }}>
+                KAIRO
+              </span>
             </div>
-          </div>
+          )}
 
           {/* ── РЕГИСТРАЦИЯ ── */}
           {step === 'register' && (
@@ -268,7 +286,7 @@ export function LockScreen() {
 
           {step === 'password' && (
             <div className="flex items-center justify-between pt-1">
-              {hasPin() ? (
+              {isMobile && hasPin() ? (
                 <button
                   type="button"
                   onClick={() => { resetFields(); setStep('pin'); }}
