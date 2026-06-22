@@ -31,6 +31,7 @@ function migrateItem(raw: any): PlanItem {
     priority:   normPriority(raw.priority),
     done:       Boolean(raw.done),
     pattern_id: raw.pattern_id ?? null,
+    task_id:    raw.task_id ?? null,
     created_at: raw.created_at || new Date().toISOString(),
   };
 }

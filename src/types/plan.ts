@@ -14,6 +14,7 @@ export interface PlanItem {
   priority: Priority;        // переиспользуем A|B|C|D для цветовой метки
   done: boolean;
   pattern_id: string | null; // если пункт «отвязан» от шаблона — хранит его id
+  task_id: string | null;    // связанная канбан-задача (листок → доска)
   created_at: string;
 }
 

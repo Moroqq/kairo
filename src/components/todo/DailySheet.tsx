@@ -35,7 +35,8 @@ export function DailySheet({ date }: Props) {
   const handleAdd = () => {
     const title = draft.trim();
     if (!title) return;
-    addItem.mutate({ date, title, priority: 'C' });
+    // Листок → доска: пункт сразу падает в ОЧЕРЕДЬ канбана (linkToBoard).
+    addItem.mutate({ date, title, priority: 'C', linkToBoard: true });
     setDraft('');
   };
 

@@ -14,6 +14,7 @@ import type { TaskStatus, Priority, Task } from '@/types';
 
 const TASKS_KEY = ['tasks'] as const;
 const LOGS_KEY  = ['event_logs'] as const;
+const PLAN_KEY  = ['plan'] as const;   // листок/календарь читают и задачи (связь листок↔доска)
 
 export function useTasks() {
   return useQuery({ queryKey: TASKS_KEY, queryFn: fetchTasks, staleTime: 15_000 });
@@ -44,7 +45,10 @@ export function useUpdateStatus() {
       return { prev };
     },
     onError: (_e, _v, ctx) => qc.setQueryData(TASKS_KEY, ctx?.prev),
-    onSettled: () => qc.invalidateQueries({ queryKey: TASKS_KEY }),
+    onSettled: () => {
+      qc.invalidateQueries({ queryKey: TASKS_KEY });
+      qc.invalidateQueries({ queryKey: PLAN_KEY });
+    },
   });
 }
 
@@ -70,7 +74,10 @@ export function useUpdateTask() {
   return useMutation({
     mutationFn: ({ id, updates }: { id: string; updates: Parameters<typeof updateTask>[1] }) =>
       updateTask(id, updates),
-    onSuccess: () => qc.invalidateQueries({ queryKey: TASKS_KEY }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: TASKS_KEY });
+      qc.invalidateQueries({ queryKey: PLAN_KEY });
+    },
   });
 }
 
@@ -89,6 +96,7 @@ export function useArchiveTask() {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: TASKS_KEY });
       qc.invalidateQueries({ queryKey: LOGS_KEY });
+      qc.invalidateQueries({ queryKey: PLAN_KEY });
     },
   });
 }

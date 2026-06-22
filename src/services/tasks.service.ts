@@ -1,5 +1,17 @@
 import { readTasks, writeTasks, readLogs, writeLogs } from '@/lib/storage';
+import { readItems, writeItems } from '@/lib/plan-storage';
 import type { Task, TaskStatus, Priority, TaskComment, SourceType, EventLog } from '@/types';
+
+/** Синхронизировать связанный листок-пункт со статусом задачи (доска → листок). */
+function syncLinkedPlanItem(taskId: string, status: TaskStatus): void {
+  const items = readItems();
+  const idx = items.findIndex((i) => i.task_id === taskId);
+  if (idx === -1) return;
+  const done = status === 'Resolved';
+  if (items[idx].done === done) return;
+  items[idx] = { ...items[idx], done };
+  writeItems(items);
+}
 
 export async function fetchTasks(): Promise<Task[]> {
   return readTasks().filter((t) => t.status !== 'Archived');
@@ -64,6 +76,7 @@ export async function updateTaskStatus(id: string, newStatus: TaskStatus): Promi
   };
   writeTasks(tasks);
 
+  syncLinkedPlanItem(id, newStatus);   // доска → листок: зачёркивание/возврат
   logEvent(id, 'status_changed', oldStatus, newStatus);
   return tasks[idx];
 }

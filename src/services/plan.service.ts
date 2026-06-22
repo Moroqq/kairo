@@ -3,9 +3,9 @@ import {
   readPatterns, writePatterns,
   readOverrides, writeOverrides,
 } from '@/lib/plan-storage';
-import { readTasks } from '@/lib/storage';
-import { updateTaskStatus } from '@/services/tasks.service';
-import { weekdayOf, toISODate } from '@/lib/date';
+import { readTasks, writeTasks } from '@/lib/storage';
+import { updateTaskStatus, createTask, archiveTask } from '@/services/tasks.service';
+import { weekdayOf, toISODate, deadlineISOFromDate } from '@/lib/date';
 import type {
   PlanItem, RecurrencePattern, PatternOverride, DisplayItem, Priority,
 } from '@/types/plan';
@@ -34,6 +34,13 @@ function findOverride(
   overrides: PatternOverride[], patternId: string, date: string,
 ): PatternOverride | undefined {
   return overrides.find((o) => o.pattern_id === patternId && o.date === date);
+}
+
+/** id канбан-задач, уже представленных plan-пунктами (листок → доска) — чтобы не дублировать в дне/месяце. */
+function linkedTaskIds(items: PlanItem[]): Set<string> {
+  const s = new Set<string>();
+  for (const i of items) if (i.task_id) s.add(i.task_id);
+  return s;
 }
 
 /* ─── чтение: материализация дня ───────────────────────────────────────── */
@@ -67,10 +74,12 @@ export function getDayItems(date: string): DisplayItem[] {
     });
   }
 
-  // Канбан-задачи с дедлайном на эту дату (локально)
+  // Канбан-задачи с дедлайном на эту дату (локально), кроме уже показанных как plan-пункты
   const todayMs = Date.now();
+  const linked = linkedTaskIds(items);
   for (const t of readTasks()) {
     if (t.status === 'Archived' || !t.deadline) continue;
+    if (linked.has(t.id)) continue;
     if (toISODate(new Date(t.deadline)) !== date) continue;
     result.push({
       kind:     'task',
@@ -123,10 +132,12 @@ export function getMonthSummary(
     if (total > 0) out[date] = { total, done };
   }
 
-  // Канбан-задачи: добавляем как пункты на дату их дедлайна
+  // Канбан-задачи: добавляем как пункты на дату их дедлайна (кроме связанных с plan-пунктами)
   const dateSet = new Set(dates);
+  const linkedSummary = linkedTaskIds(items);
   for (const t of readTasks()) {
     if (t.status === 'Archived' || !t.deadline) continue;
+    if (linkedSummary.has(t.id)) continue;
     const taskDate = toISODate(new Date(t.deadline));
     if (!dateSet.has(taskDate)) continue;
     const row = out[taskDate] ?? { total: 0, done: 0 };
@@ -159,9 +170,11 @@ export function getMonthItems(dates: string[]): Record<string, DisplayItem[]> {
     itemsByDate.set(i.date, arr);
   }
 
+  const linkedMonth = linkedTaskIds(allItems);
   const tasksByDate = new Map<string, typeof allTasks>();
   for (const t of allTasks) {
     if (t.status === 'Archived' || !t.deadline) continue;
+    if (linkedMonth.has(t.id)) continue;
     const d = toISODate(new Date(t.deadline));
     const arr = tasksByDate.get(d) ?? [];
     arr.push(t);
@@ -228,9 +241,25 @@ export interface PlanItemInput {
   note?: string | null;
   time?: string | null;
   priority?: Priority;
+  /** Завести связанную задачу в ОЧЕРЕДИ доски (листок → доска). */
+  linkToBoard?: boolean;
 }
 
-export function addItem(input: PlanItemInput): PlanItem {
+export async function addItem(input: PlanItemInput): Promise<PlanItem> {
+  let taskId: string | null = null;
+
+  // Листок → доска: создаём задачу в ОЧЕРЕДИ (status New) с дедлайном на этот день.
+  if (input.linkToBoard) {
+    const task = await createTask({
+      title:    input.title,
+      priority: input.priority ?? 'C',
+      status:   'New',
+      deadline: deadlineISOFromDate(input.date),
+      source_type: 'text',
+    });
+    taskId = task.id;
+  }
+
   const item: PlanItem = {
     id:         crypto.randomUUID(),
     date:       input.date,
@@ -240,6 +269,7 @@ export function addItem(input: PlanItemInput): PlanItem {
     priority:   input.priority ?? 'C',
     done:       false,
     pattern_id: null,
+    task_id:    taskId,
     created_at: new Date().toISOString(),
   };
   const items = readItems();
@@ -259,8 +289,14 @@ export function updateItem(
   writeItems(items);
 }
 
-export function deleteItem(id: string): void {
-  writeItems(readItems().filter((i) => i.id !== id));
+export async function deleteItem(id: string): Promise<void> {
+  const items = readItems();
+  const item  = items.find((i) => i.id === id);
+  writeItems(items.filter((i) => i.id !== id));
+  // Связанную задачу убираем с доски, чтобы не висела осиротевшей.
+  if (item?.task_id) {
+    try { await archiveTask(item.task_id); } catch { /* уже удалена */ }
+  }
 }
 
 /**
@@ -269,14 +305,30 @@ export function deleteItem(id: string): void {
  */
 export function carryOverTo(date: string): number {
   const items = readItems();
+  const movedTaskIds: string[] = [];
   let moved = 0;
   for (const i of items) {
     if (!i.done && i.date < date) {
       i.date = date;
+      if (i.task_id) movedTaskIds.push(i.task_id);
       moved++;
     }
   }
   if (moved > 0) writeItems(items);
+
+  // Двигаем дедлайн связанных задач на новый день, чтобы доска/календарь не разъехались.
+  if (movedTaskIds.length > 0) {
+    const tasks = readTasks();
+    const set = new Set(movedTaskIds);
+    let changed = false;
+    for (const t of tasks) {
+      if (set.has(t.id) && t.status !== 'Archived') {
+        t.deadline = deadlineISOFromDate(date);
+        changed = true;
+      }
+    }
+    if (changed) writeTasks(tasks);
+  }
   return moved;
 }
 
@@ -296,7 +348,12 @@ function upsertOverride(patternId: string, date: string, patch: Partial<PatternO
 /** Универсальный toggle «сделано» для любого DisplayItem. */
 export async function togglePlanDone(item: DisplayItem): Promise<void> {
   if (item.kind === 'item') {
-    updateItem(item.id, { done: !item.done });
+    const nextDone = !item.done;
+    updateItem(item.id, { done: nextDone });
+    // Связанная задача: отметка в листке синкается с доской (готово ↔ ОЧЕРЕДЬ).
+    if (item.task_id) {
+      try { await updateTaskStatus(item.task_id, nextDone ? 'Resolved' : 'New'); } catch { /* задача удалена */ }
+    }
   } else if (item.kind === 'occurrence') {
     upsertOverride(item.pattern_id, item.date, { done: !item.done });
   } else {
@@ -328,6 +385,7 @@ export function detachOccurrence(
     priority:   edits.priority ?? pattern.priority,
     done:       edits.done ?? false,
     pattern_id: pattern.id,
+    task_id:    null,
     created_at: new Date().toISOString(),
   };
   const items = readItems();
