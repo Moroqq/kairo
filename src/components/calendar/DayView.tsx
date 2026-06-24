@@ -91,7 +91,7 @@ export function DayView({ date, onClose }: Props) {
       {/* Header */}
       <div
         className="flex items-center gap-2 px-3 flex-shrink-0"
-        style={{ minHeight: 40, borderBottom: '1px solid var(--border-subtle)' }}
+        style={{ minHeight: 50, borderBottom: '1px solid var(--border-subtle)' }}
       >
         <span className="neon-text" style={{ fontSize: 13, fontWeight: 700, letterSpacing: 1 }}>
           {title}
@@ -107,21 +107,21 @@ export function DayView({ date, onClose }: Props) {
             type="button"
             onClick={handleCarryOver}
             disabled={carryOver.isPending}
-            className="bevel-raised flex items-center gap-1 px-2 text-xs"
-            style={{ minHeight: 32, background: 'var(--bg-surface)', color: 'var(--text-secondary)' }}
+            className="bevel-raised flex items-center gap-1.5 px-3"
+            style={{ minHeight: 40, fontSize: 13, background: 'var(--bg-surface)', color: 'var(--text-secondary)' }}
             title="перенести незавершённое с прошлых дней на сегодня"
           >
-            <ArrowDownToLine size={13} /> перенести
+            <ArrowDownToLine size={15} /> перенести
           </button>
         )}
         <button
           type="button"
           onClick={() => setEditing({ mode: 'add' })}
-          className="bevel-raised flex items-center gap-1 px-2 text-xs"
-          style={{ minHeight: 32, background: 'var(--bg-surface)', color: 'var(--text-primary)' }}
+          className="bevel-raised flex items-center gap-1.5 px-3"
+          style={{ minHeight: 40, fontSize: 13, background: 'var(--bg-surface)', color: 'var(--text-primary)' }}
           title="добавить пункт"
         >
-          <Plus size={13} className="neon-text" /> пункт
+          <Plus size={15} className="neon-text" /> пункт
         </button>
         {onClose && (
           <button

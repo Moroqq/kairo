@@ -145,7 +145,7 @@ export function LockScreen() {
       title={showPass ? 'Скрыть' : 'Показать'}
       type="button"
     >
-      {showPass ? <EyeOff size={11} /> : <Eye size={11} />}
+      {showPass ? <EyeOff size={13} /> : <Eye size={13} />}
     </button>
   );
 
@@ -165,11 +165,11 @@ export function LockScreen() {
         transition={{ duration: 0.2, ease: 'easeOut' }}
         className="flex flex-col relative"
         style={{
-          width: isMobile ? (isPinStep ? 340 : 380) : 300,
+          width: isMobile ? (isPinStep ? 340 : 380) : 420,
           maxWidth: '100%',
           background: 'var(--overlay-bg)',
           border: '1px solid var(--accent)',
-          boxShadow: '0 0 0 1px var(--accent), 0 0 40px var(--accent-glow), 0 0 100px rgba(0,255,65,0.15)',
+          boxShadow: '0 0 0 1px var(--accent), 0 0 40px var(--accent-glow), 0 0 100px var(--accent-glow)',
           zIndex: 5,
         }}
       >
@@ -178,7 +178,7 @@ export function LockScreen() {
           <span className="flex-1 truncate">{titlebar}</span>
         </div>
 
-        <div className="flex flex-col gap-3" style={{ padding: isMobile ? 16 : 14 }}>
+        <div className="flex flex-col gap-4" style={{ padding: isMobile ? 16 : 22 }}>
           {/* Лого: на мобиле — крупный блок, на десктопе — компактная строка */}
           {isMobile ? (
             <div className="flex flex-col items-center gap-2" style={{ marginBottom: 4, marginTop: 4 }}>
@@ -395,7 +395,7 @@ function MaskedPasswordInput({ label, value, onChange, visible, trailing, ...res
           autoComplete="off" spellCheck={false} autoCapitalize="off" autoCorrect="off"
           value={display}
           onChange={handleChange}
-          className="h-7 w-full pl-2 pr-7 text-xs outline-none font-mono"
+          className="h-9 w-full pl-3 pr-8 text-sm outline-none font-mono"
           style={{
             background: 'var(--bg-input)',
             color: visible ? 'var(--text-primary)' : 'var(--accent)',

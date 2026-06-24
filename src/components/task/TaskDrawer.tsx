@@ -1,10 +1,12 @@
 import { useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { Archive, Clock, Edit2, Tag, MessageSquare, Send } from 'lucide-react';
 import { Drawer } from '@/components/ui/Drawer';
 import { Button } from '@/components/ui/Button';
 import { TaskForm } from './TaskForm';
 import { useUIStore } from '@/stores/ui.store';
 import { useTasks, useUpdateTask, useAddComment, useArchiveTask } from '@/hooks/useTasks';
+import { fetchArchivedTasks } from '@/services/tasks.service';
 import { useToast } from '@/components/ui/Toast';
 import { formatDeadline, isOverdue, formatRelative, formatDateTime } from '@/hooks/useDeadlineWatcher';
 import type { Task } from '@/types';
@@ -20,7 +22,15 @@ export function TaskDrawer() {
   const activeTaskId   = useUIStore((s) => s.activeTaskId);
   const setActiveTaskId = useUIStore((s) => s.setActiveTaskId);
   const { data: tasks } = useTasks();
-  const task = tasks?.find((t) => t.id === activeTaskId) ?? null;
+  const { data: archivedTasks } = useQuery({
+    queryKey: ['tasks', 'archived'],
+    queryFn: fetchArchivedTasks,
+    staleTime: 30_000,
+    enabled: !!activeTaskId,
+  });
+  const task = tasks?.find((t) => t.id === activeTaskId)
+    ?? archivedTasks?.find((t) => t.id === activeTaskId)
+    ?? null;
 
   return (
     <Drawer

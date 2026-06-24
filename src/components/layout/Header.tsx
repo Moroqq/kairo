@@ -14,19 +14,19 @@ export function Header() {
 
   return (
     <div
-      className="bevel-raised flex items-center gap-2 px-2 py-1.5"
+      className="bevel-raised flex items-center gap-2 px-2 py-2.5"
       style={{ background: 'var(--panel-bg)' }}
     >
       {/* Search field — terminal-prompt look */}
       <div
-        className="flex items-center gap-2 flex-1 px-2 h-7"
+        className="flex items-center gap-2 flex-1 px-2 h-9"
         style={{
           background: 'var(--bg-input)',
           border: '1px solid var(--border-subtle)',
         }}
       >
         {!isMobile && <span className="neon-text font-mono" style={{ fontSize: 11 }}>поиск&nbsp;»</span>}
-        <Search size={11} style={{ color: 'var(--text-muted)', flexShrink: 0 }} />
+        <Search size={13} style={{ color: 'var(--text-muted)', flexShrink: 0 }} />
         <input
           className="flex-1 h-full bg-transparent text-xs outline-none font-mono"
           style={{ color: 'var(--text-primary)' }}
@@ -50,22 +50,22 @@ export function Header() {
       {/* Theme */}
       <button
         onClick={() => setThemesOpen(true)}
-        className="bevel-raised flex items-center gap-1.5 h-7 px-2.5 text-xs"
+        className="bevel-raised flex items-center gap-1.5 h-9 px-3 text-xs"
         style={{ background: 'var(--bg-surface)', color: 'var(--text-secondary)' }}
         title="Режим оформления"
       >
-        <Palette size={11} />
+        <Palette size={13} />
         {!isMobile && 'тема'}
       </button>
 
       {/* Lock */}
       <button
         onClick={lock}
-        className="bevel-raised flex items-center gap-1.5 h-7 px-2.5 text-xs"
+        className="bevel-raised flex items-center gap-1.5 h-9 px-3 text-xs"
         style={{ background: 'var(--bg-surface)', color: 'var(--text-secondary)' }}
         title="Заблокировать сессию"
       >
-        <Lock size={11} />
+        <Lock size={13} />
         {!isMobile && 'блок'}
       </button>
 

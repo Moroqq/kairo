@@ -114,11 +114,11 @@ export function FocusPage() {
         <div className="text-center flex flex-col items-center gap-6" style={{ maxWidth: 560 }}>
           <pre
             className="font-mono neon-text leading-tight"
-            style={{ fontSize: 18, letterSpacing: 1 }}
+            style={{ fontSize: 20, letterSpacing: 1 }}
           >
 {`╔══════════════════════════╗
-║   С И С Т Е М А    в     ║
-║       п о к о е          ║
+║     С И С Т Е М А       ║
+║      В   П О К О Е      ║
 ╚══════════════════════════╝`}
           </pre>
           <p className="font-mono" style={{ fontSize: 16, color: 'var(--text-secondary)' }}>
@@ -132,7 +132,7 @@ export function FocusPage() {
           <button
             onClick={openCapture}
             className="bevel-raised font-mono"
-            style={{ height: 48, padding: '0 28px', fontSize: 15, background: 'var(--bg-surface)', color: 'var(--accent)' }}
+            style={{ height: 58, padding: '0 40px', fontSize: 17, background: 'var(--bg-surface)', color: 'var(--accent)' }}
           >
             <span style={{ color: 'var(--accent)' }}>$</span> создать задачу
           </button>

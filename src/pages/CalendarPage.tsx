@@ -36,7 +36,7 @@ export function CalendarPage() {
       {/* Toolbar */}
       <div
         className="flex items-center gap-2 px-3 flex-shrink-0 font-mono"
-        style={{ minHeight: 40, borderBottom: '1px solid var(--border-subtle)', background: 'linear-gradient(90deg, var(--accent-dim) 0%, transparent 70%)' }}
+        style={{ minHeight: 48, borderBottom: '1px solid var(--border-subtle)', background: 'linear-gradient(90deg, var(--accent-dim) 0%, transparent 70%)' }}
       >
         <span className="neon-text" style={{ fontSize: 13, fontWeight: 700, letterSpacing: 2 }}>
           ПЛАН
@@ -48,11 +48,11 @@ export function CalendarPage() {
         <button
           type="button"
           onClick={() => setPatternsOpen(true)}
-          className="bevel-raised flex items-center gap-1.5 px-2 text-xs"
-          style={{ minHeight: 32, background: 'var(--bg-surface)', color: 'var(--text-secondary)' }}
+          className="bevel-raised flex items-center gap-1.5 px-3"
+          style={{ minHeight: 40, fontSize: 13, background: 'var(--bg-surface)', color: 'var(--text-secondary)' }}
           title="шаблоны-расписания"
         >
-          <CalendarClock size={13} /> расписание
+          <CalendarClock size={15} /> расписание
         </button>
       </div>
 
@@ -72,14 +72,14 @@ export function CalendarPage() {
         </div>
       ) : (
         <div className="flex flex-1 min-h-0">
-          <div className="flex-1 min-w-0" style={{ borderRight: '1px solid var(--border-subtle)' }}>
+          <div className="flex-1 min-w-0" style={{ borderRight: '1px solid var(--border-subtle)', paddingTop: 10 }}>
             <MonthGrid
               year={cursor.year} month={cursor.month}
               selectedDate={selectedDate} onSelect={handleSelect}
               onPrev={goPrev} onNext={goNext} onToday={goToday}
             />
           </div>
-          <div className="flex flex-col" style={{ width: 360, minWidth: 0 }}>
+          <div className="flex flex-col" style={{ width: 300, minWidth: 0 }}>
             <DayView date={selectedDate} />
           </div>
         </div>

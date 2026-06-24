@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { motion } from 'framer-motion';
 import { Plus, Pencil, Trash2, CalendarClock, Check } from 'lucide-react';
 import { fromISODate } from '@/lib/date';
 import { Modal } from '@/components/ui/Modal';
@@ -79,15 +80,17 @@ export function ExpensesPage() {
             <span className="font-mono" style={{ fontSize: 11, letterSpacing: 1, color: 'var(--text-muted)' }}>
               В МЕСЯЦ
             </span>
+          </div>
+          <div className="flex flex-col items-end">
+            <span className="font-mono neon-text" style={{ fontSize: 20, fontWeight: 700 }}>
+              {formatMoney(total)}
+            </span>
             {remaining !== total && (
-              <span className="font-mono" style={{ fontSize: 10, color: 'var(--text-dim)' }}>
+              <span className="font-mono" style={{ fontSize: 10, color: 'var(--text-dim)', letterSpacing: 0.5 }}>
                 осталось {formatMoney(remaining)}
               </span>
             )}
           </div>
-          <span className="font-mono neon-text" style={{ fontSize: 20, fontWeight: 700 }}>
-            {formatMoney(total)}
-          </span>
         </div>
 
         {/* Empty state */}
@@ -103,15 +106,17 @@ export function ExpensesPage() {
             const date = fromISODate(e.nextPaymentISO);
             const dateStr = date.toLocaleDateString('ru-RU', { day: '2-digit', month: 'short' });
             return (
-              <div
+              <motion.div
                 key={e.id}
+                layout
+                animate={{ opacity: e.paid ? 0.55 : 1 }}
+                transition={{ layout: { duration: 0.45, ease: [0.4, 0, 0.2, 1] }, duration: 0.3 }}
                 className="row-hover flex items-center gap-3 px-3"
                 style={{
                   minHeight: 52,
                   border: '1px solid var(--border-subtle)',
                   background: 'var(--well-bg)',
                   borderLeft: `3px solid ${e.paid ? 'var(--text-dim)' : daysColor(e.daysUntil)}`,
-                  opacity: e.paid ? 0.55 : 1,
                 }}
               >
                 {/* Чекбокс «оплачено» */}
@@ -190,7 +195,7 @@ export function ExpensesPage() {
                     <Trash2 size={13} />
                   </button>
                 </div>
-              </div>
+              </motion.div>
             );
           })}
         </div>
