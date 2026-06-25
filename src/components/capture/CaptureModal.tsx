@@ -10,10 +10,10 @@ import { useUIStore } from '@/stores/ui.store';
 type Tab = 'manual' | 'text' | 'voice' | 'image';
 
 const TABS: { id: Tab; label: string; icon: React.ReactNode }[] = [
-  { id: 'manual', label: 'вручную', icon: <PenLine size={12} /> },
-  { id: 'text',   label: 'AI',      icon: <Type    size={12} /> },
-  { id: 'voice',  label: 'голос',   icon: <Mic     size={12} /> },
-  { id: 'image',  label: 'фото',    icon: <Image   size={12} /> },
+  { id: 'manual', label: 'вручную', icon: <PenLine size={15} /> },
+  { id: 'text',   label: 'AI',      icon: <Type    size={15} /> },
+  { id: 'voice',  label: 'голос',   icon: <Mic     size={15} /> },
+  { id: 'image',  label: 'фото',    icon: <Image   size={15} /> },
 ];
 
 export function CaptureModal() {
@@ -24,24 +24,28 @@ export function CaptureModal() {
   return (
     <Modal open={isCaptureOpen} onClose={closeCapture} title="новая задача — захват" width={520}>
       {/* Win9x property-sheet tabs */}
-      <div className="flex items-end gap-0.5 px-1 pt-1" style={{ marginBottom: -1 }}>
+      {/* Tabs — touch-friendly, min 44px height */}
+      <div className="flex items-stretch gap-0 px-1 pt-2" style={{ borderBottom: '1px solid var(--border-subtle)', marginBottom: 0 }}>
         {TABS.map((tab) => {
           const active = activeTab === tab.id;
           return (
             <button
               key={tab.id}
+              type="button"
               onClick={() => setActiveTab(tab.id)}
-              className={`flex items-center gap-1 px-2 h-6 text-xs font-medium ${
-                active ? 'bevel-raised' : 'bevel-raised'
-              }`}
+              className="flex items-center gap-2 px-4 font-mono select-none"
               style={{
-                background: active ? 'var(--accent-dim)' : 'var(--bg-surface)',
+                minHeight: 44,
+                fontSize: 13,
+                letterSpacing: 0.5,
+                background: 'transparent',
+                border: 'none',
+                borderBottom: `2px solid ${active ? 'var(--accent)' : 'transparent'}`,
                 color: active ? 'var(--accent)' : 'var(--text-muted)',
-                fontWeight: active ? 700 : 500,
+                fontWeight: active ? 700 : 400,
                 textShadow: active ? '0 0 6px var(--accent-glow)' : 'none',
-                marginBottom: active ? -2 : 0,
-                zIndex: active ? 2 : 1,
-                borderBottomColor: active ? 'var(--accent-dim)' : 'var(--edge-dark)',
+                cursor: 'pointer',
+                transition: 'color 150ms, border-color 150ms',
               }}
             >
               {tab.icon}
@@ -52,10 +56,7 @@ export function CaptureModal() {
       </div>
 
       {/* Tab content panel */}
-      <div
-        className="bevel-raised"
-        style={{ background: 'var(--bg-surface)', minHeight: 260 }}
-      >
+      <div style={{ background: 'var(--bg-surface)', minHeight: 320 }}>
         {activeTab === 'manual' && <ManualCapture />}
         {activeTab === 'text'   && <TextCapture />}
         {activeTab === 'voice'  && <VoiceCapture />}

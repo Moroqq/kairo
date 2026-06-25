@@ -26,7 +26,7 @@ export function KanbanBoard() {
   const updateStatus = useUpdateStatus();
   const { toast }    = useToast();
   const searchQuery  = useUIStore((s) => s.searchQuery);
-  const filterPrio   = useUIStore((s) => s.filterPriority);
+  // filterPriority removed — priorities are no longer shown in the UI
   const filterCat    = useUIStore((s) => s.filterCategory);
   const isMobile     = useIsMobile();
   const vocab        = useTheme().vocab;
@@ -45,8 +45,7 @@ export function KanbanBoard() {
   );
 
   const filteredTasks = (allTasks ?? []).filter((t) => {
-    if (filterPrio && t.priority !== filterPrio) return false;
-    if (filterCat  && t.category !== filterCat)  return false;
+    if (filterCat && t.category !== filterCat) return false;
     if (searchQuery) {
       const q = searchQuery.toLowerCase();
       return t.title.toLowerCase().includes(q) || (t.category ?? '').toLowerCase().includes(q);

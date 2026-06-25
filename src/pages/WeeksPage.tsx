@@ -73,21 +73,21 @@ function WeekBlock({ week }: { week: WeekReview }) {
     >
       {/* Week header */}
       <div
-        className="flex items-center gap-2 px-3 flex-wrap"
+        className="flex items-center gap-2 px-4 flex-wrap"
         style={{
-          minHeight: 38,
+          minHeight: 48,
           borderBottom: '1px solid var(--border-subtle)',
           background: 'linear-gradient(90deg, var(--accent-dim) 0%, transparent 60%)',
         }}
       >
-        <span className="font-mono font-bold" style={{ fontSize: 13, color: 'var(--text-bright)', letterSpacing: 0.5 }}>
+        <span className="font-mono font-bold" style={{ fontSize: 15, color: 'var(--text-bright)', letterSpacing: 0.5 }}>
           {range}
         </span>
         {week.isCurrent && (
           <span
             className="font-mono"
             style={{
-              fontSize: 9, padding: '1px 6px', letterSpacing: 1,
+              fontSize: 10, padding: '2px 8px', letterSpacing: 1,
               color: 'var(--accent)', border: '1px solid var(--border)',
             }}
           >
@@ -95,13 +95,13 @@ function WeekBlock({ week }: { week: WeekReview }) {
           </span>
         )}
         <div className="flex-1" />
-        <span className="font-mono" style={{ fontSize: 11, color: totalDone > 0 ? 'var(--accent)' : 'var(--text-dim)' }}>
+        <span className="font-mono" style={{ fontSize: 13, color: totalDone > 0 ? 'var(--accent)' : 'var(--text-dim)', fontVariantNumeric: 'tabular-nums' }}>
           {totalDone > 0 ? `сделано: ${totalDone}` : 'пусто'}
         </span>
       </div>
 
       {/* Metrics row */}
-      <div className="flex flex-wrap gap-x-5 gap-y-1 px-3 py-2 font-mono" style={{ fontSize: 11 }}>
+      <div className="flex flex-wrap gap-x-5 gap-y-1 px-4 py-2.5 font-mono" style={{ fontSize: 13 }}>
         <Metric icon={<CheckCheck size={11} />} label="задач закрыто" value={week.resolvedTasks.length} highlight={week.resolvedTasks.length > 0} />
         <Metric icon={<ListChecks size={11} />} label="пунктов плана" value={week.planDoneCount} highlight={week.planDoneCount > 0} />
         <Metric icon={<Plus size={11} />} label="задач создано" value={week.createdCount} />
@@ -113,7 +113,7 @@ function WeekBlock({ week }: { week: WeekReview }) {
       {/* Resolved tasks */}
       {week.resolvedTasks.length > 0 && (
         <div className="px-3 pb-2">
-          <div className="font-mono mb-1" style={{ fontSize: 9, letterSpacing: 1.5, color: 'var(--text-muted)' }}>
+          <div className="font-mono mb-1" style={{ fontSize: 11, letterSpacing: 1, color: 'var(--text-muted)' }}>
             ▸ ЗАКРЫТЫЕ ЗАДАЧИ
           </div>
           <div className="flex flex-col">
@@ -123,7 +123,7 @@ function WeekBlock({ week }: { week: WeekReview }) {
                 onClick={() => setActiveTaskId(t.id)}
                 className="row-hover flex items-center gap-2 font-mono text-left"
                 style={{
-                  fontSize: 12, padding: '6px 8px', minHeight: 40,
+                  fontSize: 13, padding: '8px 12px', minHeight: 48,
                   background: 'transparent', border: 'none',
                   borderLeft: '2px solid var(--accent)',
                   color: 'var(--text-secondary)', cursor: 'pointer',
@@ -147,7 +147,7 @@ function WeekBlock({ week }: { week: WeekReview }) {
       {/* Plan done */}
       {week.planDone.length > 0 && (
         <div className="px-3 pb-3">
-          <div className="font-mono mb-1" style={{ fontSize: 9, letterSpacing: 1.5, color: 'var(--text-muted)' }}>
+          <div className="font-mono mb-1" style={{ fontSize: 11, letterSpacing: 1, color: 'var(--text-muted)' }}>
             ▸ ПЛАН / ЛИСТОК
           </div>
           <div className="flex flex-wrap gap-1.5">
@@ -156,7 +156,7 @@ function WeekBlock({ week }: { week: WeekReview }) {
                 key={p.title}
                 className="font-mono"
                 style={{
-                  fontSize: 11, padding: '2px 8px',
+                  fontSize: 12, padding: '3px 10px',
                   color: 'var(--text-secondary)',
                   border: '1px solid var(--border-subtle)',
                   background: 'var(--accent-dim)',

@@ -1,189 +1,233 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { AnimatePresence, motion } from 'framer-motion';
-import { Menu, X, Plus } from 'lucide-react';
-import { NAV } from './nav';
+import {
+  Target, LayoutDashboard, NotebookPen, MoreHorizontal,
+  CalendarDays, BarChart3, Wallet, ScrollText, Plus, X,
+} from 'lucide-react';
 import { useUIStore } from '@/stores/ui.store';
 
-const ICON_TRANSITION = { type: 'spring', duration: 0.3, bounce: 0 } as const;
+const SPRING = { type: 'spring', duration: 0.25, bounce: 0 } as const;
 
-/**
- * Мобильная навигация — выдвижной FAB speed-dial в правом нижнем углу.
- * Заменяет нижнюю панель: 8 ячеек по ~47px были непопадаемы пальцем.
- * Тач-зоны пунктов 56px, единая точка входа у большого пальца.
- */
+/** Три основные вкладки — всегда видны в нижней панели. */
+const BOTTOM_TABS = [
+  { to: '/',      label: 'фокус',  Icon: Target          },
+  { to: '/board', label: 'доска',  Icon: LayoutDashboard },
+  { to: '/todo',  label: 'листок', Icon: NotebookPen     },
+] as const;
+
+/** Дополнительные разделы в панели «Ещё». */
+const MORE_ITEMS = [
+  { to: '/calendar', label: 'план',    Icon: CalendarDays },
+  { to: '/weeks',    label: 'итоги',   Icon: BarChart3    },
+  { to: '/expenses', label: 'траты',   Icon: Wallet       },
+  { to: '/log',      label: 'события', Icon: ScrollText   },
+] as const;
+
+/** Высота нижней панели в px (без safe-area). */
+export const TAB_BAR_HEIGHT = 60;
+
 export function MobileNavFab() {
-  const navigate = useNavigate();
-  const location = useLocation();
+  const navigate    = useNavigate();
+  const location    = useLocation();
   const openCapture = useUIStore((s) => s.openCapture);
-  const [open, setOpen] = useState(false);
+  const [moreOpen, setMoreOpen] = useState(false);
 
-  // Закрывать при смене маршрута и по системной кнопке «назад»
-  useEffect(() => { setOpen(false); }, [location.pathname]);
+  // Закрывать «Ещё» при смене страницы или системной кнопке «назад»
+  useEffect(() => { setMoreOpen(false); }, [location.pathname]);
   useEffect(() => {
-    if (!open) return;
-    const onPop = () => setOpen(false);
+    if (!moreOpen) return;
+    const onPop = () => setMoreOpen(false);
     window.addEventListener('popstate', onPop);
     return () => window.removeEventListener('popstate', onPop);
-  }, [open]);
+  }, [moreOpen]);
 
-  const go = (to: string) => { navigate(to); setOpen(false); };
-  const capture = () => { setOpen(false); openCapture(); };
-
-  const currentNav = NAV.find(({ to }) => to === location.pathname);
+  const isActive      = (to: string) => location.pathname === to;
+  const go            = (to: string) => { navigate(to); setMoreOpen(false); };
+  const anyMoreActive = MORE_ITEMS.some(({ to }) => isActive(to));
 
   return (
     <>
-      {/* Бэкдроп */}
+      {/* ── Backdrop панели «Ещё» ─────────────────────────── */}
       <AnimatePresence>
-        {open && (
+        {moreOpen && (
           <motion.div
-            className="fixed inset-0 z-[55]"
-            style={{ background: 'rgba(0,0,0,0.72)', backdropFilter: 'blur(2px)' }}
+            className="fixed inset-0 z-[28]"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            transition={{ duration: 0.18 }}
-            onClick={() => setOpen(false)}
+            transition={{ duration: 0.15 }}
+            style={{ background: 'rgba(0,0,0,0.55)', backdropFilter: 'blur(2px)' }}
+            onClick={() => setMoreOpen(false)}
           />
         )}
       </AnimatePresence>
 
-      {/* Стек пунктов */}
+      {/* ── Панель «Ещё» ──────────────────────────────────── */}
       <AnimatePresence>
-        {open && (
+        {moreOpen && (
           <motion.div
-            className="fixed z-[58] flex flex-col items-end"
+            className="fixed left-0 right-0 z-[29] flex flex-col"
             style={{
-              right: 16,
-              bottom: 'calc(96px + env(safe-area-inset-bottom))',
-              gap: 8,
-              maxHeight: 'calc(100dvh - 180px)',
-              overflowY: 'auto',
+              bottom: `calc(${TAB_BAR_HEIGHT}px + env(safe-area-inset-bottom))`,
+              background: 'var(--bg-surface)',
+              borderTop: '1px solid var(--border)',
+              padding: '12px 12px 10px',
+              gap: 10,
             }}
-            initial="closed"
-            animate="open"
-            exit="closed"
-            variants={{
-              open:   { transition: { staggerChildren: 0.035, staggerDirection: -1 } },
-              closed: { transition: { staggerChildren: 0.02, staggerDirection: 1 } },
-            }}
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: 16 }}
+            transition={SPRING}
           >
-            {/* Создание задачи — primary */}
-            <NavItem
-              label="новая задача"
-              active={false}
-              primary
-              icon={<Plus size={20} />}
-              onClick={capture}
-            />
-            {/* Пункты навигации (в обратном порядке — частые ближе к пальцу) */}
-            {[...NAV].reverse().map(({ to, label, icon: Icon }) => (
-              <NavItem
-                key={to}
-                label={label}
-                active={location.pathname === to}
-                icon={<Icon size={20} />}
-                onClick={() => go(to)}
-              />
-            ))}
+            {/* Сетка дополнительных разделов */}
+            <div className="grid grid-cols-4 gap-2">
+              {MORE_ITEMS.map(({ to, label, Icon }) => {
+                const active = isActive(to);
+                return (
+                  <motion.button
+                    key={to}
+                    type="button"
+                    onClick={() => go(to)}
+                    whileTap={{ scale: 0.96 }}
+                    transition={SPRING}
+                    className="flex flex-col items-center gap-1.5 py-3 select-none"
+                    style={{
+                      minHeight: 72,
+                      background: active ? 'var(--accent-dim)' : 'var(--well-bg)',
+                      border: `1px solid ${active ? 'var(--accent)' : 'var(--border-subtle)'}`,
+                      color: active ? 'var(--accent)' : 'var(--text-secondary)',
+                      cursor: 'pointer',
+                      borderRadius: 'var(--radius)',
+                      textShadow: active ? '0 0 6px var(--accent-glow)' : 'none',
+                    }}
+                  >
+                    <Icon size={22} />
+                    <span className="font-mono" style={{ fontSize: 11, letterSpacing: 0.5 }}>{label}</span>
+                  </motion.button>
+                );
+              })}
+            </div>
+
+            {/* Кнопка «новая задача» */}
+            <motion.button
+              type="button"
+              onClick={() => { openCapture(); setMoreOpen(false); }}
+              whileTap={{ scale: 0.96 }}
+              transition={SPRING}
+              className="flex items-center justify-center gap-2 font-mono select-none"
+              style={{
+                height: 52,
+                background: 'var(--accent-dim)',
+                border: '1px solid var(--accent)',
+                color: 'var(--accent)',
+                cursor: 'pointer',
+                textShadow: '0 0 6px var(--accent-glow)',
+                fontSize: 14,
+                letterSpacing: 1,
+                borderRadius: 'var(--radius)',
+              }}
+            >
+              <Plus size={18} /> новая задача
+            </motion.button>
           </motion.div>
         )}
       </AnimatePresence>
 
-      {/* Основной FAB */}
-      <motion.button
-        type="button"
-        onClick={() => setOpen((v) => !v)}
-        whileTap={{ scale: 0.93 }}
-        transition={ICON_TRANSITION}
-        className="fixed z-[60] flex flex-col items-center justify-center gap-0.5"
+      {/* ── Нижняя вкладочная панель ──────────────────────── */}
+      <div
+        className="fixed left-0 right-0 bottom-0 z-[30] flex items-stretch"
         style={{
-          right: 16,
-          bottom: 'calc(16px + env(safe-area-inset-bottom))',
-          width: 64,
-          height: 64,
+          height: `calc(${TAB_BAR_HEIGHT}px + env(safe-area-inset-bottom))`,
+          paddingBottom: 'env(safe-area-inset-bottom)',
           background: 'var(--bg-surface)',
-          border: '2px solid var(--accent)',
-          boxShadow: '0 0 0 1px var(--accent), 0 0 20px var(--accent-glow)',
-          color: 'var(--accent)',
-          cursor: 'pointer',
+          borderTop: '1px solid var(--border)',
         }}
-        title={open ? 'закрыть меню' : 'меню'}
       >
-        <AnimatePresence mode="wait" initial={false}>
-          {open ? (
-            <motion.span
-              key="close"
-              className="flex items-center justify-center neon-text"
-              initial={{ scale: 0.25, opacity: 0, filter: 'blur(4px)' }}
-              animate={{ scale: 1, opacity: 1, filter: 'blur(0px)' }}
-              exit={{ scale: 0.25, opacity: 0, filter: 'blur(4px)' }}
-              transition={ICON_TRANSITION}
+        {/* Три основные вкладки */}
+        {BOTTOM_TABS.map(({ to, label, Icon }) => {
+          const active = isActive(to);
+          return (
+            <motion.button
+              key={to}
+              type="button"
+              onClick={() => { go(to); if (moreOpen) setMoreOpen(false); }}
+              whileTap={{ scale: 0.96 }}
+              transition={SPRING}
+              className="flex-1 flex flex-col items-center justify-center gap-1 select-none"
+              style={{
+                background: 'transparent',
+                border: 'none',
+                borderTop: `2px solid ${active ? 'var(--accent)' : 'transparent'}`,
+                color: active ? 'var(--accent)' : 'var(--text-muted)',
+                cursor: 'pointer',
+                textShadow: active ? '0 0 6px var(--accent-glow)' : 'none',
+              }}
             >
-              <X size={26} />
-            </motion.span>
-          ) : (
-            <motion.div
-              key="menu"
-              className="flex flex-col items-center gap-0.5"
-              initial={{ scale: 0.25, opacity: 0, filter: 'blur(4px)' }}
-              animate={{ scale: 1, opacity: 1, filter: 'blur(0px)' }}
-              exit={{ scale: 0.25, opacity: 0, filter: 'blur(4px)' }}
-              transition={ICON_TRANSITION}
-            >
-              <Menu size={22} className="neon-text" />
-              {currentNav && (
-                <span className="font-mono neon-text" style={{ fontSize: 7, letterSpacing: 1, lineHeight: 1, textTransform: 'uppercase' }}>
-                  {currentNav.label}
-                </span>
-              )}
-            </motion.div>
-          )}
-        </AnimatePresence>
-      </motion.button>
+              {/* Spring-анимация иконки при активации (принцип #7 скилла) */}
+              <AnimatePresence mode="wait" initial={false}>
+                <motion.span
+                  key={active ? 'active' : 'idle'}
+                  className="flex items-center justify-center"
+                  initial={{ scale: 0.5, opacity: 0 }}
+                  animate={{ scale: 1, opacity: 1 }}
+                  exit={{ scale: 0.5, opacity: 0 }}
+                  transition={SPRING}
+                >
+                  <Icon size={active ? 23 : 21} />
+                </motion.span>
+              </AnimatePresence>
+              <span className="font-mono" style={{ fontSize: 10, letterSpacing: 0.5, lineHeight: 1 }}>
+                {label}
+              </span>
+            </motion.button>
+          );
+        })}
+
+        {/* Вкладка «Ещё» */}
+        <motion.button
+          type="button"
+          onClick={() => setMoreOpen((v) => !v)}
+          whileTap={{ scale: 0.96 }}
+          transition={SPRING}
+          className="flex-1 flex flex-col items-center justify-center gap-1 select-none"
+          style={{
+            background: 'transparent',
+            border: 'none',
+            borderTop: `2px solid ${moreOpen || anyMoreActive ? 'var(--accent)' : 'transparent'}`,
+            color: moreOpen || anyMoreActive ? 'var(--accent)' : 'var(--text-muted)',
+            cursor: 'pointer',
+            textShadow: moreOpen || anyMoreActive ? '0 0 6px var(--accent-glow)' : 'none',
+          }}
+        >
+          <AnimatePresence mode="wait" initial={false}>
+            {moreOpen ? (
+              <motion.span
+                key="close"
+                className="flex items-center justify-center"
+                initial={{ scale: 0.25, opacity: 0, filter: 'blur(4px)' }}
+                animate={{ scale: 1, opacity: 1, filter: 'blur(0px)' }}
+                exit={{ scale: 0.25, opacity: 0, filter: 'blur(4px)' }}
+                transition={SPRING}
+              >
+                <X size={23} />
+              </motion.span>
+            ) : (
+              <motion.span
+                key="more"
+                className="flex items-center justify-center"
+                initial={{ scale: 0.25, opacity: 0, filter: 'blur(4px)' }}
+                animate={{ scale: 1, opacity: 1, filter: 'blur(0px)' }}
+                exit={{ scale: 0.25, opacity: 0, filter: 'blur(4px)' }}
+                transition={SPRING}
+              >
+                <MoreHorizontal size={23} />
+              </motion.span>
+            )}
+          </AnimatePresence>
+          <span className="font-mono" style={{ fontSize: 10, letterSpacing: 0.5, lineHeight: 1 }}>ещё</span>
+        </motion.button>
+      </div>
     </>
-  );
-}
-
-/* ──────────────────────────────────────────────────────────── */
-
-function NavItem({
-  label, icon, active, primary, onClick,
-}: {
-  label: string;
-  icon: React.ReactNode;
-  active: boolean;
-  primary?: boolean;
-  onClick: () => void;
-}) {
-  return (
-    <motion.button
-      type="button"
-      onClick={onClick}
-      variants={{
-        open:   { opacity: 1, x: 0,  scale: 1,   transition: { duration: 0.18, ease: [0.22, 1, 0.36, 1] } },
-        closed: { opacity: 0, x: 24, scale: 0.9, transition: { duration: 0.12 } },
-      }}
-      className="flex items-center justify-end gap-3 select-none"
-      style={{
-        height: 64,
-        minWidth: 212,
-        padding: '0 18px',
-        background: primary ? 'var(--accent-dim)' : 'var(--bg-surface)',
-        border: `1px solid ${primary || active ? 'var(--accent)' : 'var(--border)'}`,
-        color: primary || active ? 'var(--accent)' : 'var(--text-secondary)',
-        textShadow: primary || active ? '0 0 6px var(--accent-glow)' : 'none',
-        cursor: 'pointer',
-      }}
-    >
-      <span
-        className="font-mono"
-        style={{ fontSize: 15, letterSpacing: 1, textTransform: 'uppercase' }}
-      >
-        {label}
-      </span>
-      <span className="flex items-center justify-center flex-shrink-0">{icon}</span>
-    </motion.button>
   );
 }

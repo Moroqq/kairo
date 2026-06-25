@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { CalendarClock } from 'lucide-react';
 import { todayISO, fromISODate } from '@/lib/date';
 import { useIsMobile } from '@/hooks/useMediaQuery';
@@ -16,13 +16,23 @@ export function CalendarPage() {
     return { year: d.getFullYear(), month: d.getMonth() };
   });
   const [patternsOpen, setPatternsOpen] = useState(false);
+  const [direction, setDirection] = useState(0);
+  const cursorRef = useRef(cursor);
+  cursorRef.current = cursor;
 
-  const goPrev = () =>
+  const goPrev = () => {
+    setDirection(-1);
     setCursor((c) => (c.month === 0 ? { year: c.year - 1, month: 11 } : { ...c, month: c.month - 1 }));
-  const goNext = () =>
+  };
+  const goNext = () => {
+    setDirection(1);
     setCursor((c) => (c.month === 11 ? { year: c.year + 1, month: 0 } : { ...c, month: c.month + 1 }));
+  };
   const goToday = () => {
     const d = fromISODate(today);
+    const cy = cursorRef.current;
+    const diff = (d.getFullYear() * 12 + d.getMonth()) - (cy.year * 12 + cy.month);
+    setDirection(diff >= 0 ? 1 : -1);
     setCursor({ year: d.getFullYear(), month: d.getMonth() });
     setSelectedDate(today);
   };
@@ -59,9 +69,9 @@ export function CalendarPage() {
       {/* Body */}
       {isMobile ? (
         <div className="flex flex-col flex-1 min-h-0">
-          <div className="flex-shrink-0" style={{ borderBottom: '1px solid var(--border-subtle)' }}>
+          <div className="flex-shrink-0 overflow-hidden" style={{ borderBottom: '1px solid var(--border-subtle)' }}>
             <MonthGrid
-              year={cursor.year} month={cursor.month}
+              year={cursor.year} month={cursor.month} direction={direction}
               selectedDate={selectedDate} onSelect={handleSelect}
               onPrev={goPrev} onNext={goNext} onToday={goToday}
             />
@@ -72,9 +82,9 @@ export function CalendarPage() {
         </div>
       ) : (
         <div className="flex flex-1 min-h-0">
-          <div className="flex-1 min-w-0" style={{ borderRight: '1px solid var(--border-subtle)', paddingTop: 10 }}>
+          <div className="flex-1 min-w-0 overflow-hidden" style={{ borderRight: '1px solid var(--border-subtle)', paddingTop: 10 }}>
             <MonthGrid
-              year={cursor.year} month={cursor.month}
+              year={cursor.year} month={cursor.month} direction={direction}
               selectedDate={selectedDate} onSelect={handleSelect}
               onPrev={goPrev} onNext={goNext} onToday={goToday}
             />

@@ -3,7 +3,6 @@ import type { Priority } from '@/types';
 import { WEEKDAYS_RU, WEEKDAY_ORDER } from '@/types/plan';
 import { Input } from '@/components/ui/Input';
 import { Button } from '@/components/ui/Button';
-import { PrioritySelect } from './PrioritySelect';
 
 export interface PatternFormValues {
   title: string;
@@ -22,7 +21,7 @@ interface Props {
 export function PatternForm({ initial, onSave, onCancel }: Props) {
   const [title,    setTitle]    = useState(initial?.title ?? '');
   const [time,     setTime]     = useState(initial?.time ?? '');
-  const [priority, setPriority] = useState<Priority>(initial?.priority ?? 'C');
+  const priority: Priority = 'C';
   const [weekdays, setWeekdays] = useState<number[]>(initial?.weekdays ?? []);
 
   const toggleDay = (wd: number) =>
@@ -81,8 +80,6 @@ export function PatternForm({ initial, onSave, onCancel }: Props) {
           style={{ background: 'var(--bg-input)', color: 'var(--text-primary)', border: '1px solid var(--border)' }}
         />
       </div>
-
-      <PrioritySelect value={priority} onChange={setPriority} />
 
       <div className="flex justify-end gap-2 pt-1">
         <Button variant="secondary" onClick={onCancel} size="sm">отмена</Button>

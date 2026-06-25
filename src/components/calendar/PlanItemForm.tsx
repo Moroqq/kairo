@@ -2,7 +2,6 @@ import { useState } from 'react';
 import type { Priority } from '@/types';
 import { Input, Textarea } from '@/components/ui/Input';
 import { Button } from '@/components/ui/Button';
-import { PrioritySelect } from './PrioritySelect';
 
 export interface PlanFormValues {
   title: string;
@@ -23,7 +22,7 @@ export function PlanItemForm({ initial, onSave, onCancel, loading }: Props) {
   const [title,    setTitle]    = useState(initial?.title ?? '');
   const [note,     setNote]     = useState(initial?.note ?? '');
   const [time,     setTime]     = useState(initial?.time ?? '');
-  const [priority, setPriority] = useState<Priority>(initial?.priority ?? 'C');
+  const priority: Priority = initial?.priority ?? 'C';
 
   const handleSave = () => {
     if (!title.trim()) return;
@@ -62,8 +61,6 @@ export function PlanItemForm({ initial, onSave, onCancel, loading }: Props) {
           }}
         />
       </div>
-
-      <PrioritySelect value={priority} onChange={setPriority} />
 
       <Textarea
         label="заметка"

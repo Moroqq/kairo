@@ -1,3 +1,4 @@
+import { AnimatePresence, motion } from 'framer-motion';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { monthGrid, toISODate, todayISO } from '@/lib/date';
 import { MONTHS_RU, WEEKDAYS_RU, WEEKDAY_ORDER } from '@/types/plan';
@@ -14,9 +15,16 @@ interface Props {
   onPrev: () => void;
   onNext: () => void;
   onToday: () => void;
+  direction?: number;          // 1=следующий, -1=предыдущий, 0=начало
 }
 
-export function MonthGrid({ year, month, selectedDate, onSelect, onPrev, onNext, onToday }: Props) {
+const gridVariants = {
+  enter: (dir: number) => ({ x: dir >= 0 ? '6%' : '-6%', opacity: 0 }),
+  center: { x: 0, opacity: 1 },
+  exit:  (dir: number) => ({ x: dir >= 0 ? '-6%' : '6%', opacity: 0 }),
+};
+
+export function MonthGrid({ year, month, selectedDate, onSelect, onPrev, onNext, onToday, direction = 0 }: Props) {
   const { data: itemsByDate } = useMonthItems(year, month);
   const isMobile = useIsMobile();
   const weeks = monthGrid(year, month);
@@ -32,7 +40,7 @@ export function MonthGrid({ year, month, selectedDate, onSelect, onPrev, onNext,
   };
 
   return (
-    <div className="flex flex-col flex-1 min-h-0">
+    <div className="flex flex-col flex-1 min-h-0 overflow-hidden">
       {/* Month header */}
       <div className="flex items-center gap-2 px-2 flex-shrink-0" style={{ minHeight: isMobile ? 52 : 52 }}>
         <button type="button" onClick={onPrev} className="flex items-center justify-center" style={navBtn} title="предыдущий месяц">
@@ -56,6 +64,19 @@ export function MonthGrid({ year, month, selectedDate, onSelect, onPrev, onNext,
           <ChevronRight size={isMobile ? 22 : 22} />
         </button>
       </div>
+
+      {/* Weekday labels + Day cells — анимируются при смене месяца */}
+      <AnimatePresence mode="wait" custom={direction} initial={false}>
+        <motion.div
+          key={`${year}-${month}`}
+          custom={direction}
+          variants={gridVariants}
+          initial="enter"
+          animate="center"
+          exit="exit"
+          transition={{ duration: 0.22, ease: [0.22, 1, 0.36, 1] }}
+          className="flex flex-col flex-1 min-h-0"
+        >
 
       {/* Weekday labels */}
       <div className="grid flex-shrink-0" style={{ gridTemplateColumns: 'repeat(7, 1fr)' }}>
@@ -146,6 +167,9 @@ export function MonthGrid({ year, month, selectedDate, onSelect, onPrev, onNext,
           );
         })}
       </div>
+
+        </motion.div>
+      </AnimatePresence>
     </div>
   );
 }

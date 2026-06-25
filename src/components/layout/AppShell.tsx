@@ -73,7 +73,7 @@ export function AppShell({ children }: AppShellProps) {
 
             <main
               className="bevel-sunken flex-1 overflow-hidden flex flex-col relative"
-              style={{ background: 'var(--well-bg)' }}
+              style={{ background: 'var(--well-bg)', paddingBottom: isMobile ? 'calc(60px + env(safe-area-inset-bottom))' : undefined }}
             >
               {children}
 

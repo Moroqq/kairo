@@ -62,10 +62,9 @@ export interface KanbanColumn {
 }
 
 export const KANBAN_COLUMNS: KanbanColumn[] = [
-  { id: 'todo',       title: 'ОЧЕРЕДЬ',   statuses: ['New'],                                        defaultStatus: 'New' },
-  { id: 'inprogress', title: 'АКТИВНЫЕ',  statuses: ['In Progress', 'Waiting Response', 'Escalation'], defaultStatus: 'In Progress' },
-  { id: 'blocked',    title: 'БЛОК',      statuses: ['Blocked'],                                    defaultStatus: 'Blocked' },
-  { id: 'done',       title: 'ВЫПОЛНЕНО', statuses: ['Resolved'],                                   defaultStatus: 'Resolved' },
+  { id: 'todo',       title: 'ВХОДЯЩИЕ', statuses: ['New'],                                                         defaultStatus: 'New' },
+  { id: 'inprogress', title: 'В РАБОТЕ', statuses: ['In Progress', 'Waiting Response', 'Escalation', 'Blocked'],    defaultStatus: 'In Progress' },
+  { id: 'done',       title: 'ГОТОВО',   statuses: ['Resolved'],                                                    defaultStatus: 'Resolved' },
 ];
 
 export const PRIORITY_CONFIG: Record<Priority, { color: string; label: string; bgColor: string; glow: string }> = {
