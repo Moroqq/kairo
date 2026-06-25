@@ -65,6 +65,7 @@ export function getWeeklyReviews(maxWeeks = 12): WeekReview[] {
 
     // Задачи: закрытые и созданные в диапазоне
     const resolvedTasks = tasks.filter((t) =>
+      t.status !== 'Archived' &&
       t.resolved_at && inRange(toISODate(new Date(t.resolved_at)), startISO, endISO));
     const createdCount = tasks.filter((t) =>
       inRange(toISODate(new Date(t.created_at)), startISO, endISO)).length;

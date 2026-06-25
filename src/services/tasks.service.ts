@@ -18,13 +18,16 @@ export async function fetchTasks(): Promise<Task[]> {
 }
 
 export async function fetchArchivedTasks(): Promise<Task[]> {
+  return fetchTrashTasks();
+}
+
+export async function fetchTrashTasks(): Promise<Task[]> {
   return readTasks()
     .filter((t) => t.status === 'Archived')
     .sort((a, b) =>
-      new Date(b.resolved_at ?? b.created_at).getTime() -
-      new Date(a.resolved_at ?? a.created_at).getTime(),
-    )
-    .slice(0, 100);
+      new Date(b.deleted_at ?? b.created_at).getTime() -
+      new Date(a.deleted_at ?? a.created_at).getTime(),
+    );
 }
 
 export interface CreateTaskInput {
@@ -52,6 +55,7 @@ export async function createTask(input: CreateTaskInput): Promise<Task> {
     comments:       [],
     attachment_url: null,
     resolved_at:    null,
+    deleted_at:     null,
     created_at:     new Date().toISOString(),
   };
 
@@ -125,13 +129,43 @@ export async function addComment(id: string, text: string): Promise<Task> {
 }
 
 export async function archiveTask(id: string): Promise<void> {
+  return trashTask(id);
+}
+
+export async function trashTask(id: string): Promise<void> {
   const tasks = readTasks();
   const idx   = tasks.findIndex((t) => t.id === id);
   if (idx === -1) throw new Error('Task not found');
 
-  tasks[idx] = { ...tasks[idx], status: 'Archived' };
+  tasks[idx] = { ...tasks[idx], status: 'Archived', deleted_at: new Date().toISOString() };
   writeTasks(tasks);
-  logEvent(id, 'archived', null, null);
+  logEvent(id, 'trashed', null, null);
+}
+
+export async function restoreFromTrash(id: string): Promise<void> {
+  const tasks = readTasks();
+  const idx   = tasks.findIndex((t) => t.id === id);
+  if (idx === -1) throw new Error('Task not found');
+
+  tasks[idx] = { ...tasks[idx], status: 'New', deleted_at: null };
+  writeTasks(tasks);
+  logEvent(id, 'restored', 'Archived', 'New');
+}
+
+export async function permanentDeleteTask(id: string): Promise<void> {
+  const tasks = readTasks();
+  writeTasks(tasks.filter((t) => t.id !== id));
+}
+
+/** Удалить задачи в корзине старше 3 дней. */
+export function pruneTrash(): void {
+  const THREE_DAYS = 3 * 24 * 60 * 60 * 1000;
+  const now = Date.now();
+  const tasks = readTasks();
+  const pruned = tasks.filter(
+    (t) => !(t.status === 'Archived' && t.deleted_at && now - new Date(t.deleted_at).getTime() > THREE_DAYS),
+  );
+  if (pruned.length !== tasks.length) writeTasks(pruned);
 }
 
 function logEvent(

@@ -1,11 +1,11 @@
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { Archive, Clock, Edit2, Tag, MessageSquare, Send } from 'lucide-react';
+import { Trash2, Clock, Edit2, Tag, MessageSquare, Send } from 'lucide-react';
 import { Drawer } from '@/components/ui/Drawer';
 import { Button } from '@/components/ui/Button';
 import { TaskForm } from './TaskForm';
 import { useUIStore } from '@/stores/ui.store';
-import { useTasks, useUpdateTask, useAddComment, useArchiveTask } from '@/hooks/useTasks';
+import { useTasks, useUpdateTask, useAddComment, useTrashTask } from '@/hooks/useTasks';
 import { fetchArchivedTasks } from '@/services/tasks.service';
 import { useToast } from '@/components/ui/Toast';
 import { formatDeadline, isOverdue, formatRelative, formatDateTime } from '@/hooks/useDeadlineWatcher';
@@ -51,7 +51,7 @@ function TaskDrawerContent({ task, onClose }: { task: Task; onClose: () => void 
 
   const updateTask  = useUpdateTask();
   const addComment  = useAddComment();
-  const archiveTask = useArchiveTask();
+  const trashTask = useTrashTask();
 
   const handleSave = async (updates: Parameters<typeof updateTask.mutate>[0]['updates']) => {
     try {
@@ -73,13 +73,13 @@ function TaskDrawerContent({ task, onClose }: { task: Task; onClose: () => void 
     }
   };
 
-  const handleArchive = async () => {
+  const handleTrash = async () => {
     try {
-      await archiveTask.mutateAsync(task.id);
+      await trashTask.mutateAsync(task.id);
       onClose();
-      toast('Задача в архиве');
+      toast('Задача в корзине');
     } catch {
-      toast('Не удалось архивировать', 'error');
+      toast('Не удалось удалить', 'error');
     }
   };
 
@@ -245,8 +245,8 @@ function TaskDrawerContent({ task, onClose }: { task: Task; onClose: () => void 
         <Button variant="secondary" size="sm" onClick={() => setEditing(true)} className="flex-1">
           <Edit2 size={11} /> изменить
         </Button>
-        <Button variant="danger" size="sm" onClick={handleArchive} loading={archiveTask.isPending}>
-          <Archive size={11} /> в архив
+        <Button variant="danger" size="sm" onClick={handleTrash} loading={trashTask.isPending}>
+          <Trash2 size={11} /> в корзину
         </Button>
       </div>
     </div>

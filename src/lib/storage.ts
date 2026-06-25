@@ -37,6 +37,7 @@ function migrateTask(raw: any): Task {
   if (t.category === undefined)       t.category = null;
   if (t.deadline === undefined)       t.deadline = null;
   if (t.resolved_at === undefined)    t.resolved_at = null;
+  if (t.deleted_at === undefined)     t.deleted_at = null;
   if (t.ai_summary === undefined)     t.ai_summary = null;
   if (t.source_type === undefined)    t.source_type = null;
   if (t.attachment_url === undefined) t.attachment_url = null;

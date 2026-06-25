@@ -1,12 +1,16 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
   fetchTasks,
+  fetchTrashTasks,
   createTask,
   updateTaskStatus,
   updateTaskPriority,
   updateTask,
   addComment,
   archiveTask,
+  trashTask,
+  restoreFromTrash,
+  permanentDeleteTask,
   fetchEventLogs,
   type CreateTaskInput,
 } from '@/services/tasks.service';
@@ -90,13 +94,44 @@ export function useAddComment() {
 }
 
 export function useArchiveTask() {
+  return useTrashTask();
+}
+
+export function useTrashTask() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (id: string) => archiveTask(id),
+    mutationFn: (id: string) => trashTask(id),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: TASKS_KEY });
       qc.invalidateQueries({ queryKey: LOGS_KEY });
       qc.invalidateQueries({ queryKey: PLAN_KEY });
+      qc.invalidateQueries({ queryKey: ['tasks', 'trash'] });
     },
   });
+}
+
+export function useRestoreTask() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => restoreFromTrash(id),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: TASKS_KEY });
+      qc.invalidateQueries({ queryKey: ['tasks', 'trash'] });
+      qc.invalidateQueries({ queryKey: PLAN_KEY });
+    },
+  });
+}
+
+export function usePermanentDelete() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => permanentDeleteTask(id),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['tasks', 'trash'] });
+    },
+  });
+}
+
+export function useTrashTasks() {
+  return useQuery({ queryKey: ['tasks', 'trash'], queryFn: fetchTrashTasks, staleTime: 10_000 });
 }

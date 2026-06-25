@@ -27,6 +27,7 @@ export interface Task {
   deadline: string | null;
   created_at: string;
   resolved_at: string | null;
+  deleted_at: string | null;
   ai_summary: string | null;
   source_type: SourceType | null;
   comments: TaskComment[];

@@ -397,6 +397,28 @@ input[type="date"]::-webkit-calendar-picker-indicator {
   transform: scale(0.96);
 }
 
+/* ── Bloom-press: blur → clear ripple on action buttons ────── */
+@keyframes bloom-press {
+  0%   { opacity: 1;    filter: blur(0px);  transform: scale(1); }
+  28%  { opacity: 0.45; filter: blur(5px);  transform: scale(0.97); }
+  100% { opacity: 1;    filter: blur(0px);  transform: scale(1); }
+}
+.bloom-press {
+  animation: bloom-press 360ms cubic-bezier(0.4, 0, 0.2, 1) forwards !important;
+}
+
+/* ── Bloom-out: blur → fade exit (for removed list items) ─── */
+@keyframes bloom-out {
+  0%   { opacity: 1;    filter: blur(0px); transform: scale(1);    max-height: 120px; }
+  40%  { opacity: 0.5;  filter: blur(6px); transform: scale(0.98); max-height: 120px; }
+  100% { opacity: 0;    filter: blur(8px); transform: scale(0.96); max-height: 0; }
+}
+.bloom-out {
+  animation: bloom-out 320ms cubic-bezier(0.4, 0, 1, 1) forwards !important;
+  overflow: hidden;
+  pointer-events: none;
+}
+
 /* ============================================================
    SOFT THEMES (claude / clay) — сан-сериф, скругления, без неона
    ============================================================ */
@@ -490,6 +512,8 @@ html.apple body {
   font-family: system-ui, -apple-system, 'SF Pro Text', 'Helvetica Neue', Arial, sans-serif;
   font-feature-settings: normal;
   letter-spacing: -0.1px;
+  font-weight: 500;
+  -webkit-font-smoothing: antialiased;
 }
 
 html.apple .font-mono {
@@ -586,15 +610,15 @@ html.apple .win-desktop::after { display: none; }
 html.apple ::-webkit-scrollbar { width: 3px; height: 3px; }
 html.apple ::-webkit-scrollbar-track { background: transparent; border: none; }
 html.apple ::-webkit-scrollbar-thumb {
-  background: rgba(0,0,0,0.18);
+  background: rgba(255,255,255,0.18);
   border-radius: 999px;
   border: none;
 }
-html.apple ::-webkit-scrollbar-thumb:hover { background: rgba(0,0,0,0.28); }
+html.apple ::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.30); }
 html.apple ::-webkit-scrollbar-corner { background: transparent; }
 
 /* ── Row hover — iOS table-cell style ──────────────────────── */
-html.apple .row-hover:hover { background: rgba(0,0,0,0.04) !important; }
+html.apple .row-hover:hover { background: rgba(255,255,255,0.05) !important; }
 
 /* ── Flat buttons — clean iOS style ────────────────────────── */
 html.apple .btn-flat:not(:disabled):hover {
@@ -632,6 +656,7 @@ html.apple .task-card:hover {
 
 /* ── Shell surface → translucent blur ──────────────────────── */
 html.apple .bevel-sunken {
+  background: rgba(255,255,255,0.05);
   backdrop-filter: blur(8px);
   -webkit-backdrop-filter: blur(8px);
 }

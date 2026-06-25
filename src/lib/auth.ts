@@ -42,7 +42,13 @@ export function hasAccount(): boolean {
 }
 
 export function getUsername(): string {
-  return localStorage.getItem(K.username) ?? '';
+  const stored = localStorage.getItem(K.username);
+  if (!stored || stored === '0000') {
+    const name = 'Tim';
+    if (stored === '0000') localStorage.setItem(K.username, name);
+    return name;
+  }
+  return stored;
 }
 
 export async function createAccount(username: string, password: string): Promise<void> {

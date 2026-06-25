@@ -1,4 +1,4 @@
-import { Target, LayoutDashboard, CalendarDays, NotebookPen, BarChart3, Wallet, ScrollText } from 'lucide-react';
+import { Target, LayoutDashboard, CalendarDays, NotebookPen, BarChart3, Wallet, ScrollText, Trash2, Wifi } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 
 export interface NavEntry {
@@ -17,4 +17,6 @@ export const NAV: NavEntry[] = [
   { to: '/weeks',    label: 'итоги',   cmd: 'weeks', icon: BarChart3        },
   { to: '/expenses', label: 'траты',   cmd: 'spend', icon: Wallet           },
   { to: '/log',      label: 'события', cmd: 'logs',  icon: ScrollText       },
+  { to: '/trash',    label: 'корзина', cmd: 'trash', icon: Trash2           },
+  { to: '/sync',     label: 'синк',    cmd: 'sync',  icon: Wifi             },
 ];

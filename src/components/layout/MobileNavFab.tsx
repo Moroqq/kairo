@@ -3,7 +3,7 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import { AnimatePresence, motion } from 'framer-motion';
 import {
   Target, LayoutDashboard, NotebookPen, MoreHorizontal,
-  CalendarDays, BarChart3, Wallet, ScrollText, Plus, X,
+  CalendarDays, BarChart3, Wallet, ScrollText, Trash2, Wifi, Plus, X,
 } from 'lucide-react';
 import { useUIStore } from '@/stores/ui.store';
 
@@ -22,6 +22,8 @@ const MORE_ITEMS = [
   { to: '/weeks',    label: 'итоги',   Icon: BarChart3    },
   { to: '/expenses', label: 'траты',   Icon: Wallet       },
   { to: '/log',      label: 'события', Icon: ScrollText   },
+  { to: '/trash',    label: 'корзина', Icon: Trash2       },
+  { to: '/sync',     label: 'синк',    Icon: Wifi         },
 ] as const;
 
 /** Высота нижней панели в px (без safe-area). */

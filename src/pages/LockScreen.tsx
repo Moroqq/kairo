@@ -165,7 +165,7 @@ export function LockScreen() {
         transition={{ duration: 0.2, ease: 'easeOut' }}
         className="flex flex-col relative"
         style={{
-          width: isMobile ? (isPinStep ? 340 : 380) : 420,
+          width: isMobile ? (isPinStep ? 340 : 380) : 560,
           maxWidth: '100%',
           background: 'var(--overlay-bg)',
           border: '1px solid var(--accent)',
@@ -178,7 +178,7 @@ export function LockScreen() {
           <span className="flex-1 truncate">{titlebar}</span>
         </div>
 
-        <div className="flex flex-col gap-4" style={{ padding: isMobile ? 16 : 22 }}>
+        <div className="flex flex-col gap-5" style={{ padding: isMobile ? 16 : 36 }}>
           {/* Лого: на мобиле — крупный блок, на десктопе — компактная строка */}
           {isMobile ? (
             <div className="flex flex-col items-center gap-2" style={{ marginBottom: 4, marginTop: 4 }}>
@@ -194,13 +194,16 @@ export function LockScreen() {
               </div>
             </div>
           ) : (
-            <div className="flex items-center gap-2" style={{ marginBottom: 2 }}>
+            <div className="flex flex-col items-center gap-3" style={{ marginBottom: 4, marginTop: 4 }}>
               <img
-                src="/logo.png" alt="Kairo" width={28} height={28}
-                style={{ display: 'block', filter: 'drop-shadow(0 0 8px var(--accent-glow))' }}
+                src="/logo.png" alt="Kairo" width={72} height={72}
+                style={{ display: 'block', filter: 'drop-shadow(0 0 18px var(--accent-glow)) drop-shadow(0 0 36px rgba(0,255,65,0.2))' }}
               />
-              <span className="font-mono neon-text" style={{ fontSize: 13, letterSpacing: 3, fontWeight: 700 }}>
-                KAIRO
+              <span className="font-mono neon-text" style={{ fontSize: 16, letterSpacing: 5, fontWeight: 700 }}>
+                K A I R O
+              </span>
+              <span className="font-mono" style={{ fontSize: 10, letterSpacing: 2, color: 'var(--text-dim)' }}>
+                — терминал задач —
               </span>
             </div>
           )}

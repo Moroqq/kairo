@@ -1,4 +1,4 @@
-import { forwardRef, ButtonHTMLAttributes } from 'react';
+import { forwardRef, ButtonHTMLAttributes, useCallback } from 'react';
 
 interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
   variant?: 'primary' | 'secondary' | 'ghost' | 'danger';
@@ -7,15 +7,24 @@ interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
 }
 
 export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
-  ({ variant = 'secondary', size = 'md', loading, disabled, children, className = '', style, ...props }, ref) => {
+  ({ variant = 'secondary', size = 'md', loading, disabled, children, className = '', style, onClick, ...props }, ref) => {
     const base =
-      'inline-flex items-center justify-center gap-1.5 font-mono select-none transition-[border-color,box-shadow,background,color,transform,opacity] duration-150 disabled:opacity-40 disabled:cursor-not-allowed active:scale-[0.96]';
+      'inline-flex items-center justify-center gap-1.5 font-mono select-none transition-[border-color,box-shadow,background,color,transform,opacity] duration-150 disabled:opacity-40 disabled:cursor-not-allowed';
 
     const sizes: Record<string, string> = {
       sm: 'h-7  px-3 text-xs',
-      md: 'h-8  px-4 text-xs',
-      lg: 'h-10 px-6 text-sm',
+      md: 'h-9  px-4 text-sm',
+      lg: 'h-10 px-6 text-base',
     };
+
+    const handleClick = useCallback((e: React.MouseEvent<HTMLButtonElement>) => {
+      const el = e.currentTarget;
+      el.classList.remove('bloom-press');
+      void el.offsetWidth;
+      el.classList.add('bloom-press');
+      el.addEventListener('animationend', () => el.classList.remove('bloom-press'), { once: true });
+      onClick?.(e);
+    }, [onClick]);
 
     const variantStyles: Record<string, React.CSSProperties> = {
       primary: {
@@ -53,6 +62,7 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
         className={`btn-flat ${base} ${sizes[size]} ${className}`}
         data-variant={variant}
         style={{ ...variantStyles[variant], ...style }}
+        onClick={handleClick}
         {...props}
       >
         {loading ? (
