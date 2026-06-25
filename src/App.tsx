@@ -18,6 +18,7 @@ import { EventLog } from '@/pages/EventLog';
 import { TrashPage } from '@/pages/TrashPage';
 import { LanSyncPage } from '@/pages/LanSyncPage';
 import { pruneTrash } from '@/services/tasks.service';
+import lanSync, { isDesktopHost } from '@/services/lan-sync.service';
 
 export default function App() {
   const isUnlocked = useAuthStore((s) => s.isUnlocked);
@@ -28,6 +29,14 @@ export default function App() {
 
   // Автоочистка корзины при запуске
   useEffect(() => { pruneTrash(); }, []);
+
+  // WS-хост стартует сразу, а не только на странице /sync
+  useEffect(() => {
+    if (isDesktopHost()) {
+      lanSync.initHost();
+      return () => { lanSync.destroyHost(); };
+    }
+  }, []);
 
   if (!isUnlocked) {
     return (

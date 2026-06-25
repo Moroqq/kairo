@@ -1,4 +1,5 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback } from 'react';
+import { invoke } from '@tauri-apps/api/core';
 import lanSync, {
   isDesktopHost,
   isTauriEnv,
@@ -84,20 +85,9 @@ export function useLanGuest() {
 export function useLanHost() {
   const { info, refresh } = useLanHostInfo();
   const [lastSync, setLastSync] = useState<string | null>(null);
-  const initiated = useRef(false);
 
   useEffect(() => {
-    if (!isDesktopHost() || initiated.current) return;
-    initiated.current = true;
-    lanSync.initHost();
-    return () => { lanSync.destroyHost(); initiated.current = false; };
-  }, []);
-
-  useEffect(() => {
-    const off = lanSync.on('SYNC_ACK', () => {
-      setLastSync(new Date().toISOString());
-      refresh();
-    });
+    const off  = lanSync.on('SYNC_ACK', () => { setLastSync(new Date().toISOString()); refresh(); });
     const off2 = lanSync.on('HELLO', () => refresh());
     return () => { off(); off2(); };
   }, [refresh]);
