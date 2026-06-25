@@ -164,19 +164,18 @@ export function MobileNavFab() {
                 textShadow: active ? '0 0 6px var(--accent-glow)' : 'none',
               }}
             >
-              {/* Spring-анимация иконки при активации (принцип #7 скилла) */}
-              <AnimatePresence mode="wait" initial={false}>
-                <motion.span
-                  key={active ? 'active' : 'idle'}
-                  className="flex items-center justify-center"
-                  initial={{ scale: 0.5, opacity: 0 }}
-                  animate={{ scale: 1, opacity: 1 }}
-                  exit={{ scale: 0.5, opacity: 0 }}
-                  transition={SPRING}
-                >
-                  <Icon size={active ? 23 : 21} />
-                </motion.span>
-              </AnimatePresence>
+              {/*
+                Принцип #7 скилла: один motion.span animate вместо AnimatePresence/remount.
+                AnimatePresence с key-переключением анимировала ОБЕ вкладки одновременно —
+                и активируемую, и деактивируемую, — что выглядело как двойная реакция.
+              */}
+              <motion.span
+                className="flex items-center justify-center"
+                animate={{ scale: active ? 1.1 : 1, opacity: active ? 1 : 0.65 }}
+                transition={SPRING}
+              >
+                <Icon size={22} />
+              </motion.span>
               <span className="font-mono" style={{ fontSize: 10, letterSpacing: 0.5, lineHeight: 1 }}>
                 {label}
               </span>
@@ -200,28 +199,30 @@ export function MobileNavFab() {
             textShadow: moreOpen || anyMoreActive ? '0 0 6px var(--accent-glow)' : 'none',
           }}
         >
+          {/* Для кнопки "Ещё" оставляем AnimatePresence: здесь нужна именно
+              замена иконки X↔MoreHorizontal, а не двойная анимация между вкладками */}
           <AnimatePresence mode="wait" initial={false}>
             {moreOpen ? (
               <motion.span
                 key="close"
                 className="flex items-center justify-center"
                 initial={{ scale: 0.25, opacity: 0, filter: 'blur(4px)' }}
-                animate={{ scale: 1, opacity: 1, filter: 'blur(0px)' }}
+                animate={{ scale: 1.1, opacity: 1, filter: 'blur(0px)' }}
                 exit={{ scale: 0.25, opacity: 0, filter: 'blur(4px)' }}
                 transition={SPRING}
               >
-                <X size={23} />
+                <X size={22} />
               </motion.span>
             ) : (
               <motion.span
                 key="more"
                 className="flex items-center justify-center"
                 initial={{ scale: 0.25, opacity: 0, filter: 'blur(4px)' }}
-                animate={{ scale: 1, opacity: 1, filter: 'blur(0px)' }}
+                animate={{ scale: moreOpen || anyMoreActive ? 1.1 : 1, opacity: moreOpen || anyMoreActive ? 1 : 0.65, filter: 'blur(0px)' }}
                 exit={{ scale: 0.25, opacity: 0, filter: 'blur(4px)' }}
                 transition={SPRING}
               >
-                <MoreHorizontal size={23} />
+                <MoreHorizontal size={22} />
               </motion.span>
             )}
           </AnimatePresence>

@@ -115,11 +115,11 @@ export function TaskCard({ task }: TaskCardProps) {
               disabled={updateStatus.isPending}
               className="advance-btn flex items-center justify-center flex-shrink-0"
               style={{
-                /* Тач-зона ≥44px, при этом видимая рамка остаётся компактной (внутренний span).
-                   Прозрачный padding расширяет hit-area, не распирая строку визуально. */
+                /* Hit-area 44×44px, визуальный span увеличен до 32×32 (был 22×18 — слишком мал).
+                   Принцип #16 скилла: минимальная тач-зона 40×40px. */
                 width: 44,
                 height: 44,
-                margin: -13,
+                margin: -6,
                 background: 'transparent',
                 border: 'none',
                 color: 'var(--accent)',
@@ -131,9 +131,10 @@ export function TaskCard({ task }: TaskCardProps) {
               <span
                 className="flex items-center justify-center"
                 style={{
-                  width: 22,
-                  height: 18,
+                  width: 32,
+                  height: 32,
                   border: '1px solid var(--border)',
+                  borderRadius: 'var(--radius)',
                   transition: 'border-color 140ms ease-out, background 140ms ease-out, box-shadow 140ms ease-out',
                 }}
                 onMouseEnter={(e) => {
@@ -147,7 +148,7 @@ export function TaskCard({ task }: TaskCardProps) {
                   e.currentTarget.style.boxShadow   = 'none';
                 }}
               >
-                <ChevronRight size={12} />
+                <ChevronRight size={16} />
               </span>
             </button>
           )}

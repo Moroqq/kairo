@@ -13,6 +13,12 @@ export interface ThemeDef {
   fx: boolean;
   /** «Мягкий» визуальный язык: сан-сериф-шрифт, скруглённые углы, без неон-свечения. */
   soft?: boolean;
+  /**
+   * Дизайн-семейство для структурных CSS-оверрайдов.
+   * 'apple'    → html.apple: нет bevel-границ, iOS nav bar, subtle shadows, SF Pro
+   * 'material' → html.material: Material You elevation system (будущее)
+   */
+  family?: 'apple' | 'material';
   /** CSS custom properties — полный набор, чтобы переключение туда-обратно было чистым. */
   vars: Record<string, string>;
   /** «Личность» интерфейса: лексика меняется вместе с темой. */
@@ -316,9 +322,10 @@ export const THEMES: Record<ThemeId, ThemeDef> = {
   liquid: {
     id: 'liquid',
     name: 'LIQUID',
-    tagline: 'Apple Design · жидкое стекло · iOS 26',
+    tagline: 'Apple Design · жидкое стекло · iOS 27',
     fx: false,
     soft: true,
+    family: 'apple',
     vars: {
       ...matrixVars,
       '--bg-base':        '#F2F2F7',
@@ -418,10 +425,12 @@ export const THEMES: Record<ThemeId, ThemeDef> = {
 
 export const THEME_LIST: ThemeDef[] = Object.values(THEMES);
 
-/** Применить тему: проставить переменные на :root и флаг отключения фоновых эффектов. */
+/** Применить тему: проставить переменные на :root и классы дизайн-семейства. */
 export function applyTheme(t: ThemeDef): void {
   const root = document.documentElement;
   for (const [k, v] of Object.entries(t.vars)) root.style.setProperty(k, v);
-  root.classList.toggle('no-fx', !t.fx);
-  root.classList.toggle('soft', !!t.soft);
+  root.classList.toggle('no-fx',    !t.fx);
+  root.classList.toggle('soft',     !!t.soft);
+  root.classList.toggle('apple',    t.family === 'apple');
+  root.classList.toggle('material', t.family === 'material');
 }

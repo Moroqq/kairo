@@ -476,3 +476,179 @@ html.soft ::-webkit-scrollbar-track { background: var(--bg-elevated); border-lef
   /* Тач-пол для контентных кнопок (не вешаем на все button — титул-бар 24px) */
   .btn-flat { min-height: 44px; }
 }
+
+/* ============================================================
+   APPLE DESIGN (html.apple) — активируется темой LIQUID
+   iOS 27 / Human Interface Guidelines
+   Полностью заменяет терминальный визуальный язык:
+   нет bevel-границ, нет неон-свечения, нет monospace UI,
+   shadow-depth вместо border-depth, system-ui шрифт.
+   ============================================================ */
+
+/* ── Базовый шрифт ──────────────────────────────────────────── */
+html.apple body {
+  font-family: system-ui, -apple-system, 'SF Pro Text', 'Helvetica Neue', Arial, sans-serif;
+  font-feature-settings: normal;
+  letter-spacing: -0.1px;
+}
+
+html.apple .font-mono {
+  font-family: 'SF Mono', 'Menlo', 'Monaco', 'Courier New', monospace;
+  font-size: 12px;
+  letter-spacing: 0;
+}
+
+/* ── Bevel → Clean cards ────────────────────────────────────── */
+html.apple .bevel-raised {
+  border: none;
+  background: var(--bg-surface);
+  box-shadow: 0 1px 4px rgba(0,0,0,0.07), 0 0 0 0.5px rgba(0,0,0,0.05);
+  border-radius: var(--radius);
+}
+
+html.apple .bevel-sunken {
+  border: none;
+  background: rgba(60,60,67,0.06);
+  box-shadow: none;
+  border-radius: var(--radius);
+}
+
+html.apple .bevel-well {
+  border: none;
+  background: var(--bg-surface);
+  box-shadow: 0 0 0 0.5px rgba(0,0,0,0.06);
+  border-radius: var(--radius);
+}
+
+html.apple .bevel-pressed {
+  border: none;
+  background: var(--accent-dim);
+  box-shadow: none;
+  border-radius: var(--radius);
+}
+
+/* ── Button states ──────────────────────────────────────────── */
+html.apple button.bevel-raised:not(:disabled):hover,
+html.apple a.bevel-raised:hover {
+  border: none;
+  box-shadow: 0 2px 10px rgba(0,0,0,0.10), 0 0 0 0.5px rgba(0,0,0,0.06);
+  background: var(--bg-elevated);
+  text-shadow: none;
+}
+
+html.apple button.bevel-raised:not(:disabled):active {
+  background: var(--accent-dim);
+  transform: scale(0.96);
+  box-shadow: none;
+}
+
+html.apple button.bevel-raised:focus-visible,
+html.apple input:focus-visible,
+html.apple textarea:focus-visible,
+html.apple select:focus-visible {
+  outline: none;
+  border: none;
+  box-shadow: 0 0 0 4px var(--accent-dim), 0 0 0 1.5px var(--accent);
+}
+
+/* ── Title bar → iOS Navigation Bar (44px, SF Pro Semibold) ─── */
+html.apple .titlebar {
+  height: 44px;
+  padding: 0 16px;
+  font-family: system-ui, -apple-system, sans-serif;
+  font-size: 17px;
+  font-weight: 600;
+  text-transform: none;
+  letter-spacing: -0.4px;
+  text-shadow: none;
+  color: var(--text-bright);
+  background: var(--titlebar-bg);
+  border-bottom: 0.5px solid var(--border-subtle);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+}
+
+html.apple .titlebar-btn { display: none; }
+html.apple .cursor-blink::after { content: none; }
+
+/* ── Neon → Accent color, no glow ──────────────────────────── */
+html.apple .neon-text,
+html.apple .neon-cyan-text,
+html.apple .neon-mag-text,
+html.apple .neon-green-text { color: var(--accent); text-shadow: none; }
+html.apple .neon-pink-text  { color: var(--danger); text-shadow: none; }
+html.apple .neon-yellow-text{ color: var(--warning); text-shadow: none; }
+
+/* ── No scanlines / vignette ────────────────────────────────── */
+html.apple .win-desktop::after { display: none; }
+
+/* ── iOS-style scrollbars (thin, translucent) ───────────────── */
+html.apple ::-webkit-scrollbar { width: 3px; height: 3px; }
+html.apple ::-webkit-scrollbar-track { background: transparent; border: none; }
+html.apple ::-webkit-scrollbar-thumb {
+  background: rgba(0,0,0,0.18);
+  border-radius: 999px;
+  border: none;
+}
+html.apple ::-webkit-scrollbar-thumb:hover { background: rgba(0,0,0,0.28); }
+html.apple ::-webkit-scrollbar-corner { background: transparent; }
+
+/* ── Row hover — iOS table-cell style ──────────────────────── */
+html.apple .row-hover:hover { background: rgba(0,0,0,0.04) !important; }
+
+/* ── Flat buttons — clean iOS style ────────────────────────── */
+html.apple .btn-flat:not(:disabled):hover {
+  box-shadow: none;
+  text-shadow: none;
+  background: var(--accent-dim) !important;
+  color: var(--accent) !important;
+  border-color: transparent !important;
+}
+html.apple .btn-flat[data-variant="primary"]:not(:disabled):hover {
+  box-shadow: none;
+}
+html.apple .btn-flat:not(:disabled):active { transform: scale(0.96); }
+
+/* ── Selection ──────────────────────────────────────────────── */
+html.apple ::selection { background: var(--accent); color: #fff; }
+
+/* ── LED → no glow ─────────────────────────────────────────── */
+html.apple .led {
+  box-shadow: none;
+  background: var(--accent);
+}
+html.apple .led-red { box-shadow: none; }
+
+/* ── Task card → iOS card style ────────────────────────────── */
+html.apple .task-card {
+  border: none !important;
+  box-shadow: var(--shadow-card);
+  border-radius: var(--radius);
+}
+html.apple .task-card:hover {
+  box-shadow: 0 4px 16px rgba(0,0,0,0.10), 0 0 0 0.5px rgba(0,0,0,0.06) !important;
+  border-color: transparent !important;
+}
+
+/* ── Shell surface → translucent blur ──────────────────────── */
+html.apple .bevel-sunken {
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+}
+
+/* ── Desktop background ─────────────────────────────────────── */
+html.apple .win-desktop { background: var(--desktop-bg); }
+
+/* ── Separator lines — iOS-style thin (0.5px) ──────────────── */
+html.apple .border-b,
+html.apple [class*="border-b"] {
+  border-bottom-width: 0.5px;
+}
+
+/* ── Mobile safe-area + titlebar ────────────────────────────── */
+@media (max-width: 767px) {
+  html.apple .titlebar {
+    height: calc(44px + env(safe-area-inset-top));
+    padding-top: env(safe-area-inset-top);
+  }
+}

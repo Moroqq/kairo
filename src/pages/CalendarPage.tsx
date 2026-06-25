@@ -55,15 +55,28 @@ export function CalendarPage() {
           <span style={{ color: 'var(--accent)' }}>›</span> ежедневник
         </span>
         <div className="flex-1" />
-        <button
-          type="button"
-          onClick={() => setPatternsOpen(true)}
-          className="bevel-raised flex items-center gap-1.5 px-3"
-          style={{ minHeight: 40, fontSize: 13, background: 'var(--bg-surface)', color: 'var(--text-secondary)' }}
-          title="шаблоны-расписания"
-        >
-          <CalendarClock size={15} /> расписание
-        </button>
+        {/* На мобиле — только иконка (текстовая кнопка случайно нажималась вместо "перенести") */}
+        {isMobile ? (
+          <button
+            type="button"
+            onClick={() => setPatternsOpen(true)}
+            className="flex items-center justify-center"
+            style={{ width: 44, height: 44, background: 'transparent', border: 'none', color: 'var(--text-secondary)', cursor: 'pointer' }}
+            title="шаблоны расписания"
+          >
+            <CalendarClock size={20} />
+          </button>
+        ) : (
+          <button
+            type="button"
+            onClick={() => setPatternsOpen(true)}
+            className="bevel-raised flex items-center gap-1.5 px-3"
+            style={{ minHeight: 40, fontSize: 13, background: 'var(--bg-surface)', color: 'var(--text-secondary)' }}
+            title="шаблоны-расписания"
+          >
+            <CalendarClock size={15} /> расписание
+          </button>
+        )}
       </div>
 
       {/* Body */}
