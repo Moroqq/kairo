@@ -167,9 +167,9 @@ function NavItem({
       }}
       className="flex items-center justify-end gap-3 select-none"
       style={{
-        height: 56,
-        minWidth: 184,
-        padding: '0 16px',
+        height: 64,
+        minWidth: 212,
+        padding: '0 18px',
         background: primary ? 'var(--accent-dim)' : 'var(--bg-surface)',
         border: `1px solid ${primary || active ? 'var(--accent)' : 'var(--border)'}`,
         color: primary || active ? 'var(--accent)' : 'var(--text-secondary)',
@@ -179,7 +179,7 @@ function NavItem({
     >
       <span
         className="font-mono"
-        style={{ fontSize: 13, letterSpacing: 1, textTransform: 'uppercase' }}
+        style={{ fontSize: 15, letterSpacing: 1, textTransform: 'uppercase' }}
       >
         {label}
       </span>

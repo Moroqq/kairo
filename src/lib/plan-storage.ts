@@ -4,7 +4,7 @@ const ITEMS_KEY     = 'kairo_plan_items';
 const PATTERNS_KEY  = 'kairo_plan_patterns';
 const OVERRIDES_KEY = 'kairo_plan_overrides';
 
-const VALID_PRIORITIES: Priority[] = ['A', 'B', 'C', 'D'];
+const VALID_PRIORITIES: Priority[] = ['A', 'B', 'C'];
 
 function normPriority(p: unknown): Priority {
   return VALID_PRIORITIES.includes(p as Priority) ? (p as Priority) : 'C';

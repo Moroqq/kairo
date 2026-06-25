@@ -12,7 +12,7 @@ import type {
 
 /* ─── helpers ──────────────────────────────────────────────────────────── */
 
-const PRIORITY_RANK: Record<Priority, number> = { A: 0, B: 1, C: 2, D: 3 };
+const PRIORITY_RANK: Record<Priority, number> = { A: 0, B: 1, C: 2 };
 
 function sortDisplay(
   a: { time: string | null; priority: Priority },

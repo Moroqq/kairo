@@ -1,4 +1,4 @@
-export type Priority = 'A' | 'B' | 'C' | 'D';
+export type Priority = 'A' | 'B' | 'C';
 
 export type TaskStatus =
   | 'New'
@@ -69,10 +69,9 @@ export const KANBAN_COLUMNS: KanbanColumn[] = [
 ];
 
 export const PRIORITY_CONFIG: Record<Priority, { color: string; label: string; bgColor: string; glow: string }> = {
-  A: { color: '#FF1744', bgColor: 'rgba(255,23,68,0.10)',   glow: 'rgba(255,23,68,0.6)',   label: 'Critical' },
-  B: { color: '#FF9100', bgColor: 'rgba(255,145,0,0.10)',   glow: 'rgba(255,145,0,0.5)',   label: 'Today'    },
-  C: { color: '#00B0FF', bgColor: 'rgba(0,176,255,0.10)',   glow: 'rgba(0,176,255,0.5)',   label: 'Planned'  },
-  D: { color: '#B388FF', bgColor: 'rgba(179,136,255,0.10)', glow: 'rgba(179,136,255,0.5)', label: 'Optional' },
+  A: { color: '#FF1744', bgColor: 'rgba(255,23,68,0.10)',  glow: 'rgba(255,23,68,0.6)',  label: 'Critical' },
+  B: { color: '#FF9100', bgColor: 'rgba(255,145,0,0.10)',  glow: 'rgba(255,145,0,0.5)',  label: 'Today'    },
+  C: { color: '#00B0FF', bgColor: 'rgba(0,176,255,0.10)',  glow: 'rgba(0,176,255,0.5)',  label: 'Planned'  },
 };
 
 export const STATUS_LABELS: Record<TaskStatus, string> = {

@@ -79,7 +79,7 @@ export function MonthGrid({ year, month, selectedDate, onSelect, onPrev, onNext,
         className="grid flex-1 min-h-0"
         style={{
           gridTemplateColumns: 'repeat(7, 1fr)',
-          gridAutoRows: isMobile ? 'minmax(58px, 1fr)' : 'minmax(130px, 1fr)',
+          gridAutoRows: isMobile ? 'minmax(72px, 1fr)' : 'minmax(130px, 1fr)',
           gap: 2,
           padding: 2,
         }}
@@ -101,7 +101,7 @@ export function MonthGrid({ year, month, selectedDate, onSelect, onPrev, onNext,
               onClick={() => onSelect(iso)}
               className="flex flex-col items-stretch transition-colors text-left"
               style={{
-                minHeight: isMobile ? 58 : 130,
+                minHeight: isMobile ? 72 : 130,
                 background: isSelected ? 'var(--accent-dim)' : 'transparent',
                 border: `1px solid ${
                   isSelected ? 'var(--accent)'

@@ -13,7 +13,7 @@ Return exactly this structure:
 {
   "title": "short action-oriented title (max 60 chars)",
   "description": "expanded details, or empty string",
-  "priority": "A|B|C|D",
+  "priority": "A|B|C",
   "category": "inferred category or empty string",
   "deadline": "ISO8601 datetime or null",
   "summary": "one concise sentence summary"
@@ -22,8 +22,7 @@ Return exactly this structure:
 Priority rules:
 - A: urgent, critical, immediate, emergency, asap
 - B: today, must do, important, high priority
-- C: planned, scheduled, normal, this week
-- D: maybe, optional, someday, nice to have
+- C: planned, scheduled, normal, this week, optional, someday, nice to have
 
 Today's date: {TODAY}
 Resolve relative dates (tomorrow, next Monday, через 2 дня) to absolute ISO8601 dates.

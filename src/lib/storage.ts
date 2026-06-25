@@ -3,15 +3,16 @@ import type { Task, EventLog, Priority, TaskStatus } from '@/types';
 const TASKS_KEY = 'kairo_tasks';
 const LOGS_KEY  = 'kairo_event_logs';
 
-const VALID_PRIORITIES: Priority[] = ['A', 'B', 'C', 'D'];
+const VALID_PRIORITIES: Priority[] = ['A', 'B', 'C'];
 const VALID_STATUSES: TaskStatus[] = [
   'New', 'In Progress', 'Waiting Response', 'Escalation', 'Blocked', 'Resolved', 'Archived',
 ];
 
-// Legacy → canonical
+// Legacy → canonical (D was removed; P4/Low/D all remap to C)
 const PRIORITY_REMAP: Record<string, Priority> = {
-  P1: 'A', P2: 'B', P3: 'C', P4: 'D',
-  Critical: 'A', High: 'B', Medium: 'C', Low: 'D',
+  P1: 'A', P2: 'B', P3: 'C', P4: 'C',
+  Critical: 'A', High: 'B', Medium: 'C', Low: 'C',
+  D: 'C',
 };
 
 function migrateTask(raw: any): Task {

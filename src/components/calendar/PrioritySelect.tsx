@@ -1,7 +1,7 @@
 import type { Priority } from '@/types';
 import { PRIORITY_CONFIG } from '@/types';
 
-const ORDER: Priority[] = ['A', 'B', 'C', 'D'];
+const ORDER: Priority[] = ['A', 'B', 'C'];
 
 interface Props {
   value: Priority;
