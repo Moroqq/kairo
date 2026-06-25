@@ -9,7 +9,7 @@ interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
 export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
   ({ variant = 'secondary', size = 'md', loading, disabled, children, className = '', style, ...props }, ref) => {
     const base =
-      'inline-flex items-center justify-center gap-1.5 font-mono select-none transition-all duration-150 disabled:opacity-40 disabled:cursor-not-allowed';
+      'inline-flex items-center justify-center gap-1.5 font-mono select-none transition-[border-color,box-shadow,background,color,transform,opacity] duration-150 disabled:opacity-40 disabled:cursor-not-allowed active:scale-[0.96]';
 
     const sizes: Record<string, string> = {
       sm: 'h-7  px-3 text-xs',

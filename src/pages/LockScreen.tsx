@@ -184,7 +184,7 @@ export function LockScreen() {
             <div className="flex flex-col items-center gap-2" style={{ marginBottom: 4, marginTop: 4 }}>
               <img
                 src="/logo.png" alt="Kairo" width={isPinStep ? 64 : 88} height={isPinStep ? 64 : 88}
-                style={{ display: 'block', filter: 'drop-shadow(0 0 18px var(--accent-glow)) drop-shadow(0 0 36px rgba(0,255,65,0.25))' }}
+                style={{ display: 'block', filter: 'drop-shadow(0 0 18px var(--accent-glow)) drop-shadow(0 0 36px rgba(0,255,65,0.25))', outline: '1px solid rgba(255, 255, 255, 0.1)' }}
               />
               <div className="font-mono neon-text" style={{ fontSize: 11, letterSpacing: 6, fontWeight: 700 }}>
                 K A I R O

@@ -1,4 +1,5 @@
 import { CheckCheck, ListChecks, Plus, CircleSlash } from 'lucide-react';
+import { motion } from 'framer-motion';
 import { useQuery } from '@tanstack/react-query';
 import { getWeeklyReviews, formatWeekRange, type WeekReview } from '@/services/review.service';
 import { useUIStore } from '@/stores/ui.store';
@@ -34,8 +35,15 @@ export function WeeksPage() {
         )}
 
         <div className="flex flex-col gap-3">
-          {list.map((week) => (
-            <WeekBlock key={week.weekStart} week={week} />
+          {list.map((week, i) => (
+            <motion.div
+              key={week.weekStart}
+              initial={{ opacity: 0, y: 6 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.18, delay: Math.min(i, 5) * 0.04 }}
+            >
+              <WeekBlock week={week} />
+            </motion.div>
           ))}
         </div>
       </div>
@@ -115,7 +123,7 @@ function WeekBlock({ week }: { week: WeekReview }) {
                 onClick={() => setActiveTaskId(t.id)}
                 className="row-hover flex items-center gap-2 font-mono text-left"
                 style={{
-                  fontSize: 12, padding: '4px 8px',
+                  fontSize: 12, padding: '6px 8px', minHeight: 40,
                   background: 'transparent', border: 'none',
                   borderLeft: '2px solid var(--accent)',
                   color: 'var(--text-secondary)', cursor: 'pointer',
@@ -178,7 +186,7 @@ function Metric({
     <span className="flex items-center gap-1.5" style={{ color: 'var(--text-muted)' }}>
       <span style={{ color: danger ? 'var(--danger)' : highlight ? 'var(--accent)' : 'var(--text-dim)' }}>{icon}</span>
       {label}{' '}
-      <b style={{ color: danger ? 'var(--danger)' : highlight ? 'var(--text-bright)' : 'var(--text-secondary)' }}>
+      <b style={{ color: danger ? 'var(--danger)' : highlight ? 'var(--text-bright)' : 'var(--text-secondary)', fontVariantNumeric: 'tabular-nums' }}>
         {value}
       </b>
     </span>

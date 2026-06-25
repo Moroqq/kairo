@@ -164,6 +164,7 @@ a.bevel-raised:hover {
 }
 button.bevel-raised:not(:disabled):active {
   background: rgba(0, 255, 65, 0.2);
+  transform: scale(0.96);
 }
 
 button.bevel-raised:focus-visible,
@@ -216,7 +217,7 @@ select:focus-visible {
   cursor: pointer;
   padding: 0;
   font-family: inherit;
-  transition: var(--transition);
+  transition: border-color var(--transition), box-shadow var(--transition), color var(--transition);
 }
 .titlebar-btn:hover {
   color: var(--accent);
@@ -393,7 +394,7 @@ input[type="date"]::-webkit-calendar-picker-indicator {
   text-shadow: 0 0 6px rgba(255,0,60,0.6);
 }
 .btn-flat:not(:disabled):active {
-  transform: translateY(1px);
+  transform: scale(0.96);
 }
 
 /* ============================================================

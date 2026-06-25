@@ -134,7 +134,7 @@ export function TaskCard({ task }: TaskCardProps) {
                   width: 22,
                   height: 18,
                   border: '1px solid var(--border)',
-                  transition: 'all 140ms ease-out',
+                  transition: 'border-color 140ms ease-out, background 140ms ease-out, box-shadow 140ms ease-out',
                 }}
                 onMouseEnter={(e) => {
                   e.currentTarget.style.background  = 'var(--accent-dim)';

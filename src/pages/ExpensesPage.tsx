@@ -125,16 +125,25 @@ export function ExpensesPage() {
                   onClick={() => togglePaid.mutate(e.id)}
                   className="flex items-center justify-center flex-shrink-0"
                   style={{
-                    width: 24, height: 24,
-                    border: `1px solid ${e.paid ? 'var(--accent)' : 'var(--border)'}`,
-                    background: e.paid ? 'var(--accent-dim)' : 'transparent',
-                    color: 'var(--accent)',
-                    borderRadius: 'var(--radius)',
+                    width: 40, height: 40,
+                    background: 'transparent',
+                    border: 'none',
                     cursor: 'pointer',
                   }}
                   title={e.paid ? 'снять отметку (оплачено в этом месяце)' : 'отметить оплаченным'}
                 >
-                  {e.paid && <Check size={15} />}
+                  <span
+                    className="flex items-center justify-center"
+                    style={{
+                      width: 24, height: 24,
+                      border: `1px solid ${e.paid ? 'var(--accent)' : 'var(--border)'}`,
+                      background: e.paid ? 'var(--accent-dim)' : 'transparent',
+                      color: 'var(--accent)',
+                      borderRadius: 'var(--radius)',
+                    }}
+                  >
+                    {e.paid && <Check size={15} />}
+                  </span>
                 </button>
 
                 {/* Name + note */}
@@ -159,6 +168,7 @@ export function ExpensesPage() {
                   className="font-mono flex-shrink-0"
                   style={{
                     fontSize: 13, fontWeight: 600,
+                    fontVariantNumeric: 'tabular-nums',
                     color: e.paid ? 'var(--text-dim)' : 'var(--text-bright)',
                     textDecoration: e.paid ? 'line-through' : 'none',
                   }}
@@ -169,7 +179,7 @@ export function ExpensesPage() {
                 {/* Days until */}
                 <span
                   className="font-mono flex-shrink-0 text-right"
-                  style={{ fontSize: 11, minWidth: 56, color: e.paid ? 'var(--text-dim)' : daysColor(e.daysUntil), fontWeight: e.daysUntil <= 7 && !e.paid ? 700 : 400 }}
+                  style={{ fontSize: 11, minWidth: 56, fontVariantNumeric: 'tabular-nums', color: e.paid ? 'var(--text-dim)' : daysColor(e.daysUntil), fontWeight: e.daysUntil <= 7 && !e.paid ? 700 : 400 }}
                 >
                   {e.paid ? '✓' : daysLabel(e.daysUntil)}
                 </span>
@@ -180,7 +190,7 @@ export function ExpensesPage() {
                     type="button"
                     onClick={() => setEditing({ mode: 'edit', item: e })}
                     className="flex items-center justify-center"
-                    style={{ width: 36, height: 36, background: 'transparent', border: 'none', color: 'var(--text-muted)', cursor: 'pointer' }}
+                    style={{ width: 40, height: 40, background: 'transparent', border: 'none', color: 'var(--text-muted)', cursor: 'pointer' }}
                     title="изменить"
                   >
                     <Pencil size={13} />
@@ -189,7 +199,7 @@ export function ExpensesPage() {
                     type="button"
                     onClick={() => deleteExpense.mutate(e.id)}
                     className="flex items-center justify-center"
-                    style={{ width: 36, height: 36, background: 'transparent', border: 'none', color: 'var(--text-muted)', cursor: 'pointer' }}
+                    style={{ width: 40, height: 40, background: 'transparent', border: 'none', color: 'var(--text-muted)', cursor: 'pointer' }}
                     title="удалить"
                   >
                     <Trash2 size={13} />

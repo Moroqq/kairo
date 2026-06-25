@@ -104,15 +104,15 @@ export function AppShell({ children }: AppShellProps) {
           </span>
           <Sep />
           <span style={{ color: 'var(--text-muted)' }}>
-            всего <span className="font-mono" style={{ color: 'var(--text-bright)' }}>{pad(total)}</span>
+            всего <span className="font-mono" style={{ color: 'var(--text-bright)', fontVariantNumeric: 'tabular-nums' }}>{pad(total)}</span>
           </span>
           <Sep />
           <span style={{ color: 'var(--text-muted)' }}>
-            активных <span className="font-mono" style={{ color: 'var(--text-bright)' }}>{pad(open)}</span>
+            активных <span className="font-mono" style={{ color: 'var(--text-bright)', fontVariantNumeric: 'tabular-nums' }}>{pad(open)}</span>
           </span>
           <Sep />
           <span style={{ color: 'var(--text-muted)' }}>
-            выполнено <span className="font-mono" style={{ color: 'var(--text-bright)' }}>{pad(resolved)}</span>
+            выполнено <span className="font-mono" style={{ color: 'var(--text-bright)', fontVariantNumeric: 'tabular-nums' }}>{pad(resolved)}</span>
           </span>
           {overdue > 0 && (
             <>
@@ -127,13 +127,13 @@ export function AppShell({ children }: AppShellProps) {
           {nextDeadline !== undefined && (
             <span style={{ color: 'var(--text-muted)' }}>
               ближайший дедлайн{' '}
-              <span className="font-mono" style={{ color: 'var(--text-bright)' }}>
+              <span className="font-mono" style={{ color: 'var(--text-bright)', fontVariantNumeric: 'tabular-nums' }}>
                 <Countdown to={nextDeadline} />
               </span>
               <span style={{ color: 'var(--text-dim)' }}> │ </span>
             </span>
           )}
-          <span className="font-mono" style={{ color: 'var(--text-muted)' }}>
+          <span className="font-mono" style={{ color: 'var(--text-muted)', fontVariantNumeric: 'tabular-nums' }}>
             <Clock />
           </span>
         </div>

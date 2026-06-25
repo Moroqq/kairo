@@ -83,7 +83,7 @@ export function TodoPage() {
 }
 
 const navBtn: React.CSSProperties = {
-  width: 32, height: 32,
+  width: 40, height: 40,
   display: 'flex', alignItems: 'center', justifyContent: 'center',
   background: 'transparent',
   border: '1px solid var(--border-subtle)',

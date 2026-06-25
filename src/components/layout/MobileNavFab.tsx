@@ -5,6 +5,8 @@ import { Menu, X, Plus } from 'lucide-react';
 import { NAV } from './nav';
 import { useUIStore } from '@/stores/ui.store';
 
+const ICON_TRANSITION = { type: 'spring', duration: 0.3, bounce: 0 } as const;
+
 /**
  * Мобильная навигация — выдвижной FAB speed-dial в правом нижнем углу.
  * Заменяет нижнюю панель: 8 ячеек по ~47px были непопадаемы пальцем.
@@ -27,6 +29,8 @@ export function MobileNavFab() {
 
   const go = (to: string) => { navigate(to); setOpen(false); };
   const capture = () => { setOpen(false); openCapture(); };
+
+  const currentNav = NAV.find(({ to }) => to === location.pathname);
 
   return (
     <>
@@ -88,10 +92,12 @@ export function MobileNavFab() {
       </AnimatePresence>
 
       {/* Основной FAB */}
-      <button
+      <motion.button
         type="button"
         onClick={() => setOpen((v) => !v)}
-        className="fixed z-[60] flex items-center justify-center"
+        whileTap={{ scale: 0.93 }}
+        transition={ICON_TRANSITION}
+        className="fixed z-[60] flex flex-col items-center justify-center gap-0.5"
         style={{
           right: 16,
           bottom: 'calc(16px + env(safe-area-inset-bottom))',
@@ -105,14 +111,37 @@ export function MobileNavFab() {
         }}
         title={open ? 'закрыть меню' : 'меню'}
       >
-        <motion.span
-          className="flex items-center justify-center neon-text"
-          animate={{ rotate: open ? 90 : 0 }}
-          transition={{ duration: 0.2 }}
-        >
-          {open ? <X size={26} /> : <Menu size={26} />}
-        </motion.span>
-      </button>
+        <AnimatePresence mode="wait" initial={false}>
+          {open ? (
+            <motion.span
+              key="close"
+              className="flex items-center justify-center neon-text"
+              initial={{ scale: 0.25, opacity: 0, filter: 'blur(4px)' }}
+              animate={{ scale: 1, opacity: 1, filter: 'blur(0px)' }}
+              exit={{ scale: 0.25, opacity: 0, filter: 'blur(4px)' }}
+              transition={ICON_TRANSITION}
+            >
+              <X size={26} />
+            </motion.span>
+          ) : (
+            <motion.div
+              key="menu"
+              className="flex flex-col items-center gap-0.5"
+              initial={{ scale: 0.25, opacity: 0, filter: 'blur(4px)' }}
+              animate={{ scale: 1, opacity: 1, filter: 'blur(0px)' }}
+              exit={{ scale: 0.25, opacity: 0, filter: 'blur(4px)' }}
+              transition={ICON_TRANSITION}
+            >
+              <Menu size={22} className="neon-text" />
+              {currentNav && (
+                <span className="font-mono neon-text" style={{ fontSize: 7, letterSpacing: 1, lineHeight: 1, textTransform: 'uppercase' }}>
+                  {currentNav.label}
+                </span>
+              )}
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </motion.button>
     </>
   );
 }

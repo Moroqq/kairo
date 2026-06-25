@@ -160,7 +160,7 @@ export function FocusPage() {
               что делать сейчас
             </div>
           </div>
-          <div className="font-mono text-right" style={{ fontSize: 10, color: 'var(--text-muted)' }}>
+          <div className="font-mono text-right" style={{ fontSize: 10, color: 'var(--text-muted)', fontVariantNumeric: 'tabular-nums' }}>
             <div>в очереди: <span style={{ color: 'var(--text-bright)' }}>{stats.active.toString().padStart(2, '0')}</span></div>
             <div>сегодня: <span style={{ color: 'var(--accent)' }}>+{stats.doneToday}</span></div>
           </div>
@@ -231,7 +231,8 @@ export function FocusPage() {
               color: 'var(--text-primary)',
               marginBottom: current.description ? 12 : 6,
               letterSpacing: 0.2,
-            }}
+              textWrap: 'balance',
+            } as React.CSSProperties}
           >
             {current.title}
           </h1>
@@ -366,7 +367,7 @@ function ActionBtn({
     <button
       onClick={onClick}
       disabled={disabled}
-      className="flex items-center gap-1.5 h-8 px-3 font-mono transition-all"
+      className="flex items-center gap-1.5 h-10 px-3 font-mono transition-[border-color,box-shadow,background,color,transform] active:scale-[0.96]"
       style={{
         fontSize: 11,
         background: primary ? 'var(--accent-dim)' : 'transparent',
