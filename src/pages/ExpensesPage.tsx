@@ -178,10 +178,10 @@ export function ExpensesPage() {
 
                 {/* Days until */}
                 <span
-                  className="font-mono flex-shrink-0 text-right"
-                  style={{ fontSize: 11, minWidth: 56, fontVariantNumeric: 'tabular-nums', color: e.paid ? 'var(--text-dim)' : daysColor(e.daysUntil), fontWeight: e.daysUntil <= 7 && !e.paid ? 700 : 400 }}
+                  className="font-mono flex-shrink-0 text-right flex items-center justify-end"
+                  style={{ fontSize: 11, minWidth: 56, fontVariantNumeric: 'tabular-nums', color: e.paid ? 'var(--accent)' : daysColor(e.daysUntil), fontWeight: e.daysUntil <= 7 && !e.paid ? 700 : 400 }}
                 >
-                  {e.paid ? '✓' : daysLabel(e.daysUntil)}
+                  {e.paid ? <Check size={13} /> : daysLabel(e.daysUntil)}
                 </span>
 
                 {/* Actions */}
