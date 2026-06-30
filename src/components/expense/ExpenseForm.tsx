@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { Check, Trash2, Plus, Save } from 'lucide-react';
 import { Input } from '@/components/ui/Input';
 import { Button } from '@/components/ui/Button';
 import type { ExpenseView } from '@/types/expense';
@@ -14,14 +15,17 @@ interface Props {
   initial?: ExpenseView;
   onSave: (values: ExpenseFormValues) => void;
   onCancel: () => void;
+  onDelete?: () => void;
+  onTogglePaid?: () => void;
+  isPaid?: boolean;
 }
 
-/** Форма создания/редактирования регулярной траты. */
-export function ExpenseForm({ initial, onSave, onCancel }: Props) {
-  const [name,   setName]   = useState(initial?.name ?? '');
-  const [amount, setAmount] = useState(initial ? String(initial.amount) : '');
-  const [day,    setDay]    = useState(initial ? String(initial.dayOfMonth) : '1');
-  const [note,   setNote]   = useState(initial?.note ?? '');
+export function ExpenseForm({ initial, onSave, onCancel, onDelete, onTogglePaid, isPaid = false }: Props) {
+  const [name,    setName]    = useState(initial?.name ?? '');
+  const [amount,  setAmount]  = useState(initial ? String(initial.amount) : '');
+  const [day,     setDay]     = useState(initial ? String(initial.dayOfMonth) : '1');
+  const [note,    setNote]    = useState(initial?.note ?? '');
+  const [paid,    setPaid]    = useState(isPaid);
 
   const amountNum = parseFloat(amount.replace(',', '.'));
   const dayNum    = parseInt(day, 10);
@@ -29,6 +33,13 @@ export function ExpenseForm({ initial, onSave, onCancel }: Props) {
     name.trim().length > 0 &&
     Number.isFinite(amountNum) && amountNum > 0 &&
     Number.isFinite(dayNum) && dayNum >= 1 && dayNum <= 31;
+
+  const isEdit = !!initial;
+
+  const handleToggle = () => {
+    setPaid(p => !p);
+    onTogglePaid?.();
+  };
 
   const handleSave = () => {
     if (!valid) return;
@@ -42,12 +53,42 @@ export function ExpenseForm({ initial, onSave, onCancel }: Props) {
 
   return (
     <div className="flex flex-col gap-3" style={{ padding: 12 }}>
+      {/* Paid toggle — только в режиме редактирования */}
+      {isEdit && (
+        <button
+          type="button"
+          onClick={handleToggle}
+          style={{
+            display: 'flex', alignItems: 'center', gap: 10,
+            height: 48, padding: '0 14px', cursor: 'pointer',
+            background: paid ? 'var(--accent-dim)' : 'var(--bg-input)',
+            border: `1px solid ${paid ? 'var(--accent)' : 'var(--border)'}`,
+            color: paid ? 'var(--accent)' : 'var(--text-secondary)',
+            fontSize: 14,
+            transition: 'background 200ms ease, border-color 200ms ease, color 200ms ease',
+          }}
+        >
+          <span style={{
+            width: 22, height: 22, borderRadius: '50%', flexShrink: 0,
+            display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+            border: `1.5px solid ${paid ? 'var(--accent)' : 'var(--border-strong)'}`,
+            background: paid ? 'var(--accent)' : 'transparent',
+            transition: 'background 200ms ease, border-color 200ms ease',
+          }}>
+            {paid && <Check size={13} color="#000" strokeWidth={3} />}
+          </span>
+          <span className="font-mono" style={{ fontSize: 13 }}>
+            {paid ? 'оплачено · снять отметку' : 'отметить оплаченным'}
+          </span>
+        </button>
+      )}
+
       <Input
-        label="название"
+        label="описание"
         value={name}
         onChange={(e) => setName(e.target.value)}
-        placeholder="напр. Telegram Premium"
-        autoFocus
+        placeholder="напр. подписка claude"
+        autoFocus={!isEdit}
         data-selectable
         onKeyDown={(e) => { if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) handleSave(); }}
       />
@@ -59,11 +100,11 @@ export function ExpenseForm({ initial, onSave, onCancel }: Props) {
           inputMode="decimal"
           value={amount}
           onChange={(e) => setAmount(e.target.value)}
-          placeholder="300"
+          placeholder="0"
           data-selectable
         />
         <Input
-          label="день оплаты"
+          label="день"
           type="number"
           inputMode="numeric"
           value={day}
@@ -74,22 +115,31 @@ export function ExpenseForm({ initial, onSave, onCancel }: Props) {
       </div>
 
       <Input
-        label="заметка"
+        label="категория"
         value={note}
         onChange={(e) => setNote(e.target.value)}
-        placeholder="необязательно"
+        placeholder="жильё · связь · infra…"
         data-selectable
       />
 
-      <p className="text-xs font-mono" style={{ color: 'var(--text-dim)' }}>
-        <span style={{ color: 'var(--accent)' }}>›</span> оплата каждый месяц, {dayNum >= 1 && dayNum <= 31 ? `${dayNum}-го числа` : '— число —'}
+      <p className="font-mono" style={{ fontSize: 11, color: 'var(--text-dim)' }}>
+        <span style={{ color: 'var(--accent)' }}>›</span>{' '}
+        оплата каждый месяц
+        {dayNum >= 1 && dayNum <= 31 ? `, ${dayNum}-го числа` : ''}
       </p>
 
-      <div className="flex justify-end gap-2 pt-1">
-        <Button variant="secondary" size="sm" onClick={onCancel}>отмена</Button>
-        <Button variant="primary" size="sm" onClick={handleSave} disabled={!valid}>
-          {initial ? 'сохранить' : 'добавить'}
-        </Button>
+      <div className="flex gap-2 pt-1">
+        {isEdit && onDelete && (
+          <Button variant="danger" size="md" onClick={onDelete}>
+            <Trash2 size={14} /> удалить
+          </Button>
+        )}
+        <div className="flex gap-2 ml-auto">
+          <Button variant="secondary" size="md" onClick={onCancel}>отмена</Button>
+          <Button variant="primary" size="md" onClick={handleSave} disabled={!valid}>
+            {isEdit ? <><Save size={14} /> сохранить</> : <><Plus size={14} /> добавить</>}
+          </Button>
+        </div>
       </div>
     </div>
   );
