@@ -10,6 +10,7 @@ import { Eye, EyeOff } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { Button } from '@/components/ui/Button';
 import { PinPad } from '@/components/auth/PinPad';
+import { KairoMark } from '@/components/ui/KairoMark';
 import { useAuthStore } from '@/stores/auth.store';
 import { useIsMobile } from '@/hooks/useMediaQuery';
 import {
@@ -182,9 +183,9 @@ export function LockScreen() {
           {/* Лого: на мобиле — крупный блок, на десктопе — компактная строка */}
           {isMobile ? (
             <div className="flex flex-col items-center gap-2" style={{ marginBottom: 4, marginTop: 4 }}>
-              <img
-                src="/logo.png" alt="Kairo" width={isPinStep ? 64 : 88} height={isPinStep ? 64 : 88}
-                style={{ display: 'block', filter: 'drop-shadow(0 0 18px var(--accent-glow)) drop-shadow(0 0 36px rgba(0,255,65,0.25))', outline: '1px solid rgba(255, 255, 255, 0.1)' }}
+              <KairoMark
+                size={isPinStep ? 64 : 88}
+                style={{ filter: 'drop-shadow(0 0 18px var(--accent-glow)) drop-shadow(0 0 36px var(--accent-glow))' }}
               />
               <div className="font-mono neon-text" style={{ fontSize: 11, letterSpacing: 6, fontWeight: 700 }}>
                 K A I R O
@@ -195,9 +196,9 @@ export function LockScreen() {
             </div>
           ) : (
             <div className="flex flex-col items-center gap-3" style={{ marginBottom: 4, marginTop: 4 }}>
-              <img
-                src="/logo.png" alt="Kairo" width={72} height={72}
-                style={{ display: 'block', filter: 'drop-shadow(0 0 18px var(--accent-glow)) drop-shadow(0 0 36px rgba(0,255,65,0.2))' }}
+              <KairoMark
+                size={72}
+                style={{ filter: 'drop-shadow(0 0 18px var(--accent-glow)) drop-shadow(0 0 36px var(--accent-glow))' }}
               />
               <span className="font-mono neon-text" style={{ fontSize: 16, letterSpacing: 5, fontWeight: 700 }}>
                 K A I R O
