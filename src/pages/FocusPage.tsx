@@ -111,30 +111,30 @@ export function FocusPage() {
   if (!current) {
     return (
       <div className="flex-1 overflow-y-auto flex items-center justify-center" style={{ padding: 24 }}>
-        <div className="text-center flex flex-col items-center gap-6" style={{ maxWidth: 560 }}>
-          <pre
-            className="font-mono neon-text leading-tight"
-            style={{ fontSize: 20, letterSpacing: 1 }}
-          >
-{`╔══════════════════════════╗
-║     С И С Т Е М А       ║
-║      В   П О К О Е      ║
-╚══════════════════════════╝`}
-          </pre>
-          <p className="font-mono" style={{ fontSize: 16, color: 'var(--text-secondary)' }}>
-            активных задач нет
-          </p>
-          <p className="font-mono" style={{ fontSize: 13, color: 'var(--text-dim)' }}>
-            {stats.doneToday > 0
-              ? `сегодня выполнено: ${stats.doneToday}`
-              : 'начни новую задачу — мозг готов'}
-          </p>
+        <div className="text-center flex flex-col items-center gap-5" style={{ maxWidth: 400 }}>
+          <CheckCheck size={36} style={{ color: 'var(--accent)', opacity: 0.7 }} />
+          <div>
+            <p style={{ fontSize: 18, fontWeight: 600, color: 'var(--text-primary)' }}>
+              всё сделано
+            </p>
+            <p className="font-mono" style={{ fontSize: 13, color: 'var(--text-muted)', marginTop: 6 }}>
+              {stats.doneToday > 0
+                ? `сегодня выполнено ${stats.doneToday} задач`
+                : 'активных задач нет'}
+            </p>
+          </div>
           <button
             onClick={openCapture}
-            className="bevel-raised font-mono"
-            style={{ height: 58, padding: '0 40px', fontSize: 17, background: 'var(--bg-surface)', color: 'var(--accent)' }}
+            className="font-mono"
+            style={{
+              height: 48, padding: '0 28px', fontSize: 14,
+              background: 'var(--accent-dim)',
+              border: '1px solid var(--accent)',
+              color: 'var(--accent)',
+              cursor: 'pointer',
+            }}
           >
-            <span style={{ color: 'var(--accent)' }}>$</span> создать задачу
+            + новая задача
           </button>
         </div>
       </div>
