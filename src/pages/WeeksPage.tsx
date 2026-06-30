@@ -1,5 +1,5 @@
 import { useState, useRef, useCallback } from 'react';
-import { CheckCheck, ListChecks, Plus, CircleSlash, Trash2 } from 'lucide-react';
+import { BarChart3, CheckCheck, ListChecks, Plus, CircleSlash, Trash2 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useQuery } from '@tanstack/react-query';
 import { getWeeklyReviews, formatWeekRange, type WeekReview } from '@/services/review.service';
@@ -16,25 +16,39 @@ export function WeeksPage() {
   });
 
   const list = reviews ?? [];
+  const current = list.find((w) => w.isCurrent);
+  const totalDoneThisWeek = current ? current.resolvedTasks.length + current.planDoneCount : 0;
+  const totalCreated = current ? current.createdCount : 0;
 
   return (
-    <div className="flex-1 overflow-y-auto" style={{ padding: 12 }}>
-      <div style={{ maxWidth: 760, margin: '0 auto' }}>
-        {/* Header */}
-        <div className="flex items-baseline gap-2 mb-3 font-mono">
-          <span className="neon-text" style={{ fontSize: 14, fontWeight: 700, letterSpacing: 2 }}>
-            ИТОГИ
+    <div style={{ padding: '14px 14px 28px' }}>
+      {/* Section title */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '4px 2px 12px' }}>
+        <BarChart3 size={18} color="var(--accent)" />
+        <span style={{ fontSize: 17, fontWeight: 700, color: 'var(--text-bright)', letterSpacing: 0.3, flex: 1 }}>
+          итоги
+        </span>
+        {current && (
+          <span className="font-mono" style={{ fontSize: 12, color: 'var(--text-muted)' }}>
+            текущая неделя
           </span>
-          <span style={{ fontSize: 11, color: 'var(--text-dim)', letterSpacing: 1 }}>
-            <span style={{ color: 'var(--accent)' }}>›</span> ретроспектива по неделям
-          </span>
-        </div>
-
-        {list.length === 0 && (
-          <p className="font-mono py-10 text-center" style={{ fontSize: 13, color: 'var(--text-dim)' }}>
-            // активности пока не было
-          </p>
         )}
+      </div>
+
+      {/* Stats row — current week */}
+      {current && (
+        <div style={{ display: 'flex', gap: 10, marginBottom: 16 }}>
+          <StatCard label="выполнено" value={totalDoneThisWeek} accent />
+          <StatCard label="создано" value={totalCreated} />
+          <StatCard label="пропущено" value={current.planMissedCount} danger={current.planMissedCount > 0} />
+        </div>
+      )}
+
+      {list.length === 0 && (
+        <p className="font-mono py-10 text-center" style={{ fontSize: 13, color: 'var(--text-dim)' }}>
+          // активности пока не было
+        </p>
+      )}
 
         <div className="flex flex-col gap-3">
           {list.map((week, i) => (
@@ -261,5 +275,28 @@ function Metric({
         {value}
       </b>
     </span>
+  );
+}
+
+function StatCard({ label, value, accent, danger }: { label: string; value: number; accent?: boolean; danger?: boolean }) {
+  return (
+    <div style={{
+      flex: 1, background: 'var(--bg-card)', border: '1px solid var(--border)',
+      borderRadius: 'var(--radius-card)', padding: '12px 10px', textAlign: 'center',
+    }}>
+      <div
+        className={accent ? 'neon-text' : ''}
+        style={{
+          fontFamily: 'var(--font-mono)', fontSize: 24, fontWeight: 700,
+          color: danger ? 'var(--danger)' : accent ? undefined : 'var(--text-bright)',
+          fontVariantNumeric: 'tabular-nums',
+        }}
+      >
+        {value}
+      </div>
+      <div className="font-mono" style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 4, letterSpacing: 0.5 }}>
+        {label}
+      </div>
+    </div>
   );
 }

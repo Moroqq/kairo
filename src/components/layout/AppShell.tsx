@@ -49,23 +49,19 @@ export function AppShell({ children }: AppShellProps) {
           zIndex: 3,
         }}
       >
-        {/* Terminal title bar */}
-        <div className="titlebar">
-          <span className="neon-text">●</span>
-          <span className="flex-1 truncate cursor-blink">
-            {isMobile ? theme.vocab.titlebarShort : theme.vocab.titlebar}
-          </span>
-          {!isMobile && (
-            <>
-              <button className="titlebar-btn" title="Свернуть">_</button>
-              <button className="titlebar-btn" title="Развернуть">□</button>
-              <button className="titlebar-btn" title="Закрыть">✕</button>
-            </>
-          )}
-        </div>
+        {/* Terminal title bar — desktop only */}
+        {!isMobile && (
+          <div className="titlebar">
+            <span className="neon-text">●</span>
+            <span className="flex-1 truncate cursor-blink">{theme.vocab.titlebar}</span>
+            <button className="titlebar-btn" title="Свернуть">_</button>
+            <button className="titlebar-btn" title="Развернуть">□</button>
+            <button className="titlebar-btn" title="Закрыть">✕</button>
+          </div>
+        )}
 
         {/* Body */}
-        <div className="flex flex-1 min-h-0" style={{ padding: isMobile ? 4 : 8, gap: 8 }}>
+        <div className="flex flex-1 min-h-0" style={{ padding: isMobile ? 0 : 8, gap: 8 }}>
           {!isMobile && <Sidebar />}
 
           <div className="flex flex-col flex-1 min-w-0 min-h-0 gap-2">
@@ -73,7 +69,7 @@ export function AppShell({ children }: AppShellProps) {
 
             <main
               className="bevel-sunken flex-1 overflow-hidden flex flex-col relative"
-              style={{ background: 'var(--well-bg)', paddingBottom: isMobile ? 'calc(60px + env(safe-area-inset-bottom))' : undefined }}
+              style={{ background: 'var(--well-bg)', paddingBottom: isMobile ? 'calc(64px + env(safe-area-inset-bottom))' : undefined }}
             >
               {children}
 

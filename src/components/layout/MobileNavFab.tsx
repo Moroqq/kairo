@@ -5,15 +5,17 @@ import {
   Target, LayoutDashboard, NotebookPen, MoreHorizontal,
   CalendarDays, BarChart3, Wallet, ScrollText, Trash2, Wifi, Plus, X,
 } from 'lucide-react';
+
 import { useUIStore } from '@/stores/ui.store';
 
 const SPRING = { type: 'spring', duration: 0.25, bounce: 0 } as const;
 
-/** Три основные вкладки — всегда видны в нижней панели. */
+/** Четыре основные вкладки — всегда видны в нижней панели. */
 const BOTTOM_TABS = [
-  { to: '/',      label: 'фокус',  Icon: Target          },
-  { to: '/board', label: 'доска',  Icon: LayoutDashboard },
-  { to: '/todo',  label: 'листок', Icon: NotebookPen     },
+  { to: '/',         label: 'фокус',  Icon: Target          },
+  { to: '/board',    label: 'доска',  Icon: LayoutDashboard },
+  { to: '/calendar', label: 'план',   Icon: CalendarDays    },
+  { to: '/todo',     label: 'листок', Icon: NotebookPen     },
 ] as const;
 
 /** Дополнительные разделы в панели «Ещё». */
@@ -27,7 +29,7 @@ const MORE_ITEMS = [
 ] as const;
 
 /** Высота нижней панели в px (без safe-area). */
-export const TAB_BAR_HEIGHT = 60;
+export const TAB_BAR_HEIGHT = 64;
 
 export function MobileNavFab() {
   const navigate    = useNavigate();
@@ -142,7 +144,7 @@ export function MobileNavFab() {
         style={{
           height: `calc(${TAB_BAR_HEIGHT}px + env(safe-area-inset-bottom))`,
           paddingBottom: 'env(safe-area-inset-bottom)',
-          background: 'var(--bg-surface)',
+          background: 'var(--statusbar-bg)',
           borderTop: '1px solid var(--border)',
         }}
       >

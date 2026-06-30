@@ -1,5 +1,5 @@
 import { useState, useRef } from 'react';
-import { CalendarClock } from 'lucide-react';
+import { CalendarDays, CalendarClock } from 'lucide-react';
 import { todayISO, fromISODate } from '@/lib/date';
 import { useIsMobile } from '@/hooks/useMediaQuery';
 import { MonthGrid } from '@/components/calendar/MonthGrid';
@@ -45,14 +45,12 @@ export function CalendarPage() {
     <div className="flex flex-col h-full min-h-0">
       {/* Toolbar */}
       <div
-        className="flex items-center gap-2 px-3 flex-shrink-0 font-mono"
-        style={{ minHeight: 48, borderBottom: '1px solid var(--border-subtle)', background: 'linear-gradient(90deg, var(--accent-dim) 0%, transparent 70%)' }}
+        className="flex items-center gap-2 px-3 flex-shrink-0"
+        style={{ minHeight: 56, borderBottom: '1px solid var(--border-subtle)', padding: '8px 14px' }}
       >
-        <span className="neon-text" style={{ fontSize: 13, fontWeight: 700, letterSpacing: 2 }}>
-          ПЛАН
-        </span>
-        <span style={{ fontSize: 9, color: 'var(--text-dim)', letterSpacing: 1 }}>
-          <span style={{ color: 'var(--accent)' }}>›</span> ежедневник
+        <CalendarDays size={18} color="var(--accent)" />
+        <span style={{ fontSize: 17, fontWeight: 700, color: 'var(--text-bright)', letterSpacing: 0.3, flex: 1 }}>
+          план
         </span>
         <div className="flex-1" />
         {/* На мобиле — только иконка (текстовая кнопка случайно нажималась вместо "перенести") */}

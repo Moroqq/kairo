@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { ChevronLeft, ChevronRight, Archive, NotebookPen } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Archive, NotebookPen, NotebookText } from 'lucide-react';
 import { todayISO, toISODate, fromISODate } from '@/lib/date';
 import { DailySheet } from '@/components/todo/DailySheet';
 import { ArchiveView } from '@/components/todo/ArchiveView';
@@ -22,18 +22,16 @@ export function TodoPage() {
     <div className="flex flex-col h-full min-h-0">
       {/* Toolbar */}
       <div
-        className="flex items-center gap-2 px-3 flex-shrink-0 font-mono"
+        className="flex items-center gap-2 flex-shrink-0"
         style={{
-          minHeight: 40,
+          minHeight: 56,
           borderBottom: '1px solid var(--border-subtle)',
-          background: 'linear-gradient(90deg, var(--accent-dim) 0%, transparent 70%)',
+          padding: '8px 14px',
         }}
       >
-        <span className="neon-text" style={{ fontSize: 13, fontWeight: 700, letterSpacing: 2 }}>
-          ЛИСТОК
-        </span>
-        <span style={{ fontSize: 9, color: 'var(--text-dim)', letterSpacing: 1 }}>
-          <span style={{ color: 'var(--accent)' }}>›</span> задачи дня
+        <NotebookText size={18} color="var(--accent)" />
+        <span style={{ fontSize: 17, fontWeight: 700, color: 'var(--text-bright)', letterSpacing: 0.3 }}>
+          листок
         </span>
         <div className="flex-1" />
 

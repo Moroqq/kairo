@@ -1,121 +1,106 @@
-import { Loader2 } from 'lucide-react';
+import { ScrollText, Loader2 } from 'lucide-react';
 import { useEventLogs } from '@/hooks/useTasks';
 
 const EVENT_LABELS: Record<string, string> = {
-  created:          'СОЗДАНА',
-  status_changed:   'СТАТУС',
-  priority_changed: 'ПРИОР',
-  comment_added:    'КОММ',
-  archived:         'АРХИВ',
-  resolved:         'ВЫПОЛН',
+  created:          'create',
+  status_changed:   'status',
+  priority_changed: 'prior',
+  comment_added:    'comment',
+  archived:         'archive',
+  resolved:         'done',
 };
 
-const EVENT_COLORS: Record<string, string> = {
-  created:          'var(--accent)',
-  status_changed:   'var(--info)',
-  priority_changed: 'var(--warning)',
-  comment_added:    'var(--text-muted)',
-  archived:         'var(--text-muted)',
-  resolved:         'var(--accent)',
+const EVENT_KIND: Record<string, 'ok' | 'err' | 'info'> = {
+  resolved: 'ok',
+  created:  'info',
+  archived: 'info',
+  status_changed:   'info',
+  priority_changed: 'info',
+  comment_added:    'info',
+};
+
+const KIND_COLOR: Record<string, string> = {
+  ok:   'var(--success, var(--accent))',
+  err:  'var(--danger)',
+  info: 'var(--info, var(--text-muted))',
 };
 
 export function EventLog() {
   const { data: logs, isLoading } = useEventLogs();
 
   return (
-    <div className="flex-1 overflow-y-auto" style={{ padding: 12 }}>
-      <div style={{ border: '1px solid var(--border)', background: 'var(--well-bg)' }}>
-        {/* Header */}
-        <div
-          className="flex items-center gap-2 px-3 py-1.5 text-xs"
-          style={{ borderBottom: '1px solid var(--border)' }}
-        >
-          <span className="neon-text">▸</span>
-          <span style={{ color: 'var(--text-bright)', letterSpacing: 1.5, textTransform: 'uppercase' }}>
-            журнал событий
+    <div style={{ padding: '14px 14px 28px' }}>
+      {/* Section title */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '4px 2px 12px' }}>
+        <ScrollText size={18} color="var(--accent)" />
+        <span style={{ fontSize: 17, fontWeight: 700, color: 'var(--text-bright)', letterSpacing: 0.3, flex: 1 }}>
+          события
+        </span>
+        {logs && (
+          <span className="font-mono" style={{ fontSize: 12, color: 'var(--text-muted)' }}>
+            {logs.length} записей
           </span>
-          <span className="font-mono" style={{ color: 'var(--text-muted)', fontSize: 11 }}>
-            — tail -f /var/log/kairo
-          </span>
-        </div>
-
-        {/* Column header */}
-        <div
-          className="flex items-center px-3 py-1 font-mono"
-          style={{
-            background: 'var(--accent-dim)',
-            borderBottom: '1px solid var(--border-subtle)',
-            fontSize: 10,
-            color: 'var(--text-muted)',
-            textTransform: 'uppercase',
-            letterSpacing: 1,
-          }}
-        >
-          <div style={{ width: 72 }}>тип</div>
-          <div className="flex-1">событие</div>
-          <div style={{ width: 120, textAlign: 'right' }}>время</div>
-        </div>
-
-        {isLoading && (
-          <div className="flex justify-center py-8">
-            <Loader2 size={16} className="neon-text" style={{ animation: 'spin 0.8s linear infinite' }} />
-          </div>
         )}
+      </div>
 
-        {!isLoading && (!logs || logs.length === 0) && (
-          <div className="text-center py-10 text-xs font-mono" style={{ color: 'var(--text-dim)' }}>
-            // событий пока нет
-          </div>
-        )}
+      {isLoading && (
+        <div className="flex justify-center py-8">
+          <Loader2 size={16} className="neon-text" style={{ animation: 'spin 0.8s linear infinite' }} />
+        </div>
+      )}
 
-        <div className="flex flex-col">
-          {(logs ?? []).map((log) => {
-            const color = EVENT_COLORS[log.event_type] ?? 'var(--text-muted)';
-            const label = EVENT_LABELS[log.event_type] ?? log.event_type.toUpperCase();
-            return (
-              <div
-                key={log.id}
-                className="row-hover flex items-start gap-2 px-3 py-1.5 font-mono"
-                style={{
-                  fontSize: 11,
-                  borderBottom: '1px solid var(--border-subtle)',
-                  color: 'var(--text-secondary)',
-                }}
+      {!isLoading && (!logs || logs.length === 0) && (
+        <div className="font-mono text-center py-10" style={{ fontSize: 13, color: 'var(--text-dim)' }}>
+          // событий пока нет
+        </div>
+      )}
+
+      <div style={{ display: 'flex', flexDirection: 'column' }}>
+        {(logs ?? []).map((log, i) => {
+          const kind    = EVENT_KIND[log.event_type] ?? 'info';
+          const color   = KIND_COLOR[kind];
+          const tag     = EVENT_LABELS[log.event_type] ?? log.event_type;
+          const isLast  = i === (logs?.length ?? 0) - 1;
+          const time    = new Date(log.created_at).toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' });
+          const date    = new Date(log.created_at).toLocaleDateString('ru-RU', { day: '2-digit', month: 'short' });
+          return (
+            <div
+              key={log.id}
+              style={{
+                display: 'flex', alignItems: 'flex-start', gap: 10,
+                padding: '12px 6px',
+                borderBottom: isLast ? 'none' : '1px solid var(--border-subtle)',
+              }}
+            >
+              <span className="font-mono" style={{ fontSize: 12, color: 'var(--text-dim)', width: 48, flexShrink: 0, paddingTop: 1 }}>
+                {time}
+              </span>
+              <span
+                className="font-mono"
+                style={{ fontSize: 12, color, width: 64, flexShrink: 0, paddingTop: 1, fontWeight: 600 }}
               >
-                <div
-                  style={{
-                    width: 72,
-                    color,
-                    textShadow: `0 0 4px ${color}40`,
-                    fontWeight: 600,
-                  }}
-                >
-                  [{label}]
-                </div>
-                <div className="flex-1 min-w-0">
-                  {(log as { task_title?: string }).task_title && (
-                    <span style={{ color: 'var(--text-primary)' }}>
-                      {(log as { task_title?: string }).task_title}
-                    </span>
-                  )}
-                  {(log.old_value || log.new_value) && (
-                    <span style={{ color: 'var(--text-muted)' }}>
-                      {' '}
-                      {log.old_value && <span>{log.old_value} → </span>}
-                      <span style={{ color: 'var(--text-bright)' }}>{log.new_value}</span>
-                    </span>
-                  )}
-                </div>
-                <div style={{ width: 120, textAlign: 'right', color: 'var(--text-muted)', fontSize: 10 }}>
-                  {new Date(log.created_at).toLocaleString('ru-RU', {
-                    day: '2-digit', month: 'short',
-                    hour: '2-digit', minute: '2-digit',
-                  })}
-                </div>
-              </div>
-            );
-          })}
-        </div>
+                [{tag}]
+              </span>
+              <span style={{ flex: 1, fontSize: 14, color: 'var(--text-secondary)', lineHeight: 1.4 }}>
+                {(log as { task_title?: string }).task_title && (
+                  <span style={{ color: 'var(--text-primary)' }}>
+                    {(log as { task_title?: string }).task_title}
+                  </span>
+                )}
+                {(log.old_value || log.new_value) && (
+                  <span style={{ color: 'var(--text-muted)' }}>
+                    {' '}
+                    {log.old_value && <span>{log.old_value} → </span>}
+                    <span style={{ color: 'var(--text-bright)' }}>{log.new_value}</span>
+                  </span>
+                )}
+              </span>
+              <span className="font-mono" style={{ fontSize: 11, color: 'var(--text-dim)', flexShrink: 0, paddingTop: 2 }}>
+                {date}
+              </span>
+            </div>
+          );
+        })}
       </div>
     </div>
   );
