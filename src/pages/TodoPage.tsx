@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { ChevronLeft, ChevronRight, Archive, NotebookPen, NotebookText } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Archive, NotebookPen } from 'lucide-react';
 import { todayISO, toISODate, fromISODate } from '@/lib/date';
 import { DailySheet } from '@/components/todo/DailySheet';
 import { ArchiveView } from '@/components/todo/ArchiveView';
@@ -29,7 +29,7 @@ export function TodoPage() {
           padding: '8px 14px',
         }}
       >
-        <NotebookText size={18} color="var(--accent)" />
+        <NotebookPen size={18} color="var(--accent)" />
         <span style={{ fontSize: 17, fontWeight: 700, color: 'var(--text-bright)', letterSpacing: 0.3 }}>
           листок
         </span>

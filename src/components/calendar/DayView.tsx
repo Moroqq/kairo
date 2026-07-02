@@ -137,7 +137,7 @@ export function DayView({ date, onClose }: Props) {
       </div>
 
       {/* List */}
-      <div className="flex flex-col gap-1.5 p-2 overflow-y-auto flex-1">
+      <div className="flex flex-col gap-2 p-2 overflow-y-auto flex-1">
         {list.length === 0 ? (
           <div className="flex-1 flex items-center justify-center" style={{ minHeight: 80 }}>
             <p className="font-mono text-xs" style={{ color: 'var(--text-dim)' }}>// на этот день пусто</p>

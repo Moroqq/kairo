@@ -1,8 +1,7 @@
 import { useState, useEffect } from 'react';
-import { Search, Lock, X, Palette, Plus } from 'lucide-react';
+import { Search, X, Palette, Plus } from 'lucide-react';
 import { useLocation } from 'react-router-dom';
 import { useUIStore } from '@/stores/ui.store';
-import { useAuthStore } from '@/stores/auth.store';
 import { useIsMobile } from '@/hooks/useMediaQuery';
 import { ThemePicker } from '@/components/ui/ThemePicker';
 import { KairoMark } from '@/components/ui/KairoMark';
@@ -32,7 +31,6 @@ export function Header() {
   const searchQuery = useUIStore((s) => s.searchQuery);
   const setSearch   = useUIStore((s) => s.setSearch);
   const openCapture = useUIStore((s) => s.openCapture);
-  const lock        = useAuthStore((s) => s.lock);
   const isMobile    = useIsMobile();
   const [themesOpen, setThemesOpen] = useState(false);
   const location    = useLocation();
@@ -49,40 +47,25 @@ export function Header() {
       }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
           <span className="neon-text" style={{ fontSize: 13, lineHeight: 1 }}>●</span>
-          <KairoMark size={22} style={{ filter: 'drop-shadow(0 0 5px var(--accent-glow))' }} />
           <span
             className="neon-text font-mono"
             style={{ fontWeight: 700, letterSpacing: 2, fontSize: 17, flex: 1 }}
           >
             KAIRO
           </span>
-          <div style={{ display: 'flex', gap: 8 }}>
-            <button
-              onClick={() => setThemesOpen(true)}
-              aria-label="тема"
-              style={{
-                width: 44, height: 44,
-                display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
-                background: 'var(--bg-elevated)', border: '1px solid var(--border)',
-                color: 'var(--text-secondary)', cursor: 'pointer',
-              }}
-            >
-              <Palette size={19} />
-            </button>
-            <button
-              onClick={openCapture}
-              aria-label="новая задача"
-              style={{
-                width: 44, height: 44,
-                display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
-                background: 'var(--accent)', border: '1px solid var(--accent)',
-                color: '#000', cursor: 'pointer',
-                boxShadow: '0 0 12px var(--accent-glow)',
-              }}
-            >
-              <Plus size={22} />
-            </button>
-          </div>
+          <button
+            onClick={openCapture}
+            aria-label="новая задача"
+            style={{
+              width: 44, height: 44,
+              display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+              background: 'var(--accent)', border: '1px solid var(--accent)',
+              color: '#000', cursor: 'pointer',
+              boxShadow: '0 0 12px var(--accent-glow)',
+            }}
+          >
+            <Plus size={22} />
+          </button>
         </div>
         <div style={{
           display: 'flex', alignItems: 'center', gap: 6, marginTop: 7,
@@ -98,12 +81,11 @@ export function Header() {
             <LiveClock />
           </span>
         </div>
-        <ThemePicker open={themesOpen} onClose={() => setThemesOpen(false)} />
       </header>
     );
   }
 
-  /* ── Desktop: search + theme + lock ────────────────────── */
+  /* ── Desktop: search + theme ────────────────────────────── */
   return (
     <div
       className="bevel-raised flex items-center gap-2 px-2 py-2.5"
@@ -142,15 +124,6 @@ export function Header() {
         title="Режим оформления"
       >
         <Palette size={13} /> тема
-      </button>
-
-      <button
-        onClick={lock}
-        className="bevel-raised flex items-center gap-1.5 h-9 px-3 text-xs"
-        style={{ background: 'var(--bg-surface)', color: 'var(--text-secondary)' }}
-        title="Заблокировать сессию"
-      >
-        <Lock size={13} /> блок
       </button>
 
       <ThemePicker open={themesOpen} onClose={() => setThemesOpen(false)} />

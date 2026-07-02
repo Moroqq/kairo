@@ -1,18 +1,21 @@
 import type { KanbanColumnId } from '@/types';
 
 export type ThemeId =
-  | 'matrix' | 'command' | 'obsidian' | 'paper' | 'nord' | 'samurai'
+  | 'paper' | 'nord' | 'samurai'
   | 'claude' | 'clay'
-  | 'liquid' | 'material';
+  | 'liquid' | 'material'
+  | 'void' | 'snow';
 
 export interface ThemeDef {
   id: ThemeId;
   name: string;
   tagline: string;
-  /** Матричный дождь + scanlines (только для matrix). */
+  /** Матричный дождь + scanlines. */
   fx: boolean;
   /** «Мягкий» визуальный язык: сан-сериф-шрифт, скруглённые углы, без неон-свечения. */
   soft?: boolean;
+  /** Светлая тема — статус-бар на мобиле получает тёмные иконки вместо светлых. */
+  light?: boolean;
   /**
    * Дизайн-семейство для структурных CSS-оверрайдов.
    * 'apple'    → html.apple: нет bevel-границ, iOS nav bar, subtle shadows, SF Pro
@@ -80,87 +83,13 @@ const matrixVars: Record<string, string> = {
 };
 
 export const THEMES: Record<ThemeId, ThemeDef> = {
-  matrix: {
-    id: 'matrix',
-    name: 'MATRIX',
-    tagline: 'терминал · хакер · зелёный код',
-    fx: true,
-    vars: matrixVars,
-    vocab: {
-      titlebar: '[kairo@matrix:~]$ task_manager --status=работает',
-      titlebarShort: '[kairo@matrix:~]$',
-      columns: { todo: 'ОЧЕРЕДЬ', inprogress: 'АКТИВНЫЕ', blocked: 'БЛОК', done: 'ВЫПОЛНЕНО' },
-    },
-    preview: ['#000000', '#00FF41', '#D6F5D6'],
-  },
-
-  command: {
-    id: 'command',
-    name: 'COMMAND',
-    tagline: 'тёмно-синий · бизнес · Linear-вайб',
-    fx: false,
-    vars: {
-      ...matrixVars,
-      '--bg-base': '#0B1220', '--bg-surface': '#101A2C', '--bg-card': '#15223C',
-      '--bg-elevated': '#1A2A45', '--bg-input': '#0D1626',
-      '--border': 'rgba(120,160,255,0.18)', '--border-strong': 'rgba(120,160,255,0.45)',
-      '--border-subtle': 'rgba(120,160,255,0.08)', '--border-danger': 'rgba(248,81,73,0.5)',
-      '--text-primary': '#E6EDF7', '--text-secondary': '#A7B6CC', '--text-muted': '#5D7290',
-      '--text-dim': '#3A4A63', '--text-bright': '#4DA3FF',
-      '--accent': '#4DA3FF', '--accent-soft': '#2E7CD6',
-      '--accent-glow': 'rgba(77,163,255,0.45)', '--accent-dim': 'rgba(77,163,255,0.12)',
-      '--success': '#3FB950', '--warning': '#D29922', '--danger': '#F85149', '--info': '#58A6FF',
-      '--shadow-elevated': '0 0 0 1px var(--border-strong), 0 8px 32px rgba(0,0,0,0.6)',
-      '--desktop-bg': '#060A12', '--shell-bg': 'rgba(13,19,33,0.95)',
-      '--panel-bg': 'rgba(16,26,44,0.8)', '--statusbar-bg': '#0A111E',
-      '--overlay-bg': 'rgba(13,19,33,0.97)', '--titlebar-bg': '#0D1626',
-      '--well-bg': 'rgba(4,8,16,0.5)',
-      '--radius': '6px', '--radius-pill': '999px',
-    },
-    vocab: {
-      titlebar: 'KAIRO — Task Command',
-      titlebarShort: 'KAIRO',
-      columns: { todo: 'Backlog', inprogress: 'In Progress', blocked: 'Blocked', done: 'Done' },
-    },
-    preview: ['#0B1220', '#4DA3FF', '#E6EDF7'],
-  },
-
-  obsidian: {
-    id: 'obsidian',
-    name: 'OBSIDIAN',
-    tagline: 'графит · фиолетовый · премиум',
-    fx: false,
-    vars: {
-      ...matrixVars,
-      '--bg-base': '#0C0C10', '--bg-surface': '#131318', '--bg-card': '#17171E',
-      '--bg-elevated': '#1D1D26', '--bg-input': '#0E0E13',
-      '--border': 'rgba(167,139,250,0.16)', '--border-strong': 'rgba(167,139,250,0.42)',
-      '--border-subtle': 'rgba(167,139,250,0.07)', '--border-danger': 'rgba(244,63,94,0.5)',
-      '--text-primary': '#E8E6F0', '--text-secondary': '#B3AEC6', '--text-muted': '#6B6680',
-      '--text-dim': '#44405A', '--text-bright': '#C4B5FD',
-      '--accent': '#A78BFA', '--accent-soft': '#8B6CF0',
-      '--accent-glow': 'rgba(167,139,250,0.45)', '--accent-dim': 'rgba(167,139,250,0.12)',
-      '--success': '#4ADE80', '--warning': '#FACC15', '--danger': '#F43F5E', '--info': '#38BDF8',
-      '--shadow-elevated': '0 0 0 1px var(--border-strong), 0 0 32px rgba(167,139,250,0.15), 0 8px 32px rgba(0,0,0,0.7)',
-      '--desktop-bg': '#08080B', '--shell-bg': 'rgba(15,15,20,0.94)',
-      '--panel-bg': 'rgba(19,19,24,0.8)', '--statusbar-bg': '#0A0A0E',
-      '--overlay-bg': 'rgba(19,19,24,0.97)', '--titlebar-bg': '#101016',
-      '--well-bg': 'rgba(5,5,8,0.5)',
-      '--radius': '9px', '--radius-pill': '999px',
-    },
-    vocab: {
-      titlebar: 'KAIRO // OBSIDIAN',
-      titlebarShort: 'KAIRO',
-      columns: { todo: 'Очередь', inprogress: 'В работе', blocked: 'Блок', done: 'Готово' },
-    },
-    preview: ['#0C0C10', '#A78BFA', '#E8E6F0'],
-  },
 
   paper: {
     id: 'paper',
     name: 'PAPER',
     tagline: 'светлая · чистая · для дневной работы',
     fx: false,
+    light: true,
     vars: {
       ...matrixVars,
       '--bg-base': '#F6F6F3', '--bg-surface': '#FFFFFF', '--bg-card': '#FFFFFF',
@@ -191,7 +120,7 @@ export const THEMES: Record<ThemeId, ThemeDef> = {
   nord: {
     id: 'nord',
     name: 'NORD',
-    tagline: 'скандинавия · спокойный контраст',
+    tagline: 'скандинавия · спокойный контраст · без свечения',
     fx: false,
     vars: {
       ...matrixVars,
@@ -202,7 +131,7 @@ export const THEMES: Record<ThemeId, ThemeDef> = {
       '--text-primary': '#ECEFF4', '--text-secondary': '#D8DEE9', '--text-muted': '#8C99B3',
       '--text-dim': '#5E6A82', '--text-bright': '#88C0D0',
       '--accent': '#88C0D0', '--accent-soft': '#6FA8BC',
-      '--accent-glow': 'rgba(136,192,208,0.35)', '--accent-dim': 'rgba(136,192,208,0.12)',
+      '--accent-glow': 'transparent', '--accent-dim': 'rgba(136,192,208,0.12)',
       '--success': '#A3BE8C', '--warning': '#EBCB8B', '--danger': '#BF616A', '--info': '#81A1C1',
       '--shadow-elevated': '0 0 0 1px var(--border-strong), 0 8px 28px rgba(0,0,0,0.45)',
       '--desktop-bg': '#242933', '--shell-bg': 'rgba(46,52,64,0.96)',
@@ -256,6 +185,7 @@ export const THEMES: Record<ThemeId, ThemeDef> = {
     tagline: 'тёплый крем · Anthropic-вайб · сан-сериф',
     fx: false,
     soft: true,
+    light: true,
     vars: {
       ...matrixVars,
       '--bg-base': '#F5F4EE', '--bg-surface': '#FAF9F5', '--bg-card': '#FFFFFF',
@@ -421,6 +351,109 @@ export const THEMES: Record<ThemeId, ThemeDef> = {
     },
     preview: ['#1C1B1F', '#D0BCFF', '#E6E1E5'],
   },
+
+  void: {
+    id: 'void',
+    name: 'VOID',
+    tagline: 'тёмная · минимал · без свечения',
+    fx: false,
+    soft: true,
+    vars: {
+      ...matrixVars,
+      '--bg-base':        '#0A0A0A',
+      '--bg-surface':     '#141414',
+      '--bg-card':        '#1A1A1A',
+      '--bg-elevated':    '#222222',
+      '--bg-input':       '#111111',
+      '--border':         'rgba(255,255,255,0.10)',
+      '--border-strong':  'rgba(255,255,255,0.22)',
+      '--border-subtle':  'rgba(255,255,255,0.05)',
+      '--border-danger':  'rgba(239,68,68,0.45)',
+      '--text-primary':   '#E8E8E8',
+      '--text-secondary': '#B0B0B0',
+      '--text-muted':     '#707070',
+      '--text-dim':       '#404040',
+      '--text-bright':    '#FFFFFF',
+      '--accent':         '#FFFFFF',
+      '--accent-soft':    '#D0D0D0',
+      '--accent-glow':    'transparent',
+      '--accent-dim':     'rgba(255,255,255,0.08)',
+      '--success':        '#4ADE80',
+      '--warning':        '#FACC15',
+      '--danger':         '#EF4444',
+      '--info':           '#60A5FA',
+      '--shadow-card':    '0 1px 3px rgba(0,0,0,0.5)',
+      '--shadow-elevated':'0 4px 20px rgba(0,0,0,0.7), 0 0 0 1px rgba(255,255,255,0.08)',
+      '--desktop-bg':     '#050505',
+      '--shell-bg':       '#0A0A0A',
+      '--panel-bg':       '#141414',
+      '--statusbar-bg':   '#0A0A0A',
+      '--overlay-bg':     '#1A1A1A',
+      '--titlebar-bg':    '#111111',
+      '--well-bg':        'rgba(255,255,255,0.03)',
+      '--font-ui':        "system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif",
+      '--radius':         '10px',
+      '--radius-pill':    '999px',
+    },
+    vocab: {
+      titlebar: 'Kairo',
+      titlebarShort: 'Kairo',
+      columns: { todo: 'Входящие', inprogress: 'В работе', blocked: 'Ожидание', done: 'Готово' },
+    },
+    preview: ['#0A0A0A', '#FFFFFF', '#E8E8E8'],
+  },
+
+  snow: {
+    id: 'snow',
+    name: 'SNOW',
+    tagline: 'светлая · минимал · без свечения',
+    fx: false,
+    soft: true,
+    light: true,
+    vars: {
+      ...matrixVars,
+      '--bg-base':        '#F8F8F8',
+      '--bg-surface':     '#FFFFFF',
+      '--bg-card':        '#FFFFFF',
+      '--bg-elevated':    '#F0F0F0',
+      '--bg-input':       '#FFFFFF',
+      '--border':         'rgba(0,0,0,0.12)',
+      '--border-strong':  'rgba(0,0,0,0.28)',
+      '--border-subtle':  'rgba(0,0,0,0.06)',
+      '--border-danger':  'rgba(220,38,38,0.45)',
+      '--text-primary':   '#141414',
+      '--text-secondary': '#444444',
+      '--text-muted':     '#888888',
+      '--text-dim':       '#BBBBBB',
+      '--text-bright':    '#000000',
+      '--accent':         '#111111',
+      '--accent-soft':    '#333333',
+      '--accent-glow':    'transparent',
+      '--accent-dim':     'rgba(0,0,0,0.06)',
+      '--success':        '#16A34A',
+      '--warning':        '#D97706',
+      '--danger':         '#DC2626',
+      '--info':           '#2563EB',
+      '--shadow-card':    '0 1px 3px rgba(0,0,0,0.08)',
+      '--shadow-elevated':'0 4px 20px rgba(0,0,0,0.12), 0 0 0 1px rgba(0,0,0,0.06)',
+      '--desktop-bg':     '#EFEFEF',
+      '--shell-bg':       '#FFFFFF',
+      '--panel-bg':       'rgba(248,248,248,0.95)',
+      '--statusbar-bg':   '#F0F0F0',
+      '--overlay-bg':     '#FFFFFF',
+      '--titlebar-bg':    '#F8F8F8',
+      '--well-bg':        'rgba(0,0,0,0.03)',
+      '--font-ui':        "system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif",
+      '--radius':         '10px',
+      '--radius-pill':    '999px',
+    },
+    vocab: {
+      titlebar: 'Kairo',
+      titlebarShort: 'Kairo',
+      columns: { todo: 'Входящие', inprogress: 'В работе', blocked: 'Ожидание', done: 'Готово' },
+    },
+    preview: ['#F8F8F8', '#111111', '#141414'],
+  },
 };
 
 export const THEME_LIST: ThemeDef[] = Object.values(THEMES);
@@ -433,4 +466,12 @@ export function applyTheme(t: ThemeDef): void {
   root.classList.toggle('soft',     !!t.soft);
   root.classList.toggle('apple',    t.family === 'apple');
   root.classList.toggle('material', t.family === 'material');
+
+  // Статус-бар должен красится под тему, а не оставаться всегда чёрным
+  document.querySelector('meta[name="theme-color"]')
+    ?.setAttribute('content', t.vars['--statusbar-bg'] ?? t.vars['--bg-base']);
+
+  // На Android иконки статус-бара (время/батарея) переключаются между
+  // светлыми и тёмными в зависимости от темы — мост из MainActivity.kt
+  (window as any).AndroidStatusBar?.setLight?.(!!t.light);
 }

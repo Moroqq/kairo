@@ -28,7 +28,10 @@ export function ExpensesPage() {
   const active    = views.filter(e => !e.paid);
   const remaining = active.reduce((s, e) => s + e.amount, 0);
   const next      = [...active].sort((a, b) => a.daysUntil - b.daysUntil)[0];
-  const list      = [...views].sort((a, b) => a.daysUntil - b.daysUntil);
+  const list      = [...views].sort((a, b) => {
+    if (a.paid !== b.paid) return a.paid ? 1 : -1;
+    return a.daysUntil - b.daysUntil;
+  });
 
   const handleSave = useCallback((values: ExpenseFormValues) => {
     if (editing?.mode === 'edit') {

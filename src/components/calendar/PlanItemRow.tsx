@@ -24,7 +24,7 @@ export function PlanItemRow({ item, onToggle, onEdit, onDelete }: Props) {
   const canDelete = !isTask; // задачу канбана из календаря не удаляем
 
   const rowStyle: React.CSSProperties = {
-    minHeight: 44,
+    minHeight: 52,
     // На мобиле — непрозрачный фон, чтобы слой действий не просвечивал до свайпа
     background: isMobile ? 'var(--bg-card)' : 'var(--well-bg)',
     borderLeft: `3px solid ${isOverdue ? 'var(--danger)' : cfg.color}`,
@@ -43,7 +43,7 @@ export function PlanItemRow({ item, onToggle, onEdit, onDelete }: Props) {
         onClick={onToggle}
         className="flex items-center justify-center flex-shrink-0"
         style={{
-          width: 22, height: 22,
+          width: 24, height: 24,
           border: `1px solid ${item.done ? 'var(--accent)' : 'var(--border)'}`,
           background: item.done ? 'var(--accent-dim)' : 'transparent',
           color: 'var(--accent)',
@@ -51,22 +51,23 @@ export function PlanItemRow({ item, onToggle, onEdit, onDelete }: Props) {
         }}
         title={item.done ? 'снять отметку' : 'отметить выполненным'}
       >
-        {item.done && <Check size={14} />}
+        {item.done && <Check size={15} />}
       </button>
 
       {/* Time */}
       {item.time && (
-        <span className="font-mono flex-shrink-0" style={{ fontSize: 11, color: 'var(--text-bright)', minWidth: 38 }}>
+        <span className="font-mono flex-shrink-0" style={{ fontSize: 13, color: 'var(--text-bright)', minWidth: 42 }}>
           {item.time}
         </span>
       )}
 
       {/* Title + note */}
-      <div className="flex flex-col flex-1 min-w-0 py-1">
+      <div className="flex flex-col flex-1 min-w-0 gap-0.5" style={{ paddingBlock: 6 }}>
         <span
           className="truncate"
           style={{
-            fontSize: 13,
+            fontSize: 15,
+            lineHeight: 1.3,
             color: item.done ? 'var(--text-muted)' : 'var(--text-primary)',
             textDecoration: item.done ? 'line-through' : 'none',
           }}
@@ -74,7 +75,7 @@ export function PlanItemRow({ item, onToggle, onEdit, onDelete }: Props) {
           {item.title}
         </span>
         {item.note && (
-          <span className="truncate" style={{ fontSize: 10, color: 'var(--text-dim)' }}>
+          <span className="truncate" style={{ fontSize: 12, lineHeight: 1.3, color: 'var(--text-dim)' }}>
             {item.note}
           </span>
         )}
@@ -141,11 +142,11 @@ export function PlanItemRow({ item, onToggle, onEdit, onDelete }: Props) {
   };
 
   return (
-    <div style={{ position: 'relative', borderRadius: 'var(--radius)', overflow: 'hidden' }}>
+    <div style={{ position: 'relative', borderRadius: 'var(--radius)', overflow: 'hidden', isolation: 'isolate' }}>
       {/* Слой действий под строкой */}
       <div
         className="absolute inset-0 flex items-center justify-between px-4"
-        style={{ background: 'var(--bg-elevated)' }}
+        style={{ background: 'var(--bg-elevated)', zIndex: 0 }}
       >
         <Check size={18} style={{ color: 'var(--success)' }} />
         {canDelete
@@ -153,10 +154,10 @@ export function PlanItemRow({ item, onToggle, onEdit, onDelete }: Props) {
           : <span style={{ width: 18 }} />}
       </div>
 
-      {/* Сама строка — перетаскивается по X */}
+      {/* zIndex:1 гарантирует рендер поверх action-слоя на Android WebView */}
       <motion.div
         className="flex items-center gap-2 px-2"
-        style={{ ...rowStyle, touchAction: 'pan-y' }}
+        style={{ ...rowStyle, touchAction: 'pan-y', position: 'relative', zIndex: 1 }}
         drag="x"
         dragConstraints={{ left: 0, right: 0 }}
         dragElastic={0.6}

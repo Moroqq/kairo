@@ -9,7 +9,7 @@ import {
   useSensor,
   useSensors,
 } from '@dnd-kit/core';
-import { AlertCircle, Loader2 } from 'lucide-react';
+import { AlertCircle, Loader2, ChevronLeft, ChevronRight } from 'lucide-react';
 import { KanbanColumn } from './KanbanColumn';
 import { TaskCard } from '@/components/task/TaskCard';
 import { useTasks, useUpdateStatus } from '@/hooks/useTasks';
@@ -113,32 +113,31 @@ export function KanbanBoard() {
 
     return (
       <div className="flex flex-col h-full min-h-0">
-        {/* Tabs */}
-        <div className="flex flex-shrink-0" style={{ borderBottom: '1px solid var(--border-subtle)' }}>
+        {/* Pill tabs — горизонтальный скролл */}
+        <div style={{ display: 'flex', gap: 8, padding: '12px 14px 10px', overflowX: 'auto', flexShrink: 0, scrollbarWidth: 'none' }}>
           {KANBAN_COLUMNS.map((col) => {
             const active = col.id === activeCol;
-            const count = getColumnTasks(col.id).length;
+            const count  = getColumnTasks(col.id).length;
             return (
               <button
                 key={col.id}
                 type="button"
                 onClick={() => setActiveCol(col.id)}
-                className="flex-1 flex flex-col items-center justify-center gap-0.5 min-w-0"
                 style={{
-                  minHeight: 48,
-                  background: active ? 'var(--accent-dim)' : 'transparent',
-                  borderBottom: `2px solid ${active ? 'var(--accent)' : 'transparent'}`,
+                  flexShrink: 0,
+                  display: 'inline-flex', alignItems: 'center', gap: 7,
+                  height: 38, padding: '0 12px',
+                  fontFamily: 'var(--font-mono)', fontSize: 12, letterSpacing: 1, fontWeight: 600,
                   color: active ? 'var(--accent)' : 'var(--text-muted)',
+                  background: active ? 'var(--accent-dim)' : 'transparent',
+                  border: `1px solid ${active ? 'var(--accent)' : 'var(--border)'}`,
+                  borderRadius: 'var(--radius-pill)',
+                  boxShadow: active ? '0 0 10px var(--accent-glow)' : 'none',
                   cursor: 'pointer',
                 }}
               >
-                <span
-                  className="truncate"
-                  style={{ fontSize: 10, fontWeight: 700, letterSpacing: 0.5, textTransform: 'uppercase', maxWidth: '100%', padding: '0 2px' }}
-                >
-                  {vocab.columns[col.id] ?? col.title}
-                </span>
-                <span className="font-mono" style={{ fontSize: 9 }}>
+                {vocab.columns[col.id] ?? col.title}
+                <span style={{ color: active ? 'var(--accent)' : 'var(--text-dim)' }}>
                   [{count.toString().padStart(2, '0')}]
                 </span>
               </button>
@@ -146,9 +145,15 @@ export function KanbanBoard() {
           })}
         </div>
 
+        {/* Swipe hint */}
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, fontFamily: 'var(--font-mono)', fontSize: 11, color: 'var(--text-dim)', paddingBottom: 8, flexShrink: 0 }}>
+          <ChevronLeft size={12} /> свайп между колонками <ChevronRight size={12} />
+        </div>
+
         {/* Active column */}
         <div
-          className="flex-1 min-h-0 p-2"
+          className="flex-1 min-h-0"
+          style={{ padding: '0 14px 28px', overflowY: 'auto' }}
           onTouchStart={(e) => { touchStartX.current = e.touches[0].clientX; }}
           onTouchEnd={(e) => {
             if (touchStartX.current === null) return;

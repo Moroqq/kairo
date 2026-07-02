@@ -50,18 +50,17 @@ export function WeeksPage() {
         </p>
       )}
 
-        <div className="flex flex-col gap-3">
-          {list.map((week, i) => (
-            <motion.div
-              key={week.weekStart}
-              initial={{ opacity: 0, y: 6 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.18, delay: Math.min(i, 5) * 0.04 }}
-            >
-              <WeekBlock week={week} />
-            </motion.div>
-          ))}
-        </div>
+      <div className="flex flex-col gap-3">
+        {list.map((week, i) => (
+          <motion.div
+            key={week.weekStart}
+            initial={{ opacity: 0, y: 6 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.18, delay: Math.min(i, 5) * 0.04 }}
+          >
+            <WeekBlock week={week} />
+          </motion.div>
+        ))}
       </div>
     </div>
   );

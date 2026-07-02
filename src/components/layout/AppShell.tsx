@@ -37,7 +37,10 @@ export function AppShell({ children }: AppShellProps) {
     .sort((a, b) => a - b)[0];
 
   return (
-    <div className={`win-desktop h-full flex flex-col relative ${isMobile ? '' : 'p-3 gap-3'}`}>
+    <div
+      className={`win-desktop h-full flex flex-col relative ${isMobile ? '' : 'p-3 gap-3'}`}
+      style={isMobile ? { paddingTop: 'env(safe-area-inset-top)' } : undefined}
+    >
       {theme.fx && <MatrixRain mobile={isMobile} />}
 
       <div

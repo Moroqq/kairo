@@ -54,12 +54,21 @@ export type MsgType = WsMsg['type'];
 
 export type WsStatus = 'idle' | 'connecting' | 'connected' | 'error';
 
+export interface LogEntry {
+  ts: string;   // HH:MM:SS.mmm
+  text: string;
+}
+
 type Handler<T extends WsMsg> = (msg: T) => void;
 
 // ── Утилиты ────────────────────────────────────────────────────────────────
 
 export function isTauriEnv(): boolean {
   return typeof window !== 'undefined' && '__TAURI_INTERNALS__' in window;
+}
+
+function truncateLog(s: string, max = 120): string {
+  return s.length <= max ? s : `${s.slice(0, max)}…`;
 }
 
 export function isDesktopHost(): boolean {
@@ -86,20 +95,6 @@ export function applySnapshot(snapshot: LanSnapshot): void {
   queryClient.invalidateQueries();
 }
 
-/** Сравниваем ts; применяем более новый снапшот.  Возвращает «чей» применили. */
-export function mergeSnapshots(
-  local: LanSnapshot,
-  remote: LanSnapshot,
-): 'local' | 'remote' {
-  const lt = new Date(local.ts).getTime();
-  const rt = new Date(remote.ts).getTime();
-  if (rt > lt) {
-    applySnapshot(remote);
-    return 'remote';
-  }
-  return 'local';
-}
-
 // ── Класс сервиса ──────────────────────────────────────────────────────────
 
 class LanSyncService {
@@ -110,6 +105,31 @@ class LanSyncService {
   private otaChunks: string[] = [];
   private pingInterval: ReturnType<typeof setInterval> | null = null;
   private handlers = new Map<string, Handler<any>[]>();
+  private logBuf: LogEntry[] = [];
+  private readonly LOG_MAX = 300;
+
+  // ── Диагностический лог ─────────────────────────────────────────────────
+
+  private log(text: string): void {
+    const entry: LogEntry = { ts: new Date().toISOString().slice(11, 23), text };
+    this.logBuf.push(entry);
+    if (this.logBuf.length > this.LOG_MAX) this.logBuf.shift();
+    (this.handlers.get('__log__') ?? []).forEach(h => h(entry as any));
+  }
+
+  getLogs(): LogEntry[] {
+    return this.logBuf;
+  }
+
+  onLog(cb: (e: LogEntry) => void): () => void {
+    const list = this.handlers.get('__log__') ?? [];
+    this.handlers.set('__log__', [...list, cb]);
+    return () => this.off('__log__', cb);
+  }
+
+  clearLogs(): void {
+    this.logBuf = [];
+  }
 
   // ── Подписки ─────────────────────────────────────────────────────────────
 
@@ -150,32 +170,48 @@ class LanSyncService {
   async initHost(): Promise<void> {
     if (this.mode === 'host') return;
     this.mode = 'host';
+    this.log('host: инициализация…');
+
+    // Слушаем диагностику от Rust-сервера
+    const unlistenLog = await listen<string>('ws-log', (event) => {
+      this.log(`[rust] ${event.payload}`);
+    });
 
     // Слушаем входящие WS-сообщения через Tauri-событие
-    this.unlisten = await listen<string>('ws-msg', (event) => {
+    const unlistenMsg = await listen<string>('ws-msg', (event) => {
       try {
         const msg = JSON.parse(event.payload) as WsMsg;
+        this.log(`← ${msg.type}`);
         this.handleIncoming(msg);
-      } catch { /* некорректный JSON — игнорируем */ }
+      } catch {
+        this.log(`← некорректный JSON: ${truncateLog(event.payload)}`);
+      }
     });
+
+    this.unlisten = () => { unlistenLog(); unlistenMsg(); };
 
     // Ответ на рукопожатие: отправляем снапшот гостю
     this.on('HELLO', () => {
       this.send({ type: 'SYNC_PUSH', snapshot: captureSnapshot() });
     });
 
-    // Гость прислал свои данные — сливаем
+    // Гость нажал «Отправить данные на компьютер» — это явный запрос
+    // на перезапись, поэтому применяем без сравнения по времени
+    // (mergeSnapshots штамповал local.ts «прямо сейчас», из-за чего
+    // свежий снапшот хоста всегда «побеждал», даже будучи пустым).
     this.on('SYNC_PUSH', (msg) => {
-      const local = captureSnapshot();
-      mergeSnapshots(local, (msg as any).snapshot);
+      this.log('host: применяю данные от гостя (явная перезапись)');
+      applySnapshot((msg as any).snapshot);
       this.send({ type: 'SYNC_ACK', ts: new Date().toISOString() });
     });
 
     this.on('PING', () => this.send({ type: 'PONG' }));
     this.setStatus('connected');
+    this.log('host: готов, слушаю ws-msg и ws-log события');
   }
 
   async destroyHost(): Promise<void> {
+    this.log('host: остановка');
     this.unlisten?.();
     this.unlisten = null;
     this.mode = null;
@@ -192,11 +228,14 @@ class LanSyncService {
     this.mode = 'guest';
     this.setStatus('connecting');
 
-    const url = `ws://${ip}:${port}`;
+    // Если ip уже содержит порт (192.168.x.x:8765) — не дублируем
+    const url = ip.includes(':') ? `ws://${ip}` : `ws://${ip}:${port}`;
+    this.log(`guest: подключаюсь к ${url}`);
     const ws = new WebSocket(url);
     this.ws = ws;
 
     ws.onopen = () => {
+      this.log('guest: WebSocket открыт (onopen)');
       this.setStatus('connected');
       this.send({ type: 'HELLO', role: 'guest' });
       this.startPing();
@@ -205,19 +244,27 @@ class LanSyncService {
     ws.onmessage = (e) => {
       try {
         const msg = JSON.parse(e.data) as WsMsg;
+        this.log(`← ${msg.type}`);
         this.handleIncoming(msg);
-      } catch { /* skip */ }
+      } catch {
+        this.log(`← некорректный JSON: ${truncateLog(String(e.data))}`);
+      }
     };
 
-    ws.onerror = () => this.setStatus('error');
+    ws.onerror = () => {
+      this.log(`guest: ОШИБКА WebSocket (readyState=${ws.readyState}, url=${url})`);
+      this.setStatus('error');
+    };
 
-    ws.onclose = () => {
+    ws.onclose = (e) => {
+      this.log(`guest: соединение закрыто (code=${e.code}, reason="${e.reason || '—'}", wasClean=${e.wasClean})`);
       this.stopPing();
       if (this._status !== 'idle') this.setStatus('idle');
     };
   }
 
   disconnectGuest(): void {
+    if (this.ws) this.log('guest: отключение');
     this.stopPing();
     this.ws?.close();
     this.ws = null;
@@ -229,10 +276,13 @@ class LanSyncService {
 
   send(msg: WsMsg): void {
     const str = JSON.stringify(msg);
+    this.log(`→ ${msg.type}`);
     if (this.mode === 'host') {
-      invoke('ws_broadcast', { msg: str }).catch(console.error);
+      invoke('ws_broadcast', { msg: str }).catch(e => this.log(`ошибка ws_broadcast: ${e}`));
     } else if (this.ws?.readyState === WebSocket.OPEN) {
       this.ws.send(str);
+    } else {
+      this.log(`отправка невозможна: WebSocket не открыт (readyState=${this.ws?.readyState ?? 'null'})`);
     }
   }
 

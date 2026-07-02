@@ -4,7 +4,28 @@ import lanSync, {
   isDesktopHost,
   isTauriEnv,
   type WsStatus,
+  type LogEntry,
 } from '@/services/lan-sync.service';
+
+// ── Диагностический лог ───────────────────────────────────────────────────
+
+export function useLanSyncLogs() {
+  const [logs, setLogs] = useState<LogEntry[]>(() => lanSync.getLogs());
+
+  useEffect(() => {
+    const off = lanSync.onLog((entry) => {
+      setLogs(prev => [...prev, entry].slice(-300));
+    });
+    return off;
+  }, []);
+
+  const clear = useCallback(() => {
+    lanSync.clearLogs();
+    setLogs([]);
+  }, []);
+
+  return { logs, clear };
+}
 
 // ── Серверный статус (хост) ───────────────────────────────────────────────
 
@@ -86,6 +107,9 @@ export function useLanHost() {
   const { info, refresh } = useLanHostInfo();
   const [lastSync, setLastSync] = useState<string | null>(null);
 
+  // Хост-режим уже запущен глобально в App.tsx на весь срок жизни приложения —
+  // здесь только подписываемся на события, без повторного init/destroy
+  // (иначе открытие/закрытие страницы Sync обрывало бы общий сервис).
   useEffect(() => {
     const off  = lanSync.on('SYNC_ACK', () => { setLastSync(new Date().toISOString()); refresh(); });
     const off2 = lanSync.on('HELLO', () => refresh());

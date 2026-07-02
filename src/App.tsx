@@ -1,13 +1,12 @@
 import { useEffect } from 'react';
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
+import { AnimatePresence, motion } from 'framer-motion';
 import { QueryClientProvider } from '@tanstack/react-query';
 import { queryClient } from '@/lib/query-client';
-import { useAuthStore } from '@/stores/auth.store';
 import { useTheme } from '@/stores/theme.store';
 import { applyTheme } from '@/themes/themes';
 import { ToastProvider } from '@/components/ui/Toast';
 import { AppShell } from '@/components/layout/AppShell';
-import { LockScreen } from '@/pages/LockScreen';
 import { FocusPage } from '@/pages/FocusPage';
 import { Dashboard } from '@/pages/Dashboard';
 import { CalendarPage } from '@/pages/CalendarPage';
@@ -20,17 +19,45 @@ import { LanSyncPage } from '@/pages/LanSyncPage';
 import { pruneTrash } from '@/services/tasks.service';
 import lanSync, { isDesktopHost } from '@/services/lan-sync.service';
 
+/** Обёртка перехода между разделами — короткий fade + сдвиг, без блокировки ввода. */
+function PageTransition({ children }: { children: React.ReactNode }) {
+  return (
+    <motion.div
+      className="flex flex-col h-full min-h-0"
+      initial={{ opacity: 0, y: 8 }}
+      animate={{ opacity: 1, y: 0, transition: { duration: 0.18, ease: [0.25, 0.46, 0.45, 0.94] } }}
+      exit={{ opacity: 0, y: -4, transition: { duration: 0.12, ease: 'easeIn' } }}
+    >
+      {children}
+    </motion.div>
+  );
+}
+
+function AnimatedRoutes() {
+  const location = useLocation();
+  return (
+    <AnimatePresence mode="wait" initial={false}>
+      <Routes location={location} key={location.pathname}>
+        <Route path="/"         element={<PageTransition><FocusPage /></PageTransition>} />
+        <Route path="/board"    element={<PageTransition><Dashboard /></PageTransition>} />
+        <Route path="/calendar" element={<PageTransition><CalendarPage /></PageTransition>} />
+        <Route path="/todo"     element={<PageTransition><TodoPage /></PageTransition>} />
+        <Route path="/weeks"    element={<PageTransition><WeeksPage /></PageTransition>} />
+        <Route path="/expenses" element={<PageTransition><ExpensesPage /></PageTransition>} />
+        <Route path="/log"      element={<PageTransition><EventLog /></PageTransition>} />
+        <Route path="/trash"    element={<PageTransition><TrashPage /></PageTransition>} />
+        <Route path="/sync"     element={<PageTransition><LanSyncPage /></PageTransition>} />
+        <Route path="*"         element={<Navigate to="/" replace />} />
+      </Routes>
+    </AnimatePresence>
+  );
+}
+
 export default function App() {
-  const isUnlocked = useAuthStore((s) => s.isUnlocked);
   const theme = useTheme();
 
-  // Тема применяется до раннего return — работает и на lock-экране
   useEffect(() => applyTheme(theme), [theme]);
-
-  // Автоочистка корзины при запуске
   useEffect(() => { pruneTrash(); }, []);
-
-  // WS-хост стартует сразу, а не только на странице /sync
   useEffect(() => {
     if (isDesktopHost()) {
       lanSync.initHost();
@@ -38,31 +65,12 @@ export default function App() {
     }
   }, []);
 
-  if (!isUnlocked) {
-    return (
-      <ToastProvider>
-        <LockScreen />
-      </ToastProvider>
-    );
-  }
-
   return (
     <QueryClientProvider client={queryClient}>
       <ToastProvider>
         <BrowserRouter>
           <AppShell>
-            <Routes>
-              <Route path="/"         element={<FocusPage />} />
-              <Route path="/board"    element={<Dashboard />} />
-              <Route path="/calendar" element={<CalendarPage />} />
-              <Route path="/todo"     element={<TodoPage />} />
-              <Route path="/weeks"    element={<WeeksPage />} />
-              <Route path="/expenses" element={<ExpensesPage />} />
-              <Route path="/log"      element={<EventLog />} />
-              <Route path="/trash"    element={<TrashPage />} />
-              <Route path="/sync"     element={<LanSyncPage />} />
-              <Route path="*"         element={<Navigate to="/" replace />} />
-            </Routes>
+            <AnimatedRoutes />
           </AppShell>
         </BrowserRouter>
       </ToastProvider>

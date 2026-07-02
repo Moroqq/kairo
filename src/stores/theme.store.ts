@@ -10,15 +10,15 @@ interface ThemeState {
 export const useThemeStore = create<ThemeState>()(
   persist(
     (set) => ({
-      themeId: 'matrix',
+      themeId: 'void',
       setTheme: (id) => set({ themeId: id }),
     }),
     { name: 'kairo_theme' },
   ),
 );
 
-/** Текущая тема целиком (с fallback на matrix, если в storage мусор). */
+/** Текущая тема целиком (с fallback на void, если в storage мусор — например, удалённая тема). */
 export function useTheme(): ThemeDef {
   const id = useThemeStore((s) => s.themeId);
-  return THEMES[id] ?? THEMES.matrix;
+  return THEMES[id] ?? THEMES.void;
 }

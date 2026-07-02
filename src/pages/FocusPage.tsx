@@ -1,9 +1,9 @@
-import { useMemo } from 'react';
+import { useMemo, type ReactNode } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Target, Clock, CheckCheck, Play, Forward, ChevronRight } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { useTasks, useUpdateStatus, useUpdateTask } from '@/hooks/useTasks';
-import { useDeadlineWatcher, isOverdue, isDeadlineUrgent, formatDeadline, formatRelative } from '@/hooks/useDeadlineWatcher';
+import { useDeadlineWatcher, isOverdue, isDeadlineUrgent, formatDeadline } from '@/hooks/useDeadlineWatcher';
 import { useUIStore } from '@/stores/ui.store';
 import { useToast } from '@/components/ui/Toast';
 import type { Task } from '@/types';
@@ -284,7 +284,7 @@ export function FocusPage() {
 }
 
 /* ── SectionTitle ──────────────────────────────────────── */
-function SectionTitle({ icon, title, meta }: { icon: React.ReactNode; title: string; meta?: string }) {
+function SectionTitle({ icon, title, meta }: { icon: ReactNode; title: string; meta?: string }) {
   return (
     <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '4px 2px 12px' }}>
       {icon}
@@ -302,7 +302,7 @@ function SectionTitle({ icon, title, meta }: { icon: React.ReactNode; title: str
 
 /* ── Secondary action button ───────────────────────────── */
 function SecBtn({ icon, label, onClick, disabled }: {
-  icon: React.ReactNode; label: string; onClick: () => void; disabled?: boolean;
+  icon: ReactNode; label: string; onClick: () => void; disabled?: boolean;
 }) {
   return (
     <button
