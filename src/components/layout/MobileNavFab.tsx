@@ -13,6 +13,8 @@ import { ThemePicker } from '@/components/ui/ThemePicker';
 import { Modal } from '@/components/ui/Modal';
 
 const SPRING = { type: 'spring', duration: 0.25, bounce: 0 } as const;
+/** M3 Expressive — заметный, «пружинистый» переход для скользящей таблетки-индикатора. */
+const M3_PILL_SPRING = { type: 'spring', duration: 0.5, bounce: 0.22 } as const;
 
 /** Высота нижней панели в px (без safe-area). */
 export const TAB_BAR_HEIGHT = 64;
@@ -460,19 +462,27 @@ export function MobileNavFab() {
               className="flex-1 flex flex-col items-center justify-center gap-1 select-none"
               style={{
                 background: 'transparent', border: 'none',
-                borderTop: `2px solid ${active ? 'var(--accent)' : 'transparent'}`,
                 color: active ? 'var(--accent)' : 'var(--text-muted)',
                 cursor: 'pointer',
-                textShadow: active ? '0 0 6px var(--accent-glow)' : 'none',
               }}
             >
-              <motion.span
-                className="flex items-center justify-center"
-                animate={{ scale: active ? 1.1 : 1, opacity: active ? 1 : 0.65 }}
-                transition={SPRING}
-              >
-                <Icon size={22} />
-              </motion.span>
+              <span className="relative flex items-center justify-center" style={{ width: 40, height: 28 }}>
+                {active && (
+                  <motion.span
+                    layoutId="nav-active-pill"
+                    className="absolute inset-0"
+                    style={{ background: 'var(--accent-dim)', borderRadius: 'var(--shape-full)' }}
+                    transition={M3_PILL_SPRING}
+                  />
+                )}
+                <motion.span
+                  className="relative flex items-center justify-center"
+                  animate={{ scale: active ? 1.06 : 1, opacity: active ? 1 : 0.65 }}
+                  transition={SPRING}
+                >
+                  <Icon size={22} />
+                </motion.span>
+              </span>
               <span className="font-mono" style={{ fontSize: 10, letterSpacing: 0.5, lineHeight: 1 }}>
                 {label}
               </span>
@@ -489,37 +499,45 @@ export function MobileNavFab() {
           className="flex-1 flex flex-col items-center justify-center gap-1 select-none"
           style={{
             background: 'transparent', border: 'none',
-            borderTop: `2px solid ${moreOpen || anyMoreActive ? 'var(--accent)' : 'transparent'}`,
             color: moreOpen || anyMoreActive ? 'var(--accent)' : 'var(--text-muted)',
             cursor: 'pointer',
-            textShadow: moreOpen || anyMoreActive ? '0 0 6px var(--accent-glow)' : 'none',
           }}
         >
-          <AnimatePresence mode="wait" initial={false}>
-            {moreOpen ? (
+          <span className="relative flex items-center justify-center" style={{ width: 40, height: 28 }}>
+            {(moreOpen || anyMoreActive) && (
               <motion.span
-                key="close"
-                className="flex items-center justify-center"
-                initial={{ scale: 0.25, opacity: 0, filter: 'blur(4px)' }}
-                animate={{ scale: 1.1, opacity: 1, filter: 'blur(0px)' }}
-                exit={{ scale: 0.25, opacity: 0, filter: 'blur(4px)' }}
-                transition={SPRING}
-              >
-                <X size={22} />
-              </motion.span>
-            ) : (
-              <motion.span
-                key="more"
-                className="flex items-center justify-center"
-                initial={{ scale: 0.25, opacity: 0, filter: 'blur(4px)' }}
-                animate={{ scale: moreOpen || anyMoreActive ? 1.1 : 1, opacity: moreOpen || anyMoreActive ? 1 : 0.65, filter: 'blur(0px)' }}
-                exit={{ scale: 0.25, opacity: 0, filter: 'blur(4px)' }}
-                transition={SPRING}
-              >
-                <MoreHorizontal size={22} />
-              </motion.span>
+                layoutId="nav-active-pill"
+                className="absolute inset-0"
+                style={{ background: 'var(--accent-dim)', borderRadius: 'var(--shape-full)' }}
+                transition={M3_PILL_SPRING}
+              />
             )}
-          </AnimatePresence>
+            <AnimatePresence mode="wait" initial={false}>
+              {moreOpen ? (
+                <motion.span
+                  key="close"
+                  className="relative flex items-center justify-center"
+                  initial={{ scale: 0.25, opacity: 0, filter: 'blur(4px)' }}
+                  animate={{ scale: 1.06, opacity: 1, filter: 'blur(0px)' }}
+                  exit={{ scale: 0.25, opacity: 0, filter: 'blur(4px)' }}
+                  transition={SPRING}
+                >
+                  <X size={22} />
+                </motion.span>
+              ) : (
+                <motion.span
+                  key="more"
+                  className="relative flex items-center justify-center"
+                  initial={{ scale: 0.25, opacity: 0, filter: 'blur(4px)' }}
+                  animate={{ scale: moreOpen || anyMoreActive ? 1.06 : 1, opacity: moreOpen || anyMoreActive ? 1 : 0.65, filter: 'blur(0px)' }}
+                  exit={{ scale: 0.25, opacity: 0, filter: 'blur(4px)' }}
+                  transition={SPRING}
+                >
+                  <MoreHorizontal size={22} />
+                </motion.span>
+              )}
+            </AnimatePresence>
+          </span>
           <span className="font-mono" style={{ fontSize: 10, letterSpacing: 0.5, lineHeight: 1 }}>ещё</span>
         </motion.button>
       </div>

@@ -35,8 +35,9 @@ export function TaskCard({ task }: TaskCardProps) {
   const { toast }       = useToast();
   const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({ id: task.id });
 
-  const urgent     = isDeadlineUrgent(task.deadline);
-  const overdue    = isOverdue(task.deadline);
+  const isDone      = task.status === 'Resolved' || task.status === 'Archived';
+  const urgent      = !isDone && isDeadlineUrgent(task.deadline);
+  const overdue     = !isDone && isOverdue(task.deadline);
   const hasDeadline = !!task.deadline;
   const nextStatus = NEXT_STATUS[task.status];
 
@@ -46,6 +47,7 @@ export function TaskCard({ task }: TaskCardProps) {
     cursor:     isDragging ? 'grabbing' : 'default',
     background: 'var(--bg-card)',
     border:     '1px solid var(--border)',
+    borderRadius: 'var(--shape-md)',
     boxShadow:  isDragging
       ? '0 0 0 1px var(--accent), 0 0 20px var(--accent-glow), 0 4px 16px rgba(0,0,0,0.6)'
       : 'none',
@@ -129,13 +131,13 @@ export function TaskCard({ task }: TaskCardProps) {
               title={`следующий этап: ${NEXT_LABELS[nextStatus] ?? nextStatus}`}
             >
               <span
-                className="flex items-center justify-center"
+                className="m3-advance flex items-center justify-center"
                 style={{
                   width: 32,
                   height: 32,
                   border: '1px solid var(--border)',
-                  borderRadius: 'var(--radius)',
-                  transition: 'border-color 140ms ease-out, background 140ms ease-out, box-shadow 140ms ease-out',
+                  borderRadius: 'var(--shape-sm)',
+                  transition: 'border-color 140ms ease-out, background 140ms ease-out, box-shadow 140ms ease-out, border-radius 200ms var(--ease-spring), transform 160ms var(--ease-spring)',
                 }}
                 onMouseEnter={(e) => {
                   e.currentTarget.style.background  = 'var(--accent-dim)';

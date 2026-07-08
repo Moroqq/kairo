@@ -19,11 +19,13 @@ import { LanSyncPage } from '@/pages/LanSyncPage';
 import { pruneTrash } from '@/services/tasks.service';
 import lanSync, { isDesktopHost } from '@/services/lan-sync.service';
 
-/** Обёртка перехода между разделами — короткий fade + сдвиг, без блокировки ввода. */
+/** Обёртка перехода между разделами — короткий fade + сдвиг, без блокировки ввода.
+ *  Абсолютное позиционирование — старая и новая страницы накладываются друг на
+ *  друга во время перехода, а не толкают layout (родитель уже position:relative). */
 function PageTransition({ children }: { children: React.ReactNode }) {
   return (
     <motion.div
-      className="flex flex-col h-full min-h-0"
+      className="absolute inset-0 flex flex-col min-h-0"
       initial={{ opacity: 0, y: 8 }}
       animate={{ opacity: 1, y: 0, transition: { duration: 0.18, ease: [0.25, 0.46, 0.45, 0.94] } }}
       exit={{ opacity: 0, y: -4, transition: { duration: 0.12, ease: 'easeIn' } }}
@@ -36,7 +38,11 @@ function PageTransition({ children }: { children: React.ReactNode }) {
 function AnimatedRoutes() {
   const location = useLocation();
   return (
-    <AnimatePresence mode="wait" initial={false}>
+    // Без mode="wait": старая и новая страница анимируются одновременно, не
+    // блокируя друг друга — если анимация где-то внутри страницы прервётся
+    // (например, вложенный AnimatePresence в календаре), переход всё равно
+    // завершится, а не зависнет в ожидании.
+    <AnimatePresence initial={false}>
       <Routes location={location} key={location.pathname}>
         <Route path="/"         element={<PageTransition><FocusPage /></PageTransition>} />
         <Route path="/board"    element={<PageTransition><Dashboard /></PageTransition>} />

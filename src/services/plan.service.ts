@@ -322,7 +322,7 @@ export function carryOverTo(date: string): number {
     const set = new Set(movedTaskIds);
     let changed = false;
     for (const t of tasks) {
-      if (set.has(t.id) && t.status !== 'Archived') {
+      if (set.has(t.id) && t.status !== 'Archived' && t.status !== 'Resolved') {
         t.deadline = deadlineISOFromDate(date);
         changed = true;
       }

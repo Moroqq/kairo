@@ -61,7 +61,7 @@ export function ExpensesPage() {
 
         {/* ── Две сводные карточки ── */}
         <div style={{ display: 'flex', gap: 10, marginBottom: 16 }}>
-          <div style={{ flex: 1, background: 'var(--bg-card)', border: '1px solid var(--border)', padding: 14 }}>
+          <div style={{ flex: 1, background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 'var(--shape-md)', padding: 14 }}>
             <div className="font-mono" style={{ fontSize: 11, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: 1 }}>
               осталось в месяц
             </div>
@@ -69,7 +69,7 @@ export function ExpensesPage() {
               {formatMoney(remaining)}
             </div>
           </div>
-          <div style={{ flex: 1, background: 'var(--bg-card)', border: '1px solid var(--border)', padding: 14 }}>
+          <div style={{ flex: 1, background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 'var(--shape-md)', padding: 14 }}>
             <div className="font-mono" style={{ fontSize: 11, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: 1 }}>
               ближайший
             </div>
@@ -115,6 +115,7 @@ export function ExpensesPage() {
                   display: 'flex', alignItems: 'stretch',
                   background: 'var(--bg-card)',
                   border: `1px solid ${e.paid ? 'var(--border-subtle)' : 'var(--border)'}`,
+                  borderRadius: 'var(--shape-md)',
                   overflow: 'hidden',
                   transition: 'border-color 320ms ease',
                 }}
@@ -222,6 +223,7 @@ export function ExpensesPage() {
             display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 8,
             background: 'transparent',
             border: '1px dashed var(--border-strong)',
+            borderRadius: 'var(--shape-full)',
             color: 'var(--accent)', fontSize: 14,
             cursor: 'pointer',
           }}

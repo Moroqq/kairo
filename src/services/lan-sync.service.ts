@@ -23,6 +23,8 @@ export const SYNC_KEYS = [
   'kairo_plan_patterns',
   'kairo_plan_overrides',
   'kairo_expenses',
+  'kairo_dailies',
+  'kairo_daily_marks',
 ] as const;
 
 export type SyncKey = typeof SYNC_KEYS[number];

@@ -65,6 +65,20 @@
 
   --transition:     160ms ease-out;
 
+  /* ── Material 3 Expressive: форма и движение ──────────────────
+     Глобальные — не входят в THEMES.vars, поэтому не сбрасываются
+     при смене темы. Применяются точечно, через инлайн-стили
+     конкретных компонентов (не трогаем .bevel-raised — он же рамка
+     всего приложения, менять его форму глобально нельзя). */
+  --shape-xs:       10px;
+  --shape-sm:       16px;
+  --shape-md:       22px;
+  --shape-lg:       28px;
+  --shape-xl:       36px;
+  --shape-full:     999px;
+  --ease-spring:    cubic-bezier(0.34, 1.56, 0.64, 1);
+  --ease-standard:  cubic-bezier(0.2, 0, 0, 1);
+
   /* Поверхности оболочки (переопределяются темами через JS) */
   --desktop-bg:     #000000;
   --shell-bg:       rgba(5, 5, 5, 0.92);
@@ -378,7 +392,23 @@ input, textarea, select {
   border-radius: var(--radius);
 }
 
-.btn-flat { border-radius: var(--radius); }
+.btn-flat { border-radius: var(--shape-full); transition-timing-function: var(--ease-standard); }
+
+/* M3 Expressive FAB — форма «перетекает» из капсулы в более квадратную при нажатии. */
+.m3-fab {
+  border-radius: var(--shape-xl);
+  transition: border-radius 260ms var(--ease-spring), transform 160ms var(--ease-spring), box-shadow 200ms var(--ease-standard);
+}
+.m3-fab:active {
+  border-radius: var(--shape-sm);
+  transform: scale(0.94);
+}
+
+/* M3 Expressive «продвинуть» на карточке — из скруглённого квадрата в круг при нажатии. */
+.m3-advance:active {
+  border-radius: var(--shape-full) !important;
+  transform: scale(0.9);
+}
 
 /* Date-input в Chromium — невидимая иконка стрелки → красим в зелёный */
 input[type="date"]::-webkit-calendar-picker-indicator {
