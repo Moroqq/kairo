@@ -8,6 +8,11 @@ dist-ssr
 # Tauri
 src-tauri/target
 
+# Kairo server (VPS backend)
+server/dist
+server/data/*.db
+server/data/*.db-*
+
 # env
 .env
 .env.local

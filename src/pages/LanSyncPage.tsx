@@ -1,17 +1,60 @@
 import { useState, useCallback, useEffect, useRef } from 'react';
-import { Wifi, WifiOff, Download, Upload, Copy, Check, Radio, Smartphone, AlertTriangle, Terminal, Trash2 } from 'lucide-react';
+import { Wifi, WifiOff, Download, Upload, Copy, Check, Radio, Smartphone, AlertTriangle, Terminal, Trash2, Cloud, UserPlus, QrCode } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import QRCode from 'qrcode';
 import { Button } from '@/components/ui/Button';
 import { useLanHost, useLanGuest, useLanSyncLogs } from '@/hooks/useLanSync';
 import { isDesktopHost } from '@/services/lan-sync.service';
 import { useToast } from '@/components/ui/Toast';
+import { useAccountStore } from '@/stores/account.store';
+import { requestPairingTicket, pairingDeepLink } from '@/lib/account';
+import vpsSync from '@/services/vps-sync.service';
 
 // ── Страница синхронизации ─────────────────────────────────────────────────
 
+type SyncMode = 'lan' | 'cloud';
+
 export function LanSyncPage() {
   const host = isDesktopHost();
-  return host ? <HostView /> : <GuestView />;
+  const [mode, setMode] = useState<SyncMode>('lan');
+
+  return (
+    <div className="flex flex-col h-full min-h-0">
+      <div className="flex-shrink-0" style={{ padding: '12px 12px 0' }}>
+        <div style={{ maxWidth: 560, margin: '0 auto' }}>
+          <div className="segmented" style={{ display: 'inline-flex', gap: 3, padding: 4, background: 'var(--bg-elevated)', border: '1px solid var(--border)', borderRadius: 'var(--shape-md)' }}>
+            <ModeTab active={mode === 'lan'} onClick={() => setMode('lan')} icon={<Wifi size={13} />} label="локальная сеть" />
+            <ModeTab active={mode === 'cloud'} onClick={() => setMode('cloud')} icon={<Cloud size={13} />} label="облако" />
+          </div>
+        </div>
+      </div>
+      <div className="flex-1 min-h-0 flex flex-col">
+        {mode === 'lan'
+          ? (host ? <HostView /> : <GuestView />)
+          : <CloudView />
+        }
+      </div>
+    </div>
+  );
+}
+
+function ModeTab({ active, onClick, icon, label }: { active: boolean; onClick: () => void; icon: React.ReactNode; label: string }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className="flex items-center gap-1.5 font-mono"
+      style={{
+        padding: '8px 14px', fontSize: 12, fontWeight: 600,
+        background: active ? 'var(--accent)' : 'transparent',
+        color: active ? '#000' : 'var(--text-muted)',
+        border: 'none', borderRadius: 'var(--shape-sm)', cursor: 'pointer',
+        transition: 'background 200ms var(--ease-standard), color 200ms var(--ease-standard)',
+      }}
+    >
+      {icon} {label}
+    </button>
+  );
 }
 
 // ── Хост (десктоп) ────────────────────────────────────────────────────────
@@ -243,6 +286,258 @@ function GuestView() {
         <DebugLogPanel />
       </div>
     </div>
+  );
+}
+
+// ── Облако (VPS) ─────────────────────────────────────────────────────────
+
+function CloudView() {
+  const hasAccount = useAccountStore((s) => s.hasAccount);
+  const ready = useAccountStore((s) => s.ready);
+
+  if (!ready) return null;
+
+  return (
+    <div className="flex-1 overflow-y-auto" style={{ padding: 12 }}>
+      <div style={{ maxWidth: 480, margin: '0 auto' }}>
+        <PageHeader title="SYNC" subtitle="облако · через интернет, без Wi-Fi" />
+        {hasAccount ? <CloudPairedView /> : <CloudNoAccountView />}
+      </div>
+    </div>
+  );
+}
+
+/** Аккаунта на этом устройстве ещё нет — либо создаём новый, либо подключаемся к существующему. */
+function CloudNoAccountView() {
+  const createNewAccount = useAccountStore((s) => s.createNewAccount);
+  const pairWithTicket = useAccountStore((s) => s.pairWithTicket);
+  const recoverWithCode = useAccountStore((s) => s.recoverWithCode);
+  const { toast } = useToast();
+  const [code, setCode] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const handleCreate = useCallback(async () => {
+    setBusy(true);
+    setError(null);
+    try {
+      await createNewAccount();
+      toast('Облачный аккаунт создан');
+    } catch {
+      setError('Не удалось создать аккаунт — сервер недоступен. Попробуй позже.');
+    } finally {
+      setBusy(false);
+    }
+  }, [createNewAccount, toast]);
+
+  const handleRedeem = useCallback(async () => {
+    const value = code.trim();
+    if (!value) return;
+    setBusy(true);
+    setError(null);
+    try {
+      const isRecoveryCode = value.split(/\s+/).length >= 12;
+      if (isRecoveryCode) {
+        await recoverWithCode(value);
+        toast('Доступ восстановлен');
+      } else {
+        await pairWithTicket(value);
+        toast('Устройство подключено');
+      }
+      setCode('');
+    } catch {
+      setError('Не подошёл код — проверь, что он не устарел (билет живёт 5 минут), или введи 12 слов кода восстановления полностью.');
+    } finally {
+      setBusy(false);
+    }
+  }, [code, pairWithTicket, recoverWithCode, toast]);
+
+  return (
+    <>
+      <section className="font-mono mb-3" style={{ border: '1px solid var(--border-subtle)', background: 'var(--well-bg)' }}>
+        <div className="px-4 py-2" style={{ borderBottom: '1px solid var(--border-subtle)', fontSize: 11, color: 'var(--text-muted)', letterSpacing: 1 }}>
+          ▸ ПЕРВОЕ УСТРОЙСТВО
+        </div>
+        <div className="px-4 py-3 flex flex-col gap-3">
+          <div style={{ fontSize: 11, color: 'var(--text-dim)', lineHeight: 1.6 }}>
+            Если Kairo с облаком у тебя ещё нигде не настроен — создай новый аккаунт здесь.
+          </div>
+          <button
+            type="button"
+            onClick={handleCreate}
+            disabled={busy}
+            className="m3-fab flex items-center justify-center gap-2"
+            style={{ height: 48, background: 'var(--accent)', color: '#000', border: 'none', fontSize: 14, fontWeight: 700, cursor: busy ? 'wait' : 'pointer' }}
+          >
+            <UserPlus size={16} /> создать облачный аккаунт
+          </button>
+        </div>
+      </section>
+
+      <section className="font-mono mb-3" style={{ border: '1px solid var(--border-subtle)', background: 'var(--well-bg)' }}>
+        <div className="px-4 py-2" style={{ borderBottom: '1px solid var(--border-subtle)', fontSize: 11, color: 'var(--text-muted)', letterSpacing: 1 }}>
+          ▸ ЕСТЬ КОД С ДРУГОГО УСТРОЙСТВА
+        </div>
+        <div className="px-4 py-3 flex flex-col gap-3">
+          <div style={{ fontSize: 11, color: 'var(--text-dim)', lineHeight: 1.6 }}>
+            Отсканируй QR камерой (она сама предложит открыть Kairo) — или введи код парности/восстановления вручную:
+          </div>
+          <div className="flex gap-2">
+            <input
+              value={code}
+              onChange={(e) => setCode(e.target.value)}
+              placeholder="код парности или 12 слов"
+              className="flex-1 h-11 px-3 font-mono"
+              style={{
+                minWidth: 0, fontSize: 14,
+                background: 'var(--bg-input)', border: `1px solid ${error ? 'var(--danger)' : 'var(--border)'}`,
+                color: 'var(--text-primary)', caretColor: 'var(--accent)', outline: 'none',
+              }}
+              onKeyDown={(e) => { if (e.key === 'Enter') handleRedeem(); }}
+            />
+            <Button variant="primary" size="md" onClick={handleRedeem} disabled={!code.trim() || busy}>
+              Войти
+            </Button>
+          </div>
+          {error && (
+            <div style={{ display: 'flex', alignItems: 'flex-start', gap: 8, fontSize: 12, color: 'var(--danger)' }}>
+              <AlertTriangle size={14} style={{ flexShrink: 0, marginTop: 1 }} />
+              <span>{error}</span>
+            </div>
+          )}
+        </div>
+      </section>
+    </>
+  );
+}
+
+/** Аккаунт уже есть на этом устройстве — можно добавить ещё одно через QR/код, и синхронизировать данные. */
+function CloudPairedView() {
+  const { toast } = useToast();
+  const [ticket, setTicket] = useState<{ ticket: string; expiresAt: string } | null>(null);
+  const [busy, setBusy] = useState(false);
+  const [syncing, setSyncing] = useState<'pull' | 'push' | null>(null);
+  const [lastSync, setLastSync] = useState<string | null>(null);
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+
+  const handlePull = useCallback(async () => {
+    setSyncing('pull');
+    try {
+      await vpsSync.pull();
+      setLastSync(new Date().toISOString());
+      toast('Данные получены с облака');
+    } catch {
+      toast('Не удалось синхронизироваться — сервер недоступен', 'error');
+    } finally {
+      setSyncing(null);
+    }
+  }, [toast]);
+
+  const handlePush = useCallback(async () => {
+    setSyncing('push');
+    try {
+      await vpsSync.push();
+      setLastSync(new Date().toISOString());
+      toast('Данные отправлены в облако');
+    } catch {
+      toast('Не удалось синхронизироваться — сервер недоступен', 'error');
+    } finally {
+      setSyncing(null);
+    }
+  }, [toast]);
+
+  useEffect(() => {
+    if (!ticket || !canvasRef.current) return;
+    QRCode.toCanvas(canvasRef.current, pairingDeepLink(ticket.ticket), {
+      width: 180, margin: 2, color: { dark: '#000000', light: '#FFFFFF' },
+    }).catch(() => {});
+  }, [ticket]);
+
+  const handleGenerate = useCallback(async () => {
+    setBusy(true);
+    try {
+      const res = await requestPairingTicket();
+      setTicket(res);
+    } catch {
+      toast('Не удалось получить код — сервер недоступен', 'error');
+    } finally {
+      setBusy(false);
+    }
+  }, [toast]);
+
+  const secondsLeft = ticket ? Math.max(0, Math.round((new Date(ticket.expiresAt).getTime() - Date.now()) / 1000)) : 0;
+
+  return (
+    <>
+      <div className="flex items-center gap-3 mb-3 px-4 py-3 font-mono" style={{ border: '1px solid var(--border)', background: 'var(--well-bg)' }}>
+        <Cloud size={16} style={{ color: 'var(--success)' }} />
+        <span style={{ fontSize: 13, color: 'var(--success)', fontWeight: 600 }}>облако подключено</span>
+      </div>
+
+      <section className="font-mono mb-3" style={{ border: '1px solid var(--border-subtle)', background: 'var(--well-bg)' }}>
+        <div className="px-4 py-2" style={{ borderBottom: '1px solid var(--border-subtle)', fontSize: 11, color: 'var(--text-muted)', letterSpacing: 1 }}>
+          ▸ ДОБАВИТЬ ЕЩЁ УСТРОЙСТВО
+        </div>
+        <div className="px-4 py-4 flex flex-col gap-3">
+          {!ticket ? (
+            <button
+              type="button"
+              onClick={handleGenerate}
+              disabled={busy}
+              className="m3-fab flex items-center justify-center gap-2"
+              style={{ height: 48, background: 'var(--accent)', color: '#000', border: 'none', fontSize: 14, fontWeight: 700, cursor: busy ? 'wait' : 'pointer' }}
+            >
+              <QrCode size={16} /> показать QR для нового устройства
+            </button>
+          ) : (
+            <div className="flex gap-6 items-start">
+              <div style={{ flexShrink: 0, border: '2px solid var(--accent)', padding: 4, background: 'var(--bg-surface)', width: 188, height: 188, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <canvas ref={canvasRef} width={180} height={180} />
+              </div>
+              <div className="flex flex-col gap-3 min-w-0">
+                <div>
+                  <div style={{ fontSize: 11, color: 'var(--text-muted)', marginBottom: 6 }}>или введи код вручную:</div>
+                  <code className="neon-text" style={{ fontSize: 20, letterSpacing: 2 }}>{ticket.ticket}</code>
+                </div>
+                <div style={{ fontSize: 11, color: secondsLeft < 30 ? 'var(--danger)' : 'var(--text-dim)' }}>
+                  {secondsLeft > 0 ? `действует ещё ${secondsLeft} сек` : 'код истёк'}
+                </div>
+                <div style={{ fontSize: 11, color: 'var(--text-dim)', lineHeight: 1.6 }}>
+                  На новом устройстве: раздел Синк → Облако → «Есть код с другого устройства».
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+      </section>
+
+      <section className="font-mono mb-3" style={{ border: '1px solid var(--border-subtle)', background: 'var(--well-bg)' }}>
+        <div className="px-4 py-2" style={{ borderBottom: '1px solid var(--border-subtle)', fontSize: 11, color: 'var(--text-muted)', letterSpacing: 1 }}>
+          ▸ СИНХРОНИЗАЦИЯ
+        </div>
+        <div className="px-4 py-3 flex flex-col gap-2">
+          <ActionRow
+            icon={<Download size={14} />}
+            label="Получить данные с облака"
+            desc="Перезаписывает локальные данные тем, что в облаке"
+            onClick={handlePull}
+            disabled={syncing !== null}
+          />
+          <ActionRow
+            icon={<Upload size={14} />}
+            label="Отправить данные в облако"
+            desc="Перезаписывает данные в облаке локальными"
+            onClick={handlePush}
+            disabled={syncing !== null}
+          />
+          {lastSync && (
+            <div className="font-mono mt-1" style={{ fontSize: 11, color: 'var(--text-dim)' }}>
+              Последний синк: {new Date(lastSync).toLocaleTimeString('ru-RU')}
+            </div>
+          )}
+        </div>
+      </section>
+    </>
   );
 }
 

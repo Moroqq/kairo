@@ -10,31 +10,21 @@
 
 import { invoke } from '@tauri-apps/api/core';
 import { listen, type UnlistenFn } from '@tauri-apps/api/event';
-import { queryClient } from '@/lib/query-client';
+import { SYNC_KEYS, captureSnapshot, applySnapshot, type SyncKey, type SyncSnapshot } from './sync-snapshot';
+
+// Реэкспорт — снимок общий с облачным синком (см. sync-snapshot.ts),
+// но остальной код в этом файле уже ссылается на эти имена.
+export { SYNC_KEYS, captureSnapshot, applySnapshot };
+export type { SyncKey };
 
 // ── Константы ──────────────────────────────────────────────────────────────
 
 export const WS_PORT = 8765;
 
-export const SYNC_KEYS = [
-  'kairo_tasks',
-  'kairo_event_logs',
-  'kairo_plan_items',
-  'kairo_plan_patterns',
-  'kairo_plan_overrides',
-  'kairo_expenses',
-  'kairo_dailies',
-  'kairo_daily_marks',
-] as const;
-
-export type SyncKey = typeof SYNC_KEYS[number];
-
 // ── Типы протокола ─────────────────────────────────────────────────────────
 
-export interface LanSnapshot {
-  data: Record<string, string>;
-  ts: string;       // ISO — используется для конкурентного слияния
-}
+/** @deprecated используй SyncSnapshot из sync-snapshot.ts — оставлено для обратной совместимости имени. */
+export type LanSnapshot = SyncSnapshot;
 
 export type WsMsg =
   // Рукопожатие
@@ -79,23 +69,6 @@ export function isDesktopHost(): boolean {
   return !ua.includes('Android') && !ua.includes('iPhone') && !ua.includes('iPad');
 }
 
-export function captureSnapshot(): LanSnapshot {
-  const data: Record<string, string> = {};
-  for (const key of SYNC_KEYS) {
-    data[key] = localStorage.getItem(key) ?? '[]';
-  }
-  return { data, ts: new Date().toISOString() };
-}
-
-export function applySnapshot(snapshot: LanSnapshot): void {
-  for (const [k, v] of Object.entries(snapshot.data)) {
-    if ((SYNC_KEYS as readonly string[]).includes(k)) {
-      localStorage.setItem(k, v);
-    }
-  }
-  // React Query должен подобрать свежие данные
-  queryClient.invalidateQueries();
-}
 
 // ── Класс сервиса ──────────────────────────────────────────────────────────
 
