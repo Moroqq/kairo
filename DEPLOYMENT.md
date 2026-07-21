@@ -1,108 +1,116 @@
 # Kairo VPS sync backend — deployment (in progress)
 
-Живой handoff-документ. Используется, чтобы продолжить деплой на другом устройстве
-или в новой сессии. Обновляется по ходу работы.
+Живой handoff-документ. Обновляется по ходу работы, чтобы продолжить с другого
+устройства или в новой сессии.
 
-## На чём остановились
+## Где мы сейчас
 
-Начали ставить `server/` (Fastify + SQLite бэкенд из `server/src/`) на арендованный
-VPS как **co-host рядом с существующим сайтом Observ**. Изолированно: свой юзер,
-свой порт (`127.0.0.1:8787`), свой поддомен, отдельный nginx-конфиг.
-
-Прямо сейчас ждём одного шага от пользователя — регистрации DuckDNS-поддомена.
+Kairo-бэкенд **уже запущен** на новом арендованном VPS и слушает `127.0.0.1:8787`,
+здоровье отдаёт через `/health`. Осталось прокинуть его наружу через nginx с TLS
+(упирается в DuckDNS-поддомен от пользователя), и добавить второй проект (Delta,
+пока непонятен стек).
 
 ## Сервер
 
-- IP: `81.90.31.239`
-- SSH юзер: `root`, вход по ключу (ed25519), парольный вход пока включён (отключим после деплоя)
+- IP: `193.233.48.36`
+- Хостинг тот же, но это **другой VPS**. Старый (`81.90.31.239`) остаётся под Observ.
+- SSH: только по ключу, пароль отключён (`PasswordAuthentication no`, `PermitRootLogin prohibit-password`)
+- Юзер: `root`
 - ОС: Ubuntu 22.04.5 LTS, kernel 5.15
-- 2 vCPU / 3.8 ГБ RAM / 25 ГБ NVMe (занято 7.7 ГБ)
-- Уже установлено и работает:
-  - nginx 1.18 на 80/443, обслуживает сайты `observ` и `observ-mirror`
-  - Node.js v22.22.2, npm 10.9.7 (годится для `node:sqlite` в Kairo — доставлять ничего не надо)
-  - xray на 127.0.0.1:10808/10809 (не трогаем, к Kairo отношения не имеет)
-- ufw не настроен
+- 1 vCPU / 1.9 GB RAM / 20 GB NVMe. Плюс swap 2 GB.
+- Файервол ufw: разрешены только 22/80/443.
+- Unattended-upgrades активен (сервер сам ставит security-патчи ночью).
 
-### Что нельзя трогать
+### Установлено
 
-- `/etc/nginx/sites-enabled/observ*` и `/etc/nginx/sites-available/observ*`
-- Существующий Next.js на `*:3000` (это Observ)
-- TLS-сертификаты для доменов Observ
+- nginx 1.18, certbot 1.21, python3-certbot-nginx
+- Node.js 22.23.1, npm 10.9.8
+- git 2.34, sqlite3
+- ufw 0.36
 
-Все изменения — строго дополнительные, поверх текущей конфигурации.
+## Что уже поднято
 
-## Решения, которые уже приняты
+### Kairo sync backend
 
-- **Co-host** на этом же VPS, не отдельный сервер.
-- **DuckDNS** для поддомена и Let's Encrypt (не трогаем домены Observ).
-- **Путь установки:** `/opt/kairo-server`.
-- **Отдельный Linux-юзер** `kairo` без sudo.
-- **Порт бэкенда:** `127.0.0.1:8787` (наружу не торчит, nginx проксирует через HTTPS).
-- **systemd** для автозапуска/рестарта.
-- **Бэкапы:** cron раз в сутки → tar.gz в `/opt/kairo-backups`, хранение 7 дней.
-- **UI-правило приложения (не меняется):** никаких экранов логина/пароля/PIN. Синхра
-  авторизуется невидимым pre-shared токеном через QR-парность, 12-словная BIP39
-  seed-фраза показывается один раз при создании облачного аккаунта.
+- Код: `/opt/kairo-server/` (полный клон `github.com/Moroqq/kairo`, `.git` там же — обновление через `git pull`)
+- Собранный бэкенд: `/opt/kairo-server/server/dist/index.js`
+- Данные (SQLite WAL): `/opt/kairo-server/server/data/kairo.db`
+- Systemd-юнит: `/etc/systemd/system/kairo-server.service`
+  - User/Group: `kairo`
+  - `HOST=127.0.0.1`, `PORT=8787`
+  - `NODE_ENV=production`
+  - autostart, autorestart on failure
+- Проверка: `curl http://127.0.0.1:8787/health` → `{"ok":true}`
+- Занимает ~34 МБ RAM в покое.
 
-## Следующий шаг (блокирует всё остальное)
+### Бэкапы
 
-Пользователю:
+- Скрипт: `/usr/local/bin/kairo-backup.sh` (использует `sqlite3 .backup`, безопасно для WAL)
+- Cron: `/etc/cron.d/kairo-backup` — каждый день в 03:17 UTC
+- Хранилище: `/opt/kairo-backups/kairo-<STAMP>.db.gz` (chmod 600, root:root)
+- Retention: 7 дней (старее удаляется автоматически)
+- Лог: `/var/log/kairo-backup.log`
 
-1. Зайти на https://www.duckdns.org, залогиниться (GitHub / Google / любой).
-2. Выбрать поддомен, например `kairo-sv` (буквы, цифры, дефис).
-3. В поле IP вписать `81.90.31.239`, нажать `update ip`.
-4. Открыть сессию Claude Code и сказать выбранное имя.
+## Что осталось
 
-## Что делает Claude после этого (каждый шаг с подтверждением)
+### Заблокировано на пользователе
 
-1. `adduser --system --group --home /opt/kairo-server kairo` (юзер без sudo и без shell)
-2. Заливка `server/` в `/opt/kairo-server` (через `git clone` или `rsync` из локальной копии)
-3. `npm ci --omit=dev`, `npm run build` от юзера `kairo`
-4. `systemd`-юнит `/etc/systemd/system/kairo-server.service`, `enable --now`
-5. Nginx-конфиг `/etc/nginx/sites-available/kairo` → поддомен → `http://127.0.0.1:8787`,
-   с `Upgrade`/`Connection` для WebSocket
-6. `certbot --nginx -d <subdomain>.duckdns.org` для TLS
-7. Проверка: `curl https://<subdomain>.duckdns.org/health` должен вернуть `{ok:true}`
-8. Cron бэкапа SQLite (`server/data/kairo.db`)
-9. Переключение mobile/desktop-клиента Kairo на новый cloud-URL
+1. **DuckDNS-поддомен** для Kairo. Без него нельзя настроить nginx с TLS.
+   - Зарегать: https://www.duckdns.org (логин Google/GitHub)
+   - Указать IP `193.233.48.36`
+   - Сообщить Claude выбранное имя
+2. **Стек Delta**: язык, зависимости, порт, где брать код. Без этого Delta-часть не поднять.
 
-## Как зайти на сервер с НОВОГО устройства
+### Делает Claude (по мере получения инпута)
 
-Приватный SSH-ключ лежит **только** на исходной Windows-машине в
-`%USERPROFILE%\.ssh\id_ed25519`. С нового устройства два варианта:
+3. Nginx-конфиг: `sync.<duck>.duckdns.org` → `http://127.0.0.1:8787`, с WebSocket-апгрейдом
+4. Let's Encrypt: `certbot --nginx -d sync.<duck>.duckdns.org`
+5. Проверка: `curl https://sync.<duck>.duckdns.org/health` → `{"ok":true}` через TLS
+6. Deploy Delta по своей схеме (юзер `delta`, свой поддомен если нужно)
+7. Обновить cloud-URL клиента Kairo (в приложении) на новый HTTPS-адрес
+
+## Быстрые команды (для дебага)
+
+```bash
+# Статус бэкенда
+systemctl status kairo-server
+
+# Логи в реальном времени
+journalctl -u kairo-server -f
+
+# Что слушает kairo
+ss -tlnp | grep 8787
+
+# Ручной прогон бэкапа
+/usr/local/bin/kairo-backup.sh
+ls -la /opt/kairo-backups/
+
+# Обновить код Kairo из репо
+cd /opt/kairo-server && git pull
+cd server && sudo -u kairo npm ci && sudo -u kairo npm run build
+systemctl restart kairo-server
+```
+
+## Как зайти с НОВОГО устройства
+
+Приватный SSH-ключ есть **только** на исходной Windows-машине
+(`%USERPROFILE%\.ssh\id_ed25519`). Пароль по SSH отключён — вход только по ключу.
 
 **Вариант A (рекомендуется) — сгенерировать ещё один ключ:**
 
-1. На новом устройстве: `ssh-keygen -t ed25519 -C "kairo-vps-<имя-устройства>"`
-2. Показать публичный ключ: `type $env:USERPROFILE\.ssh\id_ed25519.pub` (Windows)
-   или `cat ~/.ssh/id_ed25519.pub` (Mac/Linux)
+1. На новом устройстве: `ssh-keygen -t ed25519 -C "kairo-vps-<имя>"`
+2. Показать публичный: Windows `type $env:USERPROFILE\.ssh\id_ed25519.pub`,
+   Mac/Linux `cat ~/.ssh/id_ed25519.pub`
 3. Дописать эту публичную строку в `/root/.ssh/authorized_keys` на сервере
    (это можно сделать с исходного устройства, где ключ уже работает).
 
-**Вариант B — перенести существующий приватный ключ:**
+**Вариант B (если пропал доступ ко всем исходным ключам):**
 
-Скопировать `id_ed25519` (без `.pub`) с исходной машины через USB/менеджер паролей.
-Не рекомендую, если новое устройство не полностью твоё.
+Веб-консоль (VNC) через панель хостера — вход по паролю root. Если пароль тоже
+потерян, у хостера кнопка «Сбросить пароль root».
 
-## Задачи безопасности после деплоя
+## История
 
-- Отключить парольный вход по SSH: `PasswordAuthentication no` в `/etc/ssh/sshd_config`
-- Поставить и настроить ufw: allow 22, 80, 443; deny остальное
-- Разобраться, почему существующий Next.js слушает `*:3000` вместо `127.0.0.1:3000`
-  (не относится к Kairo, но нехорошо)
-
-## Быстрая проверка живости деплоя (когда закончим)
-
-```bash
-# health
-curl https://<subdomain>.duckdns.org/health
-
-# юнит
-systemctl status kairo-server
-
-# логи сервера
-journalctl -u kairo-server -n 100 --no-pager
-
-# что слушает kairo
-ss -tlnp | grep 8787
-```
+- Изначально начинали ставить как co-host на сервер Observ (`81.90.31.239`) → отказались, взяли отдельный VPS.
+- ed25519-ключ на Windows сгенерён один раз, используется для обоих серверов.
+- Старый VPS Observ по-прежнему имеет наш ключ в `/root/.ssh/authorized_keys` — если больше не нужен, можно удалить строку с `kairo-vps`.
