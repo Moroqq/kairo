@@ -1,7 +1,6 @@
 /**
- * Облачный аккаунт (VPS-синк): создание при первом запуске, парность
- * дополнительных устройств через билет, восстановление по коду.
- * Полностью отдельно от LAN-синка — тот работает без всякого аккаунта.
+ * Облачный аккаунт (VPS-синк): создание при первом запуске, добавление
+ * новых устройств через инвертированный QR-flow, восстановление по коду.
  */
 
 const SERVER_URL = (import.meta.env.VITE_KAIRO_SERVER_URL as string | undefined) ?? 'http://localhost:8787';
@@ -43,7 +42,7 @@ export function hasAccount(): boolean {
   return getCredentials() !== null;
 }
 
-/** Показывать ли одноразовый экран кода восстановления (ещё ни разу не показывался на этом устройстве). */
+/** Показывать ли одноразовый экран кода восстановления. */
 export function shouldShowRecoveryCode(): boolean {
   return localStorage.getItem(RECOVERY_SHOWN_KEY) !== '1';
 }
@@ -68,7 +67,7 @@ async function postJSON<T>(path: string, body: unknown, token?: string): Promise
   return res.json() as Promise<T>;
 }
 
-/** Первый запуск на первом устройстве — создаёт аккаунт «с нуля». Возвращает код восстановления (показать один раз). */
+/** Первый запуск на первом устройстве — создаёт аккаунт «с нуля». */
 export async function createAccount(): Promise<string> {
   const res = await postJSON<{ account_id: string; device_id: string; device_token: string; recovery_code: string }>(
     '/accounts',
@@ -78,24 +77,58 @@ export async function createAccount(): Promise<string> {
   return res.recovery_code;
 }
 
-/** Уже привязанное устройство запрашивает билет для добавления нового. */
-export async function requestPairingTicket(): Promise<{ ticket: string; expiresAt: string }> {
+// ── Инвертированный QR-flow ─────────────────────────────────────────────
+
+export interface PairingIntent {
+  intentId: string;
+  expiresAt: string;
+}
+
+/** Новое устройство создаёт intent — сервер выдаёт id, устройство рисует QR. */
+export async function startPairing(): Promise<PairingIntent> {
+  const res = await postJSON<{ intent_id: string; expires_at: string }>('/pairing/start', {});
+  return { intentId: res.intent_id, expiresAt: res.expires_at };
+}
+
+export type PairingWaitResult =
+  | { status: 'approved' }
+  | { status: 'pending' }
+  | { status: 'expired' | 'not_found' | 'already_consumed' };
+
+/**
+ * Long-poll: ждёт одобрения intent-а. При approved сохраняет полученные
+ * креды в localStorage. Возвращает статус.
+ */
+export async function waitForPairing(intentId: string): Promise<PairingWaitResult> {
+  const res = await fetch(`${SERVER_URL}/pairing/wait/${encodeURIComponent(intentId)}`);
+  if (res.status === 200) {
+    const body = await res.json() as { account_id: string; device_id: string; device_token: string };
+    saveCredentials({ accountId: body.account_id, deviceId: body.device_id, deviceToken: body.device_token });
+    return { status: 'approved' };
+  }
+  if (res.status === 202) return { status: 'pending' };
+  if (res.status === 404) return { status: 'not_found' };
+  if (res.status === 410) {
+    const body = await res.json().catch(() => ({ status: 'expired' })) as { status?: string };
+    return { status: (body.status as 'expired' | 'already_consumed') ?? 'expired' };
+  }
+  throw new Error(`unexpected_status_${res.status}`);
+}
+
+/** Родительское устройство одобряет intent, полученный из QR-кода. */
+export async function approvePairing(intentId: string): Promise<void> {
   const creds = getCredentials();
   if (!creds) throw new Error('no_account');
-  const res = await postJSON<{ ticket: string; expires_at: string }>('/pairing/tickets', {}, creds.deviceToken);
-  return { ticket: res.ticket, expiresAt: res.expires_at };
-}
-
-/** Новое устройство — обменивает билет (из QR-ссылки или введённый вручную) на собственный токен. */
-export async function redeemPairingTicket(ticket: string): Promise<void> {
-  const res = await postJSON<{ account_id: string; device_id: string; device_token: string }>(
-    '/pairing/redeem',
-    { ticket, device_label: platformLabel(), platform: platformLabel() },
+  await postJSON<{ ok: true }>(
+    '/pairing/approve',
+    { intent_id: intentId, device_label: platformLabel(), platform: platformLabel() },
+    creds.deviceToken,
   );
-  saveCredentials({ accountId: res.account_id, deviceId: res.device_id, deviceToken: res.device_token });
 }
 
-/** Восстановление по коду (все устройства потеряны). Возвращает НОВЫЙ код восстановления — старые устройства отзываются. */
+// ── Восстановление ──────────────────────────────────────────────────────
+
+/** Восстановление по коду. Возвращает НОВЫЙ код взамен старого. */
 export async function redeemRecoveryCode(recoveryCode: string): Promise<string> {
   const res = await postJSON<{ account_id: string; device_id: string; device_token: string; recovery_code: string }>(
     '/recovery/redeem',
@@ -103,9 +136,4 @@ export async function redeemRecoveryCode(recoveryCode: string): Promise<string> 
   );
   saveCredentials({ accountId: res.account_id, deviceId: res.device_id, deviceToken: res.device_token });
   return res.recovery_code;
-}
-
-/** Ссылка для QR-парности — сканируется обычной камерой телефона, открывает Kairo через deep link. */
-export function pairingDeepLink(ticket: string): string {
-  return `kairo://pair?ticket=${encodeURIComponent(ticket)}`;
 }

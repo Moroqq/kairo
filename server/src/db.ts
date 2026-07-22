@@ -41,6 +41,20 @@ db.exec(`
     consumed_at   TEXT
   );
 
+  -- Инвертированный QR-flow: новое устройство создаёт intent и показывает
+  -- его id в QR, родительское сканирует и одобряет через /pairing/approve.
+  -- approved_* поля заполняются в момент одобрения, потом одноразово
+  -- забираются через /pairing/wait и не сохраняются в открытом виде.
+  CREATE TABLE IF NOT EXISTS pairing_intents (
+    id                       TEXT PRIMARY KEY,
+    created_at               TEXT NOT NULL DEFAULT (datetime('now')),
+    expires_at               TEXT NOT NULL,
+    approved_at              TEXT,
+    approved_account_id      TEXT REFERENCES accounts(id) ON DELETE CASCADE,
+    approved_device_id       TEXT,
+    approved_device_token    TEXT  -- транзиентно; удаляется после первого чтения waitером
+  );
+
   CREATE TABLE IF NOT EXISTS sync_blobs (
     account_id  TEXT PRIMARY KEY REFERENCES accounts(id) ON DELETE CASCADE,
     data        TEXT NOT NULL,

@@ -15,64 +15,12 @@ import { WeeksPage } from '@/pages/WeeksPage';
 import { ExpensesPage } from '@/pages/ExpensesPage';
 import { EventLog } from '@/pages/EventLog';
 import { TrashPage } from '@/pages/TrashPage';
-import { LanSyncPage } from '@/pages/LanSyncPage';
+import { SyncPage } from '@/pages/SyncPage';
 import { pruneTrash } from '@/services/tasks.service';
-import lanSync, { isDesktopHost, isTauriEnv } from '@/services/lan-sync.service';
 import { useAccountStore } from '@/stores/account.store';
 import { RecoveryCodeReveal } from '@/components/onboarding/RecoveryCodeReveal';
-import { useToast } from '@/components/ui/Toast';
 
-/** Достаёт ticket из ссылки вида kairo://pair?ticket=XXXXXXXX. */
-function extractPairingTicket(url: string): string | null {
-  try {
-    const parsed = new URL(url);
-    return parsed.searchParams.get('ticket');
-  } catch {
-    return null;
-  }
-}
-
-/** Обрабатывает открытие приложения по deep-link kairo://pair?ticket=... (сканирование QR камерой телефона). */
-function DeepLinkPairingHandler() {
-  const pairWithTicket = useAccountStore((s) => s.pairWithTicket);
-  const hasAccount = useAccountStore((s) => s.hasAccount);
-  const { toast } = useToast();
-
-  useEffect(() => {
-    if (!isTauriEnv()) return;
-
-    const handleUrls = async (urls: string[]) => {
-      const ticket = urls.map(extractPairingTicket).find((t): t is string => !!t);
-      if (!ticket) return;
-      if (hasAccount) {
-        toast('На этом устройстве уже есть облачный аккаунт', 'info');
-        return;
-      }
-      try {
-        await pairWithTicket(ticket);
-        toast('Устройство подключено к облаку');
-      } catch {
-        toast('Не удалось подключиться — код устарел или уже использован', 'error');
-      }
-    };
-
-    let unlisten: (() => void) | undefined;
-    (async () => {
-      const { getCurrent, onOpenUrl } = await import('@tauri-apps/plugin-deep-link');
-      const current = await getCurrent().catch(() => null);
-      if (current) await handleUrls(current);
-      unlisten = await onOpenUrl(handleUrls).catch(() => undefined);
-    })();
-
-    return () => unlisten?.();
-  }, [pairWithTicket, hasAccount, toast]);
-
-  return null;
-}
-
-/** Обёртка перехода между разделами — короткий fade + сдвиг, без блокировки ввода.
- *  Абсолютное позиционирование — старая и новая страницы накладываются друг на
- *  друга во время перехода, а не толкают layout (родитель уже position:relative). */
+/** Обёртка перехода между разделами — короткий fade + сдвиг, без блокировки ввода. */
 function PageTransition({ children }: { children: React.ReactNode }) {
   return (
     <motion.div
@@ -89,10 +37,6 @@ function PageTransition({ children }: { children: React.ReactNode }) {
 function AnimatedRoutes() {
   const location = useLocation();
   return (
-    // Без mode="wait": старая и новая страница анимируются одновременно, не
-    // блокируя друг друга — если анимация где-то внутри страницы прервётся
-    // (например, вложенный AnimatePresence в календаре), переход всё равно
-    // завершится, а не зависнет в ожидании.
     <AnimatePresence initial={false}>
       <Routes location={location} key={location.pathname}>
         <Route path="/"         element={<PageTransition><FocusPage /></PageTransition>} />
@@ -103,7 +47,7 @@ function AnimatedRoutes() {
         <Route path="/expenses" element={<PageTransition><ExpensesPage /></PageTransition>} />
         <Route path="/log"      element={<PageTransition><EventLog /></PageTransition>} />
         <Route path="/trash"    element={<PageTransition><TrashPage /></PageTransition>} />
-        <Route path="/sync"     element={<PageTransition><LanSyncPage /></PageTransition>} />
+        <Route path="/sync"     element={<PageTransition><SyncPage /></PageTransition>} />
         <Route path="*"         element={<Navigate to="/" replace />} />
       </Routes>
     </AnimatePresence>
@@ -118,12 +62,6 @@ export default function App() {
 
   useEffect(() => applyTheme(theme), [theme]);
   useEffect(() => { pruneTrash(); }, []);
-  useEffect(() => {
-    if (isDesktopHost()) {
-      lanSync.initHost();
-      return () => { lanSync.destroyHost(); };
-    }
-  }, []);
   useEffect(() => {
     // Только читаем, есть ли уже локально сохранённый облачный аккаунт —
     // ничего не создаём автоматически (иначе каждое новое устройство
@@ -142,7 +80,6 @@ export default function App() {
         {recoveryCodeToShow && (
           <RecoveryCodeReveal recoveryCode={recoveryCodeToShow} onConfirm={dismissRecoveryReveal} />
         )}
-        <DeepLinkPairingHandler />
       </ToastProvider>
     </QueryClientProvider>
   );

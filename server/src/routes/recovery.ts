@@ -1,6 +1,7 @@
 import type { FastifyInstance } from 'fastify';
 import { db, withTransaction } from '../db.js';
 import { newId, isValidRecoveryCodeFormat, hashRecoveryCode, generateRecoveryCode, generateDeviceToken, hashToken } from '../crypto.js';
+import { makeRateLimiter } from '../rate-limit.js';
 
 interface RedeemBody {
   recovery_code?: string;
@@ -17,14 +18,26 @@ const rotateRecoveryCode = db.prepare(`UPDATE accounts SET recovery_code_hash = 
 const revokeOtherDevices = db.prepare(`UPDATE devices SET revoked_at = datetime('now') WHERE account_id = ? AND revoked_at IS NULL`);
 const insertDevice = db.prepare(`INSERT INTO devices (id, account_id, token_hash, label, platform) VALUES (?, ?, ?, ?, ?)`);
 
+// 10 попыток в час на IP. Полный перебор 6-символьного кода (~887M вариантов)
+// при таких лимитах — сотни тысяч лет. Целевая атака невозможна.
+const recoveryRateLimit = makeRateLimiter({ windowMs: 60 * 60 * 1000, max: 10 });
+
 export function registerRecoveryRoutes(app: FastifyInstance): void {
   /**
    * Восстановление по коду — потерял все устройства. Выдаёт новое устройство,
-   * ОТЗЫВАЕТ все прежние (защитный дефолт: если код утёк не туда, старые
-   * легитимные устройства сами отвалятся при следующей попытке синка — это
-   * и есть сигнал, что что-то не так) и выпускает новый код взамен старого.
+   * ОТЗЫВАЕТ все прежние и выпускает новый код взамен старого.
+   *
+   * Принимает и новый короткий формат, и legacy 12-словную BIP39-фразу
+   * (для миграции старых аккаунтов). Всегда возвращает НОВЫЙ короткий код.
    */
   app.post<{ Body: RedeemBody }>('/recovery/redeem', async (req, reply) => {
+    const ip = req.ip;
+    const gate = recoveryRateLimit(ip);
+    if (!gate.ok) {
+      reply.header('Retry-After', String(gate.retryAfterSec ?? 60));
+      return reply.code(429).send({ error: 'too_many_attempts', retry_after_sec: gate.retryAfterSec });
+    }
+
     const code = req.body?.recovery_code;
     if (!code || !isValidRecoveryCodeFormat(code)) {
       return reply.code(400).send({ error: 'invalid_recovery_code_format' });

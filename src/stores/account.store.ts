@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import {
   hasAccount, createAccount, shouldShowRecoveryCode, markRecoveryCodeShown,
-  redeemPairingTicket, redeemRecoveryCode,
+  redeemRecoveryCode,
 } from '@/lib/account';
 
 interface AccountState {
@@ -9,15 +9,12 @@ interface AccountState {
   hasAccount: boolean;
   recoveryCodeToShow: string | null; // не null → показываем RecoveryCodeReveal с этим кодом
 
-  /** Только читает локальное состояние — НИЧЕГО не создаёт на сервере сама.
-   *  Создание аккаунта — осознанное действие пользователя (см. createNewAccount),
-   *  иначе КАЖДОЕ новое устройство при первом запуске заводило бы свой
-   *  отдельный аккаунт вместо того, чтобы дождаться парности с существующим. */
   checkLocalState: () => void;
   createNewAccount: () => Promise<void>;
-  dismissRecoveryReveal: () => void;
-  pairWithTicket: (ticket: string) => Promise<void>;
   recoverWithCode: (code: string) => Promise<void>;
+  dismissRecoveryReveal: () => void;
+  /** После успешного pairing (через SyncPage QR-flow) — обновить UI. */
+  refreshAfterPairing: () => void;
 }
 
 export const useAccountStore = create<AccountState>((set) => ({
@@ -38,19 +35,18 @@ export const useAccountStore = create<AccountState>((set) => ({
     });
   },
 
+  /** Восстановление выдаёт НОВЫЙ код взамен старого — его тоже нужно показать один раз. */
+  recoverWithCode: async (code: string) => {
+    const newRecoveryCode = await redeemRecoveryCode(code);
+    set({ hasAccount: true, recoveryCodeToShow: newRecoveryCode });
+  },
+
   dismissRecoveryReveal: () => {
     markRecoveryCodeShown();
     set({ recoveryCodeToShow: null });
   },
 
-  pairWithTicket: async (ticket: string) => {
-    await redeemPairingTicket(ticket);
-    set({ hasAccount: true });
-  },
-
-  /** Восстановление выдаёт НОВЫЙ код взамен старого — его тоже нужно показать один раз. */
-  recoverWithCode: async (code: string) => {
-    const newRecoveryCode = await redeemRecoveryCode(code);
-    set({ hasAccount: true, recoveryCodeToShow: newRecoveryCode });
+  refreshAfterPairing: () => {
+    set({ hasAccount: hasAccount() });
   },
 }));
