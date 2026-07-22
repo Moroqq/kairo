@@ -1,5 +1,6 @@
 import Fastify from 'fastify';
 import websocketPlugin from '@fastify/websocket';
+import corsPlugin from '@fastify/cors';
 import { registerAccountRoutes } from './routes/accounts.js';
 import { registerPairingRoutes } from './routes/pairing.js';
 import { registerRecoveryRoutes } from './routes/recovery.js';
@@ -9,6 +10,12 @@ import './db.js'; // инициализирует схему при старте
 
 const app = Fastify({ logger: true });
 
+await app.register(corsPlugin, {
+  origin: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization'],
+  credentials: true,
+});
 await app.register(websocketPlugin);
 
 app.get('/health', async () => ({ ok: true }));

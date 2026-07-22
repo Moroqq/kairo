@@ -9,6 +9,7 @@
     "start": "node dist/index.js"
   },
   "dependencies": {
+    "@fastify/cors": "^11.3.0",
     "@fastify/websocket": "^11.0.2",
     "bip39": "^3.1.0",
     "fastify": "^5.2.1"
