@@ -247,22 +247,22 @@ function UnpairedView() {
             <Card>
               <div className="p-4">
                 <p className="font-mono mb-2" style={{ fontSize: 12, color: 'var(--text-muted)' }}>
-                  Введи 6-символьный код восстановления.
+                  Введи 6-символьный код восстановления. Старые аккаунты
+                  с 12-словной фразой тоже принимаются.
                 </p>
-                <div className="flex gap-2">
-                  <input
-                    type="text"
+                <div className="flex flex-col gap-2">
+                  <textarea
                     value={code}
-                    onChange={(e) => setCode(e.target.value.toUpperCase())}
-                    placeholder="XXXXXX"
-                    maxLength={7}
-                    className="flex-1 font-mono px-3 py-2 rounded"
-                    style={{ background: 'var(--input-bg)', color: 'var(--text-1)', border: '1px solid var(--border)', letterSpacing: 4, fontSize: 15 }}
+                    onChange={(e) => setCode(e.target.value)}
+                    placeholder="XXXXXX или 12 слов через пробел"
+                    rows={2}
+                    className="w-full font-mono px-3 py-2 rounded"
+                    style={{ background: 'var(--input-bg)', color: 'var(--text-1)', border: '1px solid var(--border)', fontSize: 14, resize: 'vertical' }}
                   />
                   <button
                     onClick={handleRecover}
                     disabled={busy || !code.trim()}
-                    className="font-mono px-4 rounded"
+                    className="font-mono py-2 rounded"
                     style={{ background: 'transparent', color: 'var(--text-1)', border: '1px solid var(--border)', cursor: 'pointer' }}
                   >
                     войти
