@@ -1,76 +1,33 @@
-import Anthropic from '@anthropic-ai/sdk';
 import type { TaskPreview } from '@/types';
+import { getCredentials } from '@/lib/account';
 
-const client = new Anthropic({
-  apiKey: import.meta.env.VITE_PARSER_KEY as string,
-  dangerouslyAllowBrowser: true,
-});
+const SERVER_URL =
+  (import.meta.env.VITE_KAIRO_SERVER_URL as string | undefined) ?? 'http://localhost:8787';
 
-const SYSTEM_PROMPT = `You are a task parser for a personal operational management system.
-Extract task information from the user's input and return ONLY valid JSON — no markdown, no explanation.
+async function callParse<TBody extends object>(path: string, body: TBody): Promise<TaskPreview> {
+  const creds = getCredentials();
+  if (!creds) throw new Error('no_account');
 
-Return exactly this structure:
-{
-  "title": "short action-oriented title (max 60 chars)",
-  "description": "expanded details, or empty string",
-  "priority": "A|B|C",
-  "category": "inferred category or empty string",
-  "deadline": "ISO8601 datetime or null",
-  "summary": "one concise sentence summary"
-}
-
-Priority rules:
-- A: urgent, critical, immediate, emergency, asap
-- B: today, must do, important, high priority
-- C: planned, scheduled, normal, this week, optional, someday, nice to have
-
-Today's date: {TODAY}
-Resolve relative dates (tomorrow, next Monday, через 2 дня) to absolute ISO8601 dates.
-If no deadline mentioned, return null for deadline.
-Respond in the same language as the input for title, description, and category.`;
-
-export async function parseTaskFromText(input: string): Promise<TaskPreview> {
-  const today = new Date().toISOString().split('T')[0];
-  const message = await client.messages.create({
-    model: 'claude-sonnet-4-6',
-    max_tokens: 512,
-    system: SYSTEM_PROMPT.replace('{TODAY}', today),
-    messages: [{ role: 'user', content: input }],
+  const res = await fetch(`${SERVER_URL}${path}`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${creds.deviceToken}`,
+    },
+    body: JSON.stringify(body),
   });
 
-  const text = message.content[0].type === 'text' ? message.content[0].text : '';
-  const jsonMatch = text.match(/\{[\s\S]*\}/);
-  if (!jsonMatch) throw new Error('Failed to parse response');
-
-  return JSON.parse(jsonMatch[0]) as TaskPreview;
+  if (!res.ok) {
+    const text = await res.text().catch(() => '');
+    throw new Error(`parse_failed:${res.status}:${text.slice(0, 200)}`);
+  }
+  return (await res.json()) as TaskPreview;
 }
 
-export async function parseTaskFromImage(base64Image: string, mimeType: string): Promise<TaskPreview> {
-  const today = new Date().toISOString().split('T')[0];
-  const message = await client.messages.create({
-    model: 'claude-sonnet-4-6',
-    max_tokens: 512,
-    system: SYSTEM_PROMPT.replace('{TODAY}', today),
-    messages: [
-      {
-        role: 'user',
-        content: [
-          {
-            type: 'image',
-            source: { type: 'base64', media_type: mimeType as 'image/png' | 'image/jpeg' | 'image/webp', data: base64Image },
-          },
-          {
-            type: 'text',
-            text: 'Extract the task from this screenshot/image.',
-          },
-        ],
-      },
-    ],
-  });
+export function parseTaskFromText(input: string): Promise<TaskPreview> {
+  return callParse('/ai/parse-text', { text: input });
+}
 
-  const text = message.content[0].type === 'text' ? message.content[0].text : '';
-  const jsonMatch = text.match(/\{[\s\S]*\}/);
-  if (!jsonMatch) throw new Error('Failed to parse response');
-
-  return JSON.parse(jsonMatch[0]) as TaskPreview;
+export function parseTaskFromImage(base64Image: string, mimeType: string): Promise<TaskPreview> {
+  return callParse('/ai/parse-image', { image: base64Image, mime: mimeType });
 }
