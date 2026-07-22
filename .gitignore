@@ -7,6 +7,11 @@ dist-ssr
 
 # Tauri
 src-tauri/target
+# Updater signing keys — приватный ключ НИКОГДА не должен попасть в git.
+# Публичный (updater.key.pub) не секрет, но нам всё равно достаточно
+# хранить его в tauri.conf.json — файл на диске не нужен.
+src-tauri/updater.key
+src-tauri/updater.key.pub
 
 # Kairo server (VPS backend)
 server/dist

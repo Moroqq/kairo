@@ -19,6 +19,7 @@ import { SyncPage } from '@/pages/SyncPage';
 import { pruneTrash } from '@/services/tasks.service';
 import { useAccountStore } from '@/stores/account.store';
 import { RecoveryCodeReveal } from '@/components/onboarding/RecoveryCodeReveal';
+import { UpdateBanner } from '@/components/updates/UpdateBanner';
 
 /** Обёртка перехода между разделами — короткий fade + сдвиг, без блокировки ввода. */
 function PageTransition({ children }: { children: React.ReactNode }) {
@@ -80,6 +81,7 @@ export default function App() {
         {recoveryCodeToShow && (
           <RecoveryCodeReveal recoveryCode={recoveryCodeToShow} onConfirm={dismissRecoveryReveal} />
         )}
+        <UpdateBanner />
       </ToastProvider>
     </QueryClientProvider>
   );
