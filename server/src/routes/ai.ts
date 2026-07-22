@@ -2,8 +2,8 @@ import type { FastifyInstance } from 'fastify';
 import { requireAuth } from '../auth.js';
 import { openRouterChat } from '../openrouter.js';
 
-const TEXT_MODEL = process.env.OPENROUTER_TEXT_MODEL ?? 'qwen/qwen-2.5-72b-instruct:free';
-const IMAGE_MODEL = process.env.OPENROUTER_IMAGE_MODEL ?? 'qwen/qwen-2.5-vl-72b-instruct:free';
+const TEXT_MODEL = process.env.OPENROUTER_TEXT_MODEL ?? 'nvidia/nemotron-3-ultra-550b-a55b:free';
+const IMAGE_MODEL = process.env.OPENROUTER_IMAGE_MODEL ?? 'nvidia/nemotron-nano-12b-v2-vl:free';
 
 const SYSTEM_PROMPT = `You are a task parser for a personal operational management system.
 Extract task information from the user's input and return ONLY valid JSON — no markdown, no explanation.

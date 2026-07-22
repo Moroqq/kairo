@@ -1,4 +1,6 @@
-const URL = 'https://openrouter.ai/api/v1/chat/completions';
+const BASE = process.env.OPENROUTER_BASE_URL ?? 'https://openrouter.ai';
+const URL = `${BASE.replace(/\/$/, '')}/api/v1/chat/completions`;
+const PROXY_SECRET = process.env.OPENROUTER_PROXY_SECRET ?? '';
 
 type Content =
   | string
@@ -22,14 +24,17 @@ export async function openRouterChat(params: ORChatParams): Promise<string> {
   const apiKey = process.env.OPENROUTER_API_KEY;
   if (!apiKey) throw new Error('OPENROUTER_API_KEY not set');
 
+  const headers: Record<string, string> = {
+    Authorization: `Bearer ${apiKey}`,
+    'Content-Type': 'application/json',
+    'HTTP-Referer': 'https://kairogoupyrlife.duckdns.org',
+    'X-Title': 'Kairo',
+  };
+  if (PROXY_SECRET) headers['X-Proxy-Secret'] = PROXY_SECRET;
+
   const res = await fetch(URL, {
     method: 'POST',
-    headers: {
-      Authorization: `Bearer ${apiKey}`,
-      'Content-Type': 'application/json',
-      'HTTP-Referer': 'https://kairogoupyrlife.duckdns.org',
-      'X-Title': 'Kairo',
-    },
+    headers,
     body: JSON.stringify({
       model: params.model,
       messages: params.messages,
