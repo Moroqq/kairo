@@ -452,5 +452,18 @@ export function SyncPage() {
   const hasAccount = useAccountStore((s) => s.hasAccount);
   const ready = useAccountStore((s) => s.ready);
   if (!ready) return null;
-  return hasAccount ? <PairedView /> : <UnpairedView />;
+  return (
+    <>
+      {hasAccount ? <PairedView /> : <UnpairedView />}
+      <div
+        className="font-mono"
+        style={{
+          position: 'absolute', bottom: 8, right: 12,
+          fontSize: 10, color: 'var(--text-muted)', letterSpacing: 1, pointerEvents: 'none',
+        }}
+      >
+        kairo v{__APP_VERSION__}
+      </div>
+    </>
+  );
 }
