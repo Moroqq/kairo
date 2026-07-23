@@ -1,6 +1,6 @@
 [package]
 name = "kairo"
-version = "0.4.5"
+version = "0.4.6"
 description = "Personal AI Operational Desktop Assistant"
 authors = []
 edition = "2021"
