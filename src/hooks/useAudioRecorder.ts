@@ -66,6 +66,24 @@ export function useAudioRecorder(): UseAudioRecorderReturn {
     };
   }, []);
 
+  const mimeRef = useRef<string>('audio/webm');
+
+  const pickMime = (): string => {
+    // Android WebView часто не поддерживает голый 'audio/webm', но нормально
+    // хавает с уточнённым codec, а на некоторых устройствах — только mp4/ogg.
+    const candidates = [
+      'audio/webm;codecs=opus',
+      'audio/webm',
+      'audio/ogg;codecs=opus',
+      'audio/mp4',
+      '', // финальный fallback — пусть браузер сам выберет
+    ];
+    for (const m of candidates) {
+      if (!m || (typeof MediaRecorder !== 'undefined' && MediaRecorder.isTypeSupported(m))) return m;
+    }
+    return '';
+  };
+
   const startRecording = useCallback(async () => {
     setError(null);
     try {
@@ -73,14 +91,18 @@ export function useAudioRecorder(): UseAudioRecorderReturn {
       streamRef.current = stream;
       chunksRef.current = [];
 
-      const recorder = new MediaRecorder(stream, { mimeType: 'audio/webm' });
+      const mime = pickMime();
+      mimeRef.current = mime || 'audio/webm';
+      const recorder = mime ? new MediaRecorder(stream, { mimeType: mime }) : new MediaRecorder(stream);
       mediaRecorderRef.current = recorder;
 
       recorder.ondataavailable = (e) => {
         if (e.data.size > 0) chunksRef.current.push(e.data);
       };
 
-      recorder.start(100);
+      // Меньший тайм-слайс = чаще обновляются чанки. Стоп-тап минимум ~150мс
+      // всё равно нужен, иначе Groq не примет пустышку. Это ниже валидируем.
+      recorder.start(50);
       setState('recording');
       startVolumeMonitor(stream);
     } catch (err) {
@@ -98,10 +120,14 @@ export function useAudioRecorder(): UseAudioRecorderReturn {
     return new Promise((resolve) => {
       recorder.onstop = () => {
         stream?.getTracks().forEach((t) => t.stop());
-        const blob = new Blob(chunksRef.current, { type: 'audio/webm' });
+        const blob = new Blob(chunksRef.current, { type: mimeRef.current });
         setState('idle');
-        resolve(blob.size > 0 ? blob : null);
+        // Отбраковываем совсем пустышки (<1 КБ ≈ короче ~50мс тишины).
+        resolve(blob.size > 1024 ? blob : null);
       };
+      // requestData() принудительно сбрасывает буфер в ondataavailable перед stop —
+      // спасает при супер-коротком тапе, когда обычный timeslice не успел выстрелить.
+      try { recorder.requestData(); } catch { /* not supported everywhere */ }
       recorder.stop();
       setState('processing');
     });
