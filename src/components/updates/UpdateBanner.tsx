@@ -1,71 +1,99 @@
 import { useCallback, useEffect, useState } from 'react';
-import { Download, X, Loader2 } from 'lucide-react';
+import { Download, X, Loader2, RefreshCw } from 'lucide-react';
 import { check, type Update } from '@tauri-apps/plugin-updater';
 import { relaunch } from '@tauri-apps/plugin-process';
 
-type Phase = 'hidden' | 'available' | 'downloading' | 'installing' | 'done' | 'error';
+type Phase =
+  | 'idle'
+  | 'checking'
+  | 'available'
+  | 'no-update'
+  | 'downloading'
+  | 'installing'
+  | 'done'
+  | 'error';
 
 /**
- * Проверяет наличие обновления при монтировании (по manifest'у
- * `plugins.updater.endpoints` из tauri.conf.json), рендерит баннер если
- * версия новее. Кнопка «Обновить» — скачивает + ставит + перезапускает.
- * Полностью no-op в браузере (плагин недоступен вне Tauri).
+ * Проверяет наличие обновления. При старте — тихо. Если версия новее —
+ * снизу баннер "есть новая версия" с кнопкой. Также экспортирует хук
+ * useUpdateCheck() чтобы SyncPage мог триггерить перепроверку вручную
+ * (с видимым результатом — успех / нет обнов / ошибка).
  */
+
+// Единый store-в-модуле: SyncPage дёргает checkNow(), баннер реагирует.
+type Listener = (state: BannerState) => void;
+export interface BannerState {
+  phase: Phase;
+  update: Update | null;
+  errorMsg: string | null;
+  progress: { done: number; total: number | null };
+}
+
+let state: BannerState = { phase: 'idle', update: null, errorMsg: null, progress: { done: 0, total: null } };
+const listeners = new Set<Listener>();
+const setState = (patch: Partial<BannerState>) => {
+  state = { ...state, ...patch };
+  listeners.forEach((l) => l(state));
+};
+
+export async function checkNow(): Promise<void> {
+  setState({ phase: 'checking', errorMsg: null });
+  try {
+    const u = await check();
+    if (u) setState({ phase: 'available', update: u });
+    else setState({ phase: 'no-update' });
+  } catch (e) {
+    setState({ phase: 'error', errorMsg: e instanceof Error ? e.message : String(e) });
+  }
+}
+
+export function useBannerState(): BannerState {
+  const [s, setS] = useState<BannerState>(state);
+  useEffect(() => {
+    listeners.add(setS);
+    return () => { listeners.delete(setS); };
+  }, []);
+  return s;
+}
+
 export function UpdateBanner() {
-  const [phase, setPhase] = useState<Phase>('hidden');
-  const [update, setUpdate] = useState<Update | null>(null);
-  const [progress, setProgress] = useState<{ done: number; total: number | null }>({ done: 0, total: null });
-  const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const s = useBannerState();
 
   useEffect(() => {
-    let cancelled = false;
-    (async () => {
-      try {
-        const u = await check();
-        if (cancelled) return;
-        if (u) {
-          setUpdate(u);
-          setPhase('available');
-        }
-      } catch {
-        // Плагин недоступен или сеть — молча ничего не показываем.
-      }
-    })();
-    return () => { cancelled = true; };
+    // Автопроверка при старте — тихая: если ничего нет, баннер не рендерится.
+    checkNow();
   }, []);
 
   const doUpdate = useCallback(async () => {
-    if (!update) return;
-    setPhase('downloading');
-    setErrorMsg(null);
+    if (!s.update) return;
+    setState({ phase: 'downloading', errorMsg: null, progress: { done: 0, total: null } });
     try {
       let total: number | null = null;
       let done = 0;
-      await update.downloadAndInstall((event) => {
+      await s.update.downloadAndInstall((event) => {
         if (event.event === 'Started') {
           total = event.data.contentLength ?? null;
-          setProgress({ done: 0, total });
+          setState({ progress: { done: 0, total } });
         } else if (event.event === 'Progress') {
           done += event.data.chunkLength;
-          setProgress({ done, total });
+          setState({ progress: { done, total } });
         } else if (event.event === 'Finished') {
-          setPhase('installing');
+          setState({ phase: 'installing' });
         }
       });
-      setPhase('done');
-      // На десктопе — перезапускаем сами. На Android процесс перезапускается
-      // системой после установки, relaunch() тихо no-op.
-      try { await relaunch(); } catch { /* ignore */ }
+      setState({ phase: 'done' });
+      try { await relaunch(); } catch { /* Android перезапускается сам */ }
     } catch (e) {
-      setPhase('error');
-      setErrorMsg(e instanceof Error ? e.message : String(e));
+      setState({ phase: 'error', errorMsg: e instanceof Error ? e.message : String(e) });
     }
-  }, [update]);
+  }, [s.update]);
 
-  if (phase === 'hidden' || !update) return null;
+  // 'idle' и 'no-update' — ничего не рендерим (кроме случая когда SyncPage
+  // сам хочет показать статус — там своя UI).
+  if (s.phase === 'idle' || s.phase === 'no-update') return null;
 
   const humanSize = (b: number) => `${(b / (1024 * 1024)).toFixed(1)} МБ`;
-  const pct = progress.total ? Math.min(100, Math.round((progress.done / progress.total) * 100)) : null;
+  const pct = s.progress.total ? Math.min(100, Math.round((s.progress.done / s.progress.total) * 100)) : null;
 
   return (
     <div
@@ -77,10 +105,16 @@ export function UpdateBanner() {
         boxShadow: '0 4px 12px rgba(0,0,0,0.4)',
       }}
     >
-      {phase === 'available' && (
+      {s.phase === 'checking' && (
+        <div className="flex items-center gap-3">
+          <Loader2 size={14} className="animate-spin" />
+          <span style={{ color: 'var(--text-muted, #999)' }}>проверяю обновления…</span>
+        </div>
+      )}
+      {s.phase === 'available' && s.update && (
         <div className="flex items-center justify-between gap-3">
           <span style={{ color: 'var(--text-muted, #999)' }}>
-            есть новая версия <b style={{ color: 'var(--text-1, #eee)' }}>v{update.version}</b>
+            есть новая версия <b style={{ color: 'var(--text-1, #eee)' }}>v{s.update.version}</b>
           </span>
           <div className="flex gap-2">
             <button
@@ -91,7 +125,7 @@ export function UpdateBanner() {
               <Download size={12} /> обновить
             </button>
             <button
-              onClick={() => setPhase('hidden')}
+              onClick={() => setState({ phase: 'idle' })}
               className="px-2"
               style={{ background: 'transparent', border: 'none', color: 'var(--text-muted)', cursor: 'pointer' }}
               aria-label="закрыть"
@@ -101,37 +135,48 @@ export function UpdateBanner() {
           </div>
         </div>
       )}
-      {phase === 'downloading' && (
+      {s.phase === 'downloading' && (
         <div className="flex items-center gap-3">
           <Loader2 size={14} className="animate-spin" />
           <span style={{ color: 'var(--text-muted, #999)' }}>
-            скачивание {humanSize(progress.done)}{progress.total ? ` из ${humanSize(progress.total)}` : ''}
+            скачивание {humanSize(s.progress.done)}{s.progress.total ? ` из ${humanSize(s.progress.total)}` : ''}
             {pct !== null ? ` — ${pct}%` : ''}
           </span>
         </div>
       )}
-      {phase === 'installing' && (
+      {s.phase === 'installing' && (
         <div className="flex items-center gap-3">
           <Loader2 size={14} className="animate-spin" />
           <span style={{ color: 'var(--text-muted, #999)' }}>установка…</span>
         </div>
       )}
-      {phase === 'done' && (
-        <div style={{ color: 'var(--text-muted, #999)' }}>
-          готово. перезапуск…
-        </div>
+      {s.phase === 'done' && (
+        <div style={{ color: 'var(--text-muted, #999)' }}>готово. перезапуск…</div>
       )}
-      {phase === 'error' && (
-        <div className="flex items-center justify-between gap-3">
-          <span style={{ color: 'var(--danger, #ef4444)' }}>
-            ошибка обновления: {errorMsg}
-          </span>
-          <button
-            onClick={() => setPhase('hidden')}
-            style={{ background: 'transparent', border: 'none', color: 'var(--text-muted)', cursor: 'pointer' }}
-          >
-            <X size={14} />
-          </button>
+      {s.phase === 'error' && (
+        <div className="flex items-start justify-between gap-3">
+          <div style={{ color: 'var(--danger, #ef4444)', wordBreak: 'break-word' }}>
+            <div style={{ fontWeight: 600, marginBottom: 4 }}>ошибка апдейтера</div>
+            <div style={{ fontSize: 11, opacity: 0.8 }}>{s.errorMsg}</div>
+          </div>
+          <div className="flex gap-1 shrink-0">
+            <button
+              onClick={checkNow}
+              className="px-2"
+              style={{ background: 'transparent', border: 'none', color: 'var(--text-muted)', cursor: 'pointer' }}
+              aria-label="повторить"
+            >
+              <RefreshCw size={14} />
+            </button>
+            <button
+              onClick={() => setState({ phase: 'idle' })}
+              className="px-2"
+              style={{ background: 'transparent', border: 'none', color: 'var(--text-muted)', cursor: 'pointer' }}
+              aria-label="закрыть"
+            >
+              <X size={14} />
+            </button>
+          </div>
         </div>
       )}
     </div>

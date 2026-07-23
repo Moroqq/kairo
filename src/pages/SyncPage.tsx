@@ -8,6 +8,7 @@ import {
   startPairing, waitForPairing, approvePairing, type PairingIntent,
 } from '@/lib/account';
 import vpsSync from '@/services/vps-sync.service';
+import { checkNow, useBannerState } from '@/components/updates/UpdateBanner';
 
 // ── Мелкие UI-хелперы (используются только здесь) ───────────────────────
 
@@ -448,6 +449,33 @@ function ScannerModal({ onClose }: { onClose: () => void }) {
 
 // ── Root ────────────────────────────────────────────────────────────────
 
+function UpdateCheckerRow() {
+  const s = useBannerState();
+  const label = (() => {
+    if (s.phase === 'checking') return 'проверяю…';
+    if (s.phase === 'available' && s.update) return `есть v${s.update.version}`;
+    if (s.phase === 'no-update') return 'уже последняя';
+    if (s.phase === 'error') return `ошибка: ${(s.errorMsg ?? '').slice(0, 60)}`;
+    return 'проверить обновления';
+  })();
+  return (
+    <button
+      onClick={() => checkNow()}
+      disabled={s.phase === 'checking'}
+      className="w-full font-mono py-2 rounded flex items-center justify-center gap-2"
+      style={{
+        background: 'transparent',
+        color: s.phase === 'error' ? 'var(--danger, #ef4444)' : 'var(--text-muted)',
+        border: '1px solid var(--border)',
+        cursor: 'pointer',
+        fontSize: 12,
+      }}
+    >
+      {label}
+    </button>
+  );
+}
+
 export function SyncPage() {
   const hasAccount = useAccountStore((s) => s.hasAccount);
   const ready = useAccountStore((s) => s.ready);
@@ -455,6 +483,9 @@ export function SyncPage() {
   return (
     <>
       {hasAccount ? <PairedView /> : <UnpairedView />}
+      <div style={{ maxWidth: 480, margin: '12px auto 32px', padding: '0 12px' }}>
+        <UpdateCheckerRow />
+      </div>
       <div
         className="font-mono"
         style={{
