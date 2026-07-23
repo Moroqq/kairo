@@ -1,6 +1,7 @@
 import type { FastifyInstance } from 'fastify';
 import { requireAuth } from '../auth.js';
 import { openRouterChat } from '../openrouter.js';
+import { groqTranscribe } from '../groq.js';
 
 const TEXT_MODEL = process.env.OPENROUTER_TEXT_MODEL ?? 'nvidia/nemotron-3-ultra-550b-a55b:free';
 const IMAGE_MODEL = process.env.OPENROUTER_IMAGE_MODEL ?? 'nvidia/nemotron-nano-12b-v2-vl:free';
@@ -83,6 +84,38 @@ export function registerAiRoutes(app: FastifyInstance): void {
       return extractJson(raw);
     } catch (err) {
       req.log.error({ err }, 'ai_parse_image_failed');
+      return reply.code(502).send({ error: 'ai_failed', detail: String(err) });
+    }
+  });
+
+  /**
+   * Транскрибация аудио через Groq Whisper.
+   * multipart/form-data: `audio` (файл) — обязательное поле.
+   * Возвращает { text } — расшифрованный текст.
+   */
+  app.post('/ai/transcribe', {
+    preHandler: requireAuth,
+    // ограничение размера ~25 МБ (лимит Groq Whisper)
+    bodyLimit: 26 * 1024 * 1024,
+  }, async (req, reply) => {
+    const parts = req.parts();
+    let audio: Buffer | null = null;
+    let mime = 'audio/webm';
+    let filename = 'audio.webm';
+    for await (const part of parts) {
+      if (part.type === 'file' && part.fieldname === 'audio') {
+        audio = await part.toBuffer();
+        mime = part.mimetype || mime;
+        filename = part.filename || filename;
+      }
+    }
+    if (!audio) return reply.code(400).send({ error: 'audio_required' });
+
+    try {
+      const text = await groqTranscribe(audio, mime, filename);
+      return { text };
+    } catch (err) {
+      req.log.error({ err }, 'ai_transcribe_failed');
       return reply.code(502).send({ error: 'ai_failed', detail: String(err) });
     }
   });

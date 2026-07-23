@@ -1,6 +1,7 @@
 import Fastify from 'fastify';
 import websocketPlugin from '@fastify/websocket';
 import corsPlugin from '@fastify/cors';
+import multipartPlugin from '@fastify/multipart';
 import { registerAccountRoutes } from './routes/accounts.js';
 import { registerPairingRoutes } from './routes/pairing.js';
 import { registerRecoveryRoutes } from './routes/recovery.js';
@@ -15,6 +16,9 @@ await app.register(corsPlugin, {
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization'],
   credentials: true,
+});
+await app.register(multipartPlugin, {
+  limits: { fileSize: 26 * 1024 * 1024 }, // 25 МБ + запас (лимит Groq Whisper)
 });
 await app.register(websocketPlugin);
 
