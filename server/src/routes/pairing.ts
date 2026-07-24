@@ -143,17 +143,14 @@ export function registerPairingRoutes(app: FastifyInstance): void {
         req.body?.device_label ?? null,
         req.body?.platform ?? null,
       );
-      // Диагностика: смотрим на реальный intent прямо в транзакции.
-      const preRow = findIntent.get(intentId);
-      const info = approveIntent.run(intentId, accountId, deviceId, deviceToken);
-      const postRow = findIntent.get(intentId);
-      req.log.info({
-        insertChanges: String(devInfo.changes),
-        approveChanges: String(info.changes),
-        preRow: JSON.stringify(preRow),
-        postRow: JSON.stringify(postRow),
-      }, 'pairing_approve_diag');
+      // ВНИМАНИЕ: порядок аргументов должен соответствовать порядку `?` в SQL:
+      // SET approved_account_id = ?, approved_device_id = ?, approved_device_token = ?
+      // WHERE id = ?  →  (accountId, deviceId, deviceToken, intentId).
+      // Раньше был перепутан — в WHERE попадал deviceToken, никогда не матчил
+      // и approve валился с "intent_race" на каждый запрос.
+      const info = approveIntent.run(accountId, deviceId, deviceToken, intentId);
       if (Number(info.changes) < 1) throw new Error('intent_race');
+      void devInfo;
     });
 
     return reply.code(200).send({ ok: true });
