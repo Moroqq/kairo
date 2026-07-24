@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import QRCode from 'qrcode';
 import QrScanner from 'qr-scanner';
-import { Download, Upload, QrCode, Camera, X, Loader2 } from 'lucide-react';
+import { QrCode, Camera, X, Loader2 } from 'lucide-react';
 import { useAccountStore } from '@/stores/account.store';
 import { useToast } from '@/components/ui/Toast';
 import {
@@ -281,41 +281,28 @@ function UnpairedView() {
 // ── Экран с аккаунтом ──────────────────────────────────────────────────
 
 function PairedView() {
-  const { toast } = useToast();
   const [scannerOpen, setScannerOpen] = useState(false);
-  const [syncing, setSyncing] = useState<'pull' | 'push' | null>(null);
   const [lastSync, setLastSync] = useState<string | null>(null);
 
-  const handlePull = useCallback(async () => {
-    setSyncing('pull');
-    try {
-      await vpsSync.pull();
-      setLastSync(new Date().toISOString());
-      toast('Данные получены с облака');
-    } catch {
-      toast('Не удалось синхронизироваться — сервер недоступен', 'error');
-    } finally { setSyncing(null); }
-  }, [toast]);
-
-  const handlePush = useCallback(async () => {
-    setSyncing('push');
-    try {
-      await vpsSync.push();
-      setLastSync(new Date().toISOString());
-      toast('Данные отправлены в облако');
-    } catch {
-      toast('Не удалось синхронизироваться — сервер недоступен', 'error');
-    } finally { setSyncing(null); }
-  }, [toast]);
+  // Слушаем ACK от сервера — обновляем таймстамп «последний синк».
+  useEffect(() => {
+    const unsub = vpsSync.onLastSync((ts) => setLastSync(ts));
+    return unsub;
+  }, []);
 
   return (
     <div className="flex-1 overflow-y-auto" style={{ padding: 12 }}>
       <div style={{ maxWidth: 480, margin: '0 auto' }}>
-        <Header title="SYNC" subtitle="облако · через интернет" />
+        <Header title="SYNC" subtitle="облако · автоматический" />
 
         <Card>
           <div className="px-4 py-3 font-mono" style={{ fontSize: 13, color: 'var(--accent-text, #7fe7c7)' }}>
             ✓ облако подключено
+            {lastSync && (
+              <span className="block" style={{ color: 'var(--text-muted)', fontSize: 11, marginTop: 4 }}>
+                последний синк: {new Date(lastSync).toLocaleTimeString('ru-RU')}
+              </span>
+            )}
           </div>
         </Card>
 
@@ -334,27 +321,10 @@ function PairedView() {
         </Card>
 
         <Card>
-          <CardTitle>СИНХРОНИЗАЦИЯ</CardTitle>
-          <div className="px-4 py-3 flex flex-col gap-2">
-            <ActionRow
-              icon={<Download size={14} />}
-              label="Получить данные с облака"
-              desc="Перезаписывает локальные данные тем, что в облаке"
-              onClick={handlePull}
-              disabled={syncing !== null}
-            />
-            <ActionRow
-              icon={<Upload size={14} />}
-              label="Отправить данные в облако"
-              desc="Перезаписывает данные в облаке локальными"
-              onClick={handlePush}
-              disabled={syncing !== null}
-            />
-            {lastSync && (
-              <div className="font-mono mt-1" style={{ fontSize: 11, color: 'var(--text-muted)' }}>
-                Последний синк: {new Date(lastSync).toLocaleTimeString('ru-RU')}
-              </div>
-            )}
+          <div className="px-4 py-3 font-mono" style={{ fontSize: 11, color: 'var(--text-muted)', lineHeight: 1.5 }}>
+            Синхронизация теперь автоматическая: любое изменение уходит
+            в облако через пару секунд после того как ты замер. При открытии
+            приложения данные подтягиваются сами.
           </div>
         </Card>
 

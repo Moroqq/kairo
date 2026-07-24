@@ -128,6 +128,38 @@ class VpsSyncService {
     this.ws = null;
     this.setStatus('idle');
   }
+
+  // ── Автосинк ─────────────────────────────────────────────────────────
+  // pushDebounced() схлопывает быстрые серии мутаций в один push через N сек
+  // тишины. Ошибки глушим — авто-синк не должен беспокоить пользователя,
+  // а next mutation всё равно триггернёт новый push.
+
+  private pushTimer: ReturnType<typeof setTimeout> | null = null;
+  private pushPending = false;
+  private static readonly DEBOUNCE_MS = 3000;
+
+  pushDebounced(): void {
+    if (!getCredentials()) return; // нет аккаунта — тихо no-op
+    if (this.pushTimer) clearTimeout(this.pushTimer);
+    this.pushTimer = setTimeout(() => { void this.tryPush(); }, VpsSyncService.DEBOUNCE_MS);
+  }
+
+  /** Тихий push. Ошибки только в console.warn, помечаем pushPending для ретрая. */
+  private async tryPush(): Promise<void> {
+    this.pushTimer = null;
+    try {
+      await this.push();
+      this.pushPending = false;
+    } catch (err) {
+      this.pushPending = true;
+      console.warn('[vps-sync] auto-push failed:', err);
+    }
+  }
+
+  /** Ретрай залежавшегося push, вызывается на `online` event. */
+  retryPendingPush(): void {
+    if (this.pushPending) this.pushDebounced();
+  }
 }
 
 const vpsSync = new VpsSyncService();

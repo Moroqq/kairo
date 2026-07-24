@@ -53,9 +53,21 @@ export function KanbanBoard() {
     return true;
   });
 
+  // Как давно задача уходит с «Готово» — 7 дней с момента закрытия.
+  // Сама задача остаётся в списке (и попадает в недельный итог), просто
+  // с канбана уходит, чтобы колонка не разрасталась.
+  const DONE_TTL_MS = 7 * 24 * 60 * 60 * 1000;
+
   const getColumnTasks = (columnId: KanbanColumnId) => {
     const col = KANBAN_COLUMNS.find((c) => c.id === columnId)!;
-    return filteredTasks.filter((t) => col.statuses.includes(t.status));
+    return filteredTasks.filter((t) => {
+      if (!col.statuses.includes(t.status)) return false;
+      // Скрываем с канбана «Готово» всё, что закрыто раньше чем неделю назад.
+      if (columnId === 'done' && t.status === 'Resolved' && t.resolved_at) {
+        if (Date.now() - new Date(t.resolved_at).getTime() > DONE_TTL_MS) return false;
+      }
+      return true;
+    });
   };
 
   const handleDragStart = ({ active }: DragStartEvent) => {

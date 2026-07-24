@@ -20,6 +20,8 @@ import { pruneTrash } from '@/services/tasks.service';
 import { useAccountStore } from '@/stores/account.store';
 import { RecoveryCodeReveal } from '@/components/onboarding/RecoveryCodeReveal';
 import { UpdateBanner } from '@/components/updates/UpdateBanner';
+import vpsSync from '@/services/vps-sync.service';
+import { hasAccount } from '@/lib/account';
 
 /** Обёртка перехода между разделами — короткий fade + сдвиг, без блокировки ввода. */
 function PageTransition({ children }: { children: React.ReactNode }) {
@@ -69,6 +71,33 @@ export default function App() {
     // заводило бы себе отдельный аккаунт вместо парности с существующим).
     checkLocalState();
   }, [checkLocalState]);
+
+  // Автосинк: любая успешная TanStack Query мутация → debounced-push в облако.
+  useEffect(() => {
+    const cache = queryClient.getMutationCache();
+    const unsub = cache.subscribe((event) => {
+      // event.type === 'updated' и mutation.state.status === 'success' —
+      // мутация только что завершилась. Планируем push (сам метод тихий,
+      // no-op при отсутствии аккаунта).
+      if (event.type === 'updated' && event.mutation.state.status === 'success') {
+        vpsSync.pushDebounced();
+      }
+    });
+    return unsub;
+  }, []);
+
+  // Auto-pull при старте, если есть креды. Тихо игнорируем сбой сети.
+  useEffect(() => {
+    if (!hasAccount()) return;
+    vpsSync.pull().catch((err) => console.warn('[vps-sync] initial pull failed:', err));
+  }, []);
+
+  // Ретрай залежавшегося push при восстановлении сети.
+  useEffect(() => {
+    const onOnline = () => vpsSync.retryPendingPush();
+    window.addEventListener('online', onOnline);
+    return () => window.removeEventListener('online', onOnline);
+  }, []);
 
   return (
     <QueryClientProvider client={queryClient}>

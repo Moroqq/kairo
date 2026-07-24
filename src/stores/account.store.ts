@@ -3,6 +3,7 @@ import {
   hasAccount, createAccount, shouldShowRecoveryCode, markRecoveryCodeShown,
   redeemRecoveryCode,
 } from '@/lib/account';
+import vpsSync from '@/services/vps-sync.service';
 
 interface AccountState {
   ready: boolean;              // локальное состояние прочитано хотя бы раз
@@ -39,6 +40,8 @@ export const useAccountStore = create<AccountState>((set) => ({
   recoverWithCode: async (code: string) => {
     const newRecoveryCode = await redeemRecoveryCode(code);
     set({ hasAccount: true, recoveryCodeToShow: newRecoveryCode });
+    // Данные на облаке уже могут быть — сразу тянем их локально.
+    vpsSync.pull().catch((err) => console.warn('[vps-sync] post-recovery pull failed:', err));
   },
 
   dismissRecoveryReveal: () => {
@@ -48,5 +51,8 @@ export const useAccountStore = create<AccountState>((set) => ({
 
   refreshAfterPairing: () => {
     set({ hasAccount: hasAccount() });
+    // После успешной парности сразу тянем данные с облака —
+    // пользователю не надо жать никаких кнопок.
+    vpsSync.pull().catch((err) => console.warn('[vps-sync] post-pair pull failed:', err));
   },
 }));
