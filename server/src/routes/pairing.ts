@@ -144,10 +144,10 @@ export function registerPairingRoutes(app: FastifyInstance): void {
         req.body?.platform ?? null,
       );
       const info = approveIntent.run(intentId, accountId, deviceId, deviceToken);
-      // На случай гонки: если approveIntent не апдейтил строку (одобрен пока
-      // мы создавали устройство), откатываем всё — устройство мы уже вставили,
-      // но throw уронит транзакцию.
-      if (info.changes !== 1) throw new Error('intent_race');
+      // ВНИМАНИЕ: info.changes в node:sqlite может быть BigInt, поэтому
+      // сравниваем через Number() — строгое `!== 1` сравнение с bigint 1n
+      // всегда true и роняло approve всегда, даже без реальной гонки.
+      if (Number(info.changes) < 1) throw new Error('intent_race');
     });
 
     return reply.code(200).send({ ok: true });
