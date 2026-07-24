@@ -143,13 +143,15 @@ export function registerPairingRoutes(app: FastifyInstance): void {
         req.body?.device_label ?? null,
         req.body?.platform ?? null,
       );
+      // Диагностика: смотрим на реальный intent прямо в транзакции.
+      const preRow = findIntent.get(intentId);
       const info = approveIntent.run(intentId, accountId, deviceId, deviceToken);
+      const postRow = findIntent.get(intentId);
       req.log.info({
         insertChanges: String(devInfo.changes),
-        insertChangesType: typeof devInfo.changes,
         approveChanges: String(info.changes),
-        approveChangesType: typeof info.changes,
-        intentId, accountId, deviceId,
+        preRow: JSON.stringify(preRow),
+        postRow: JSON.stringify(postRow),
       }, 'pairing_approve_diag');
       if (Number(info.changes) < 1) throw new Error('intent_race');
     });
