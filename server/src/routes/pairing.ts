@@ -136,7 +136,7 @@ export function registerPairingRoutes(app: FastifyInstance): void {
     const deviceToken = generateDeviceToken();
 
     withTransaction(() => {
-      insertDevice.run(
+      const devInfo = insertDevice.run(
         deviceId,
         accountId,
         hashToken(deviceToken),
@@ -144,9 +144,13 @@ export function registerPairingRoutes(app: FastifyInstance): void {
         req.body?.platform ?? null,
       );
       const info = approveIntent.run(intentId, accountId, deviceId, deviceToken);
-      // ВНИМАНИЕ: info.changes в node:sqlite может быть BigInt, поэтому
-      // сравниваем через Number() — строгое `!== 1` сравнение с bigint 1n
-      // всегда true и роняло approve всегда, даже без реальной гонки.
+      req.log.info({
+        insertChanges: String(devInfo.changes),
+        insertChangesType: typeof devInfo.changes,
+        approveChanges: String(info.changes),
+        approveChangesType: typeof info.changes,
+        intentId, accountId, deviceId,
+      }, 'pairing_approve_diag');
       if (Number(info.changes) < 1) throw new Error('intent_race');
     });
 
