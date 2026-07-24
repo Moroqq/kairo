@@ -382,6 +382,9 @@ function ScannerModal({ onClose }: { onClose: () => void }) {
       async (result) => {
         if (handledRef.current) return;
         handledRef.current = true;
+        // ВАЖНО: останавливаем сканер сразу после первой ловли, чтобы
+        // при ошибке не тыкали approve каждый кадр (иначе получаем 6 тостов).
+        try { s.stop(); } catch { /* ignore */ }
         setApproving(true);
         try {
           await approvePairing(result.data);
@@ -395,8 +398,9 @@ function ScannerModal({ onClose }: { onClose: () => void }) {
             err === 'intent_not_found' ? 'Код не найден.' :
             'Не удалось подключить устройство';
           toast(msg, 'error');
-          handledRef.current = false;
           setApproving(false);
+          // Закрываем модалку — пусть пользователь откроет её заново и попробует ещё раз.
+          onClose();
         }
       },
       { highlightScanRegion: true, highlightCodeOutline: true },

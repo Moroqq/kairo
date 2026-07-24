@@ -33,13 +33,17 @@ const findIntent = db.prepare(
   `SELECT id, expires_at, approved_at, approved_account_id, approved_device_id, approved_device_token
    FROM pairing_intents WHERE id = ?`,
 );
+// NB: срок жизни intent-а проверяем в JS (см. route ниже), а не в SQL —
+// у нас expires_at хранится в ISO-формате (`...T...Z`), а `datetime('now')`
+// возвращает `YYYY-MM-DD HH:MM:SS`, из-за чего лексикографическое сравнение
+// строк даёт неожиданный результат.
 const approveIntent = db.prepare(
   `UPDATE pairing_intents
    SET approved_at = datetime('now'),
        approved_account_id = ?,
        approved_device_id = ?,
        approved_device_token = ?
-   WHERE id = ? AND approved_at IS NULL AND expires_at > datetime('now')`,
+   WHERE id = ? AND approved_at IS NULL`,
 );
 const clearIntentToken = db.prepare(
   `UPDATE pairing_intents SET approved_device_token = NULL WHERE id = ?`,
