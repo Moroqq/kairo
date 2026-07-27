@@ -1,9 +1,12 @@
 import type { FastifyInstance } from 'fastify';
 import { requireAuth } from '../auth.js';
 import { openRouterChat } from '../openrouter.js';
-import { groqTranscribe } from '../groq.js';
+import { groqTranscribe, groqChat } from '../groq.js';
 
-const TEXT_MODEL = process.env.OPENROUTER_TEXT_MODEL ?? 'nvidia/nemotron-3-ultra-550b-a55b:free';
+// Текст → задача: бесплатный Groq (ключ уже есть, используется для голоса).
+// Раньше был ':free'-Nemotron на OpenRouter — free-модели лимитируются (429/503).
+const TEXT_MODEL = process.env.GROQ_TEXT_MODEL ?? 'llama-3.3-70b-versatile';
+// Картинки остаются на OpenRouter (vision) — Groq стабильного vision пока не даёт.
 const IMAGE_MODEL = process.env.OPENROUTER_IMAGE_MODEL ?? 'nvidia/nemotron-nano-12b-v2-vl:free';
 
 const SYSTEM_PROMPT = `You are a task parser for a personal operational management system.
@@ -45,9 +48,10 @@ export function registerAiRoutes(app: FastifyInstance): void {
 
     const today = new Date().toISOString().split('T')[0];
     try {
-      const raw = await openRouterChat({
+      const raw = await groqChat({
         model: TEXT_MODEL,
         maxTokens: 512,
+        json: true,
         messages: [
           { role: 'system', content: SYSTEM_PROMPT.replace('{TODAY}', today) },
           { role: 'user', content: input },

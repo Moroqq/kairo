@@ -7,8 +7,55 @@ import { spawn } from 'node:child_process';
 
 const BASE = process.env.GROQ_BASE_URL ?? 'https://api.groq.com';
 const URL_TRANSCRIBE = `${BASE.replace(/\/$/, '')}/openai/v1/audio/transcriptions`;
+const URL_CHAT = `${BASE.replace(/\/$/, '')}/openai/v1/chat/completions`;
 const PROXY_SECRET = process.env.OPENROUTER_PROXY_SECRET ?? '';
 const MODEL = process.env.GROQ_STT_MODEL ?? 'whisper-large-v3-turbo';
+
+// ── Текстовый чат через Groq (OpenAI-совместимый) ───────────────────────────
+// Бесплатный и быстрый; используется для парсинга текста в задачу вместо
+// ':free'-моделей OpenRouter, которые часто отдают 429/503.
+
+export interface GroqMessage {
+  role: 'system' | 'user' | 'assistant';
+  content: string;
+}
+
+export interface GroqChatParams {
+  model: string;
+  messages: GroqMessage[];
+  maxTokens?: number;
+  /** Просить у модели строгий JSON (response_format json_object). */
+  json?: boolean;
+}
+
+export async function groqChat(params: GroqChatParams): Promise<string> {
+  const apiKey = process.env.GROQ_API_KEY;
+  if (!apiKey) throw new Error('GROQ_API_KEY not set');
+
+  const headers: Record<string, string> = {
+    Authorization: `Bearer ${apiKey}`,
+    'Content-Type': 'application/json',
+  };
+  if (PROXY_SECRET) headers['X-Proxy-Secret'] = PROXY_SECRET;
+
+  const body: Record<string, unknown> = {
+    model: params.model,
+    messages: params.messages,
+    max_tokens: params.maxTokens ?? 512,
+    temperature: 0.2,
+  };
+  if (params.json) body.response_format = { type: 'json_object' };
+
+  const res = await fetch(URL_CHAT, { method: 'POST', headers, body: JSON.stringify(body) });
+  if (!res.ok) {
+    const t = await res.text().catch(() => '');
+    throw new Error(`groq_chat ${res.status}: ${t.slice(0, 500)}`);
+  }
+  const data = (await res.json()) as { choices?: Array<{ message?: { content?: string } }> };
+  const text = data.choices?.[0]?.message?.content;
+  if (typeof text !== 'string') throw new Error('groq_chat: no text in response');
+  return text;
+}
 
 /**
  * Перекодирует любой входной аудио-буфер в mono 16kHz WAV через ffmpeg.
