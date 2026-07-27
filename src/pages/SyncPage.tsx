@@ -15,7 +15,7 @@ import { checkNow, useBannerState } from '@/components/updates/UpdateBanner';
 function Header({ title, subtitle }: { title: string; subtitle?: string }) {
   return (
     <div className="mb-3">
-      <div className="font-mono" style={{ fontSize: 15, letterSpacing: 2, color: 'var(--text-1)' }}>
+      <div className="font-mono" style={{ fontSize: 15, letterSpacing: 2, color: 'var(--text-primary)' }}>
         {title}
       </div>
       {subtitle && (
@@ -64,9 +64,9 @@ function ActionRow({ icon, label, desc, onClick, disabled = false }: {
         opacity: disabled ? 0.5 : 1,
       }}
     >
-      <span style={{ color: 'var(--text-1)', marginTop: 2 }}>{icon}</span>
+      <span style={{ color: 'var(--text-primary)', marginTop: 2 }}>{icon}</span>
       <span className="flex-1">
-        <span style={{ color: 'var(--text-1)', fontSize: 13 }}>{label}</span>
+        <span style={{ color: 'var(--text-primary)', fontSize: 13 }}>{label}</span>
         {desc && (
           <span className="block" style={{ color: 'var(--text-muted)', fontSize: 11, marginTop: 2 }}>{desc}</span>
         )}
@@ -187,7 +187,7 @@ function UnpairedView() {
                   onClick={startWait}
                   disabled={busy}
                   className="w-full font-mono py-3 rounded"
-                  style={{ background: 'var(--accent-bg)', color: 'var(--accent-text)', border: 'none', cursor: 'pointer' }}
+                  style={{ background: 'var(--accent)', color: '#000', border: 'none', cursor: 'pointer', boxShadow: '0 0 12px var(--accent-glow)' }}
                 >
                   <QrCode size={14} style={{ display: 'inline', marginRight: 8 }} />
                   показать QR для сканирования
@@ -228,7 +228,7 @@ function UnpairedView() {
               onClick={handleCreate}
               disabled={busy}
               className="w-full font-mono py-3 rounded"
-              style={{ background: 'transparent', color: 'var(--text-1)', border: '1px solid var(--border)', cursor: 'pointer' }}
+              style={{ background: 'transparent', color: 'var(--text-primary)', border: '1px solid var(--border)', cursor: 'pointer' }}
             >
               создать облачный аккаунт
             </button>
@@ -258,13 +258,13 @@ function UnpairedView() {
                     placeholder="XXXXXX или 12 слов через пробел"
                     rows={2}
                     className="w-full font-mono px-3 py-2 rounded"
-                    style={{ background: 'var(--input-bg)', color: 'var(--text-1)', border: '1px solid var(--border)', fontSize: 14, resize: 'vertical' }}
+                    style={{ background: 'var(--bg-input)', color: 'var(--text-primary)', border: '1px solid var(--border)', fontSize: 14, resize: 'vertical' }}
                   />
                   <button
                     onClick={handleRecover}
                     disabled={busy || !code.trim()}
                     className="font-mono py-2 rounded"
-                    style={{ background: 'transparent', color: 'var(--text-1)', border: '1px solid var(--border)', cursor: 'pointer' }}
+                    style={{ background: 'transparent', color: 'var(--text-primary)', border: '1px solid var(--border)', cursor: 'pointer' }}
                   >
                     войти
                   </button>
@@ -296,7 +296,7 @@ function PairedView() {
         <Header title="SYNC" subtitle="облако · автоматический" />
 
         <Card>
-          <div className="px-4 py-3 font-mono" style={{ fontSize: 13, color: 'var(--accent-text, #7fe7c7)' }}>
+          <div className="px-4 py-3 font-mono" style={{ fontSize: 13, color: 'var(--accent)' }}>
             ✓ облако подключено
             {lastSync && (
               <span className="block" style={{ color: 'var(--text-muted)', fontSize: 11, marginTop: 4 }}>
@@ -312,7 +312,7 @@ function PairedView() {
             <button
               onClick={() => setScannerOpen(true)}
               className="w-full font-mono py-3 rounded"
-              style={{ background: 'var(--accent-bg)', color: 'var(--accent-text)', border: 'none', cursor: 'pointer' }}
+              style={{ background: 'var(--accent)', color: '#000', border: 'none', cursor: 'pointer', boxShadow: '0 0 12px var(--accent-glow)' }}
             >
               <Camera size={14} style={{ display: 'inline', marginRight: 8 }} />
               подключить новое устройство

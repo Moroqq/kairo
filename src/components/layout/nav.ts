@@ -13,7 +13,7 @@ export const NAV: NavEntry[] = [
   { to: '/',         label: 'фокус',   cmd: 'focus', icon: Target           },
   { to: '/board',    label: 'доска',   cmd: 'board', icon: LayoutDashboard  },
   { to: '/calendar', label: 'план',    cmd: 'plan',  icon: CalendarDays     },
-  { to: '/todo',     label: 'листок',  cmd: 'todo',  icon: NotebookPen      },
+  { to: '/todo',     label: 'дэйлики', cmd: 'todo',  icon: NotebookPen      },
   { to: '/weeks',    label: 'итоги',   cmd: 'weeks', icon: BarChart3        },
   { to: '/expenses', label: 'траты',   cmd: 'spend', icon: Wallet           },
   { to: '/log',      label: 'события', cmd: 'logs',  icon: ScrollText       },

@@ -3,6 +3,7 @@ import { Search, X, Palette, Plus } from 'lucide-react';
 import { useLocation } from 'react-router-dom';
 import { useUIStore } from '@/stores/ui.store';
 import { useIsMobile } from '@/hooks/useMediaQuery';
+import { useOnline } from '@/hooks/useOnline';
 import { ThemePicker } from '@/components/ui/ThemePicker';
 import { KairoMark } from '@/components/ui/KairoMark';
 
@@ -32,7 +33,9 @@ export function Header() {
   const setSearch   = useUIStore((s) => s.setSearch);
   const openCapture = useUIStore((s) => s.openCapture);
   const isMobile    = useIsMobile();
+  const online      = useOnline();
   const [themesOpen, setThemesOpen] = useState(false);
+  const [searchOpen, setSearchOpen] = useState(false);
   const location    = useLocation();
 
   const cmd = ROUTE_CMD[location.pathname] ?? location.pathname.slice(1);
@@ -54,6 +57,19 @@ export function Header() {
             KAIRO
           </span>
           <button
+            onClick={() => setSearchOpen((v) => !v)}
+            aria-label="поиск"
+            style={{
+              width: 44, height: 44,
+              display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+              background: searchOpen ? 'var(--accent-dim)' : 'transparent',
+              border: `1px solid ${searchOpen ? 'var(--accent)' : 'var(--border)'}`,
+              color: searchOpen ? 'var(--accent)' : 'var(--text-secondary)', cursor: 'pointer',
+            }}
+          >
+            <Search size={20} />
+          </button>
+          <button
             onClick={openCapture}
             aria-label="новая задача"
             style={{
@@ -67,20 +83,47 @@ export function Header() {
             <Plus size={22} />
           </button>
         </div>
-        <div style={{
-          display: 'flex', alignItems: 'center', gap: 6, marginTop: 7,
-          fontFamily: 'var(--font-mono)', fontSize: 12, color: 'var(--text-dim)',
-        }}>
-          <span style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-            <span style={{ color: 'var(--text-muted)' }}>[kairo@matrix:~]$ </span>
-            <span style={{ color: 'var(--text-secondary)' }}>{cmd}</span>
-            <span style={{ color: 'var(--text-dim)' }}> --online</span>
-          </span>
-          <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5, color: 'var(--text-muted)', flexShrink: 0 }}>
-            <span className="led led-blink" style={{ width: 6, height: 6 }} />
-            <LiveClock />
-          </span>
-        </div>
+
+        {searchOpen ? (
+          <div style={{
+            display: 'flex', alignItems: 'center', gap: 6, marginTop: 7,
+            background: 'var(--bg-input)', border: '1px solid var(--border-subtle)',
+            padding: '0 8px', height: 38,
+          }}>
+            <Search size={14} style={{ color: 'var(--text-muted)', flexShrink: 0 }} />
+            <input
+              autoFocus
+              className="flex-1 h-full bg-transparent outline-none font-mono"
+              style={{ color: 'var(--text-primary)', fontSize: 14 }}
+              placeholder="поиск задач…"
+              value={searchQuery}
+              onChange={(e) => setSearch(e.target.value)}
+              data-selectable
+            />
+            <button
+              onClick={() => { setSearch(''); setSearchOpen(false); }}
+              aria-label="закрыть поиск"
+              style={{ width: 32, height: 32, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', background: 'transparent', border: 'none', color: 'var(--text-muted)', cursor: 'pointer' }}
+            >
+              <X size={16} />
+            </button>
+          </div>
+        ) : (
+          <div style={{
+            display: 'flex', alignItems: 'center', gap: 6, marginTop: 7,
+            fontFamily: 'var(--font-mono)', fontSize: 12, color: 'var(--text-dim)',
+          }}>
+            <span style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+              <span style={{ color: 'var(--text-muted)' }}>[kairo@matrix:~]$ </span>
+              <span style={{ color: 'var(--text-secondary)' }}>{cmd}</span>
+              <span style={{ color: 'var(--text-dim)' }}> {online ? '--online' : '--offline'}</span>
+            </span>
+            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5, color: 'var(--text-muted)', flexShrink: 0 }}>
+              <span className={online ? 'led led-blink' : 'led led-red'} style={{ width: 6, height: 6 }} />
+              <LiveClock />
+            </span>
+          </div>
+        )}
       </header>
     );
   }

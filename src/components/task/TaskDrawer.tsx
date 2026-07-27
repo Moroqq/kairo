@@ -5,7 +5,7 @@ import { Drawer } from '@/components/ui/Drawer';
 import { Button } from '@/components/ui/Button';
 import { TaskForm } from './TaskForm';
 import { useUIStore } from '@/stores/ui.store';
-import { useTasks, useUpdateTask, useAddComment, useTrashTask } from '@/hooks/useTasks';
+import { useTasks, useUpdateTask, useAddComment, useTrashTask, useRestoreTask } from '@/hooks/useTasks';
 import { fetchArchivedTasks } from '@/services/tasks.service';
 import { useToast } from '@/components/ui/Toast';
 import { formatDeadline, isOverdue, formatRelative, formatDateTime } from '@/hooks/useDeadlineWatcher';
@@ -52,6 +52,7 @@ function TaskDrawerContent({ task, onClose }: { task: Task; onClose: () => void 
   const updateTask  = useUpdateTask();
   const addComment  = useAddComment();
   const trashTask = useTrashTask();
+  const restoreTask = useRestoreTask();
 
   const handleSave = async (updates: Parameters<typeof updateTask.mutate>[0]['updates']) => {
     try {
@@ -74,10 +75,14 @@ function TaskDrawerContent({ task, onClose }: { task: Task; onClose: () => void 
   };
 
   const handleTrash = async () => {
+    const id = task.id;
     try {
-      await trashTask.mutateAsync(task.id);
+      await trashTask.mutateAsync(id);
       onClose();
-      toast('Задача в корзине');
+      toast('Задача в корзине', 'success', {
+        label: 'Отменить',
+        onClick: () => { restoreTask.mutate(id); },
+      });
     } catch {
       toast('Не удалось удалить', 'error');
     }
@@ -147,7 +152,10 @@ function TaskDrawerContent({ task, onClose }: { task: Task; onClose: () => void 
               }}
             >
               <Clock size={11} />
-              {overdue ? 'просрочено · ' : ''}{formatDeadline(task.deadline)}
+              {(() => {
+                const label = formatDeadline(task.deadline!);
+                return overdue && !label.startsWith('просрочено') ? `просрочено · ${label}` : label;
+              })()}
             </div>
           )}
 

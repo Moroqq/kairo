@@ -4,7 +4,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useQuery } from '@tanstack/react-query';
 import { getWeeklyReviews, formatWeekRange, type WeekReview } from '@/services/review.service';
 import { useUIStore } from '@/stores/ui.store';
-import { useTrashTask } from '@/hooks/useTasks';
+import { useTrashTask, useRestoreTask } from '@/hooks/useTasks';
 import { formatRelative } from '@/hooks/useDeadlineWatcher';
 import { useToast } from '@/components/ui/Toast';
 
@@ -71,6 +71,7 @@ export function WeeksPage() {
 function WeekBlock({ week }: { week: WeekReview }) {
   const setActiveTaskId = useUIStore((s) => s.setActiveTaskId);
   const trashTask = useTrashTask();
+  const restoreTask = useRestoreTask();
   const { toast } = useToast();
   const [trashingId, setTrashingId] = useState<string | null>(null);
   const btnRefs = useRef<Map<string, HTMLButtonElement>>(new Map());
@@ -78,10 +79,13 @@ function WeekBlock({ week }: { week: WeekReview }) {
   const handleTrash = useCallback((id: string) => {
     setTrashingId(id);
     trashTask.mutate(id, {
-      onSuccess: () => toast('В корзину'),
+      onSuccess: () => toast('В корзину', 'success', {
+        label: 'Отменить',
+        onClick: () => { restoreTask.mutate(id); setTrashingId(null); },
+      }),
       onError: () => setTrashingId(null),
     });
-  }, [trashTask, toast]);
+  }, [trashTask, restoreTask, toast]);
 
   const triggerBloom = useCallback((btn: HTMLButtonElement | null) => {
     if (!btn) return;

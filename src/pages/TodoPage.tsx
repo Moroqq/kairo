@@ -15,7 +15,7 @@ export function TodoPage() {
       >
         <NotebookPen size={18} color="var(--accent)" />
         <span style={{ fontSize: 17, fontWeight: 700, color: 'var(--text-bright)', letterSpacing: 0.3 }}>
-          листок
+          дэйлики
         </span>
       </div>
 

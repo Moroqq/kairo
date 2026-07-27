@@ -29,13 +29,15 @@ export function DailyList() {
     <div className="flex-1 overflow-y-auto" style={{ padding: '12px 12px 28px' }}>
       <div style={{ maxWidth: 560, margin: '0 auto' }}>
 
-        {/* Заголовок */}
-        <div className="flex items-baseline gap-2 mb-4 font-mono">
-          <span className="neon-text" style={{ fontSize: 14, fontWeight: 700, letterSpacing: 2 }}>ДЭЙЛИКИ</span>
-          <span style={{ fontSize: 11, color: 'var(--text-dim)', letterSpacing: 0.5 }}>
-            · {doneCount} из {list.length} сегодня
-          </span>
-        </div>
+        {/* Счётчик прогресса за сегодня (заголовок раздела — в тулбаре страницы) */}
+        {list.length > 0 && (
+          <div className="flex items-baseline gap-2 mb-4 font-mono">
+            <span className="neon-text" style={{ fontSize: 14, fontWeight: 700, letterSpacing: 1, fontVariantNumeric: 'tabular-nums' }}>
+              {doneCount} из {list.length}
+            </span>
+            <span style={{ fontSize: 11, color: 'var(--text-dim)', letterSpacing: 0.5 }}>сегодня</span>
+          </div>
+        )}
 
         {/* Список */}
         {list.length === 0 && (

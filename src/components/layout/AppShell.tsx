@@ -9,6 +9,7 @@ import { useUIStore } from '@/stores/ui.store';
 import { useTheme } from '@/stores/theme.store';
 import { useTasks } from '@/hooks/useTasks';
 import { useIsMobile } from '@/hooks/useMediaQuery';
+import { useOnline } from '@/hooks/useOnline';
 import { initNotifications } from '@/services/notifications.service';
 import { isOverdue } from '@/hooks/useDeadlineWatcher';
 
@@ -22,7 +23,22 @@ export function AppShell({ children }: AppShellProps) {
   const openCapture = useUIStore((s) => s.openCapture);
   const isMobile = useIsMobile();
   const theme = useTheme();
+  const online = useOnline();
   const { data: tasks } = useTasks();
+
+  // Глобальный хоткей N — новая задача. Раньше слушатель жил в Dashboard и
+  // работал только на /board, хотя кнопка «+ новая задача (N)» видна везде.
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      if (e.metaKey || e.ctrlKey || e.altKey) return;
+      const el = e.target as HTMLElement;
+      const tag = el.tagName;
+      if (tag === 'INPUT' || tag === 'TEXTAREA' || el.isContentEditable) return;
+      if (e.key === 'n' || e.key === 'N') { e.preventDefault(); openCapture(); }
+    };
+    window.addEventListener('keydown', handler);
+    return () => window.removeEventListener('keydown', handler);
+  }, [openCapture]);
 
   const active   = (tasks ?? []).filter((t) => t.status !== 'Resolved' && t.status !== 'Archived');
   const total    = tasks?.length ?? 0;
@@ -57,9 +73,13 @@ export function AppShell({ children }: AppShellProps) {
           <div className="titlebar">
             <span className="neon-text">●</span>
             <span className="flex-1 truncate cursor-blink">{theme.vocab.titlebar}</span>
-            <button className="titlebar-btn" title="Свернуть">_</button>
-            <button className="titlebar-btn" title="Развернуть">□</button>
-            <button className="titlebar-btn" title="Закрыть">✕</button>
+            {/* Декоративные глифы окна — терминальная эстетика, не интерактивны.
+                Раньше были <button> с title «Свернуть/Развернуть/Закрыть», но ничего
+                не делали (ложная affordance). Пока нет реального Tauri-управления окном —
+                это просто оформление, aria-hidden. */}
+            <span className="titlebar-btn" aria-hidden style={{ pointerEvents: 'none' }}>_</span>
+            <span className="titlebar-btn" aria-hidden style={{ pointerEvents: 'none' }}>□</span>
+            <span className="titlebar-btn" aria-hidden style={{ pointerEvents: 'none' }}>✕</span>
           </div>
         )}
 
@@ -102,8 +122,12 @@ export function AppShell({ children }: AppShellProps) {
           style={{ background: 'var(--statusbar-bg)', borderTop: '1px solid var(--border-subtle)' }}
         >
           <span className="flex items-center gap-1.5">
-            <span className="led led-blink" />
-            <span className="neon-text" style={{ letterSpacing: 1 }}>В СЕТИ</span>
+            <span className={online ? 'led led-blink' : 'led led-red'} />
+            {online ? (
+              <span className="neon-text" style={{ letterSpacing: 1 }}>В СЕТИ</span>
+            ) : (
+              <span style={{ letterSpacing: 1, color: 'var(--text-muted)' }}>НЕ В СЕТИ</span>
+            )}
           </span>
           <Sep />
           <span style={{ color: 'var(--text-muted)' }}>

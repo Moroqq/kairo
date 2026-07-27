@@ -8,21 +8,40 @@ import { useUIStore } from '@/stores/ui.store';
 import { useToast } from '@/components/ui/Toast';
 import type { Task } from '@/types';
 
+/**
+ * Балл для фокуса — чем меньше, тем выше задача.
+ *
+ * Ярусы (каждый следующий начинается на TIER выше предыдущего, поэтому
+ * порядок между ярусами жёсткий, а внутри яруса сортируем по времени):
+ *   0 — просрочено          (нужно разобрать в первую очередь)
+ *   1 — в работе            (уже начал — доведи до конца, даже без срока)
+ *   2 — есть будущий срок    (по дате, ближайший первым)
+ *   3 — всё остальное        (по статусу, затем по возрасту)
+ *
+ * Раньше любая задача с дедлайном била любую задачу без него — поэтому
+ * начатая, но бессрочная задача не могла попасть в фокус никогда. Теперь
+ * «в работе» — отдельный высокий ярус независимо от наличия срока.
+ */
+const TIER = 1e15;
+
 function focusScore(task: Task): number {
-  if (task.deadline) {
-    return new Date(task.deadline).getTime() - Date.now();
-  }
-  const FUTURE = Date.now() + 1000 * 60 * 60 * 24 * 365;
+  const now     = Date.now();
+  const dl      = task.deadline ? new Date(task.deadline).getTime() : null;
+  const created = new Date(task.created_at).getTime();
+  const overdue = dl !== null && dl < now;
+
+  if (overdue)                        return 0 * TIER + dl!;
+  if (task.status === 'In Progress')  return 1 * TIER + (dl ?? created);
+  if (dl !== null)                    return 2 * TIER + dl;
+
   const statusBias: Record<string, number> = {
-    'In Progress':      0,
     'Waiting Response': 1,
     'Escalation':       2,
     'New':              3,
     'Blocked':          4,
   };
   const bias = statusBias[task.status] ?? 5;
-  const created = new Date(task.created_at).getTime();
-  return FUTURE + bias * 1e10 + (created - new Date('2020-01-01').getTime());
+  return 3 * TIER + bias * 1e13 + created;
 }
 
 export function FocusPage() {
@@ -69,10 +88,18 @@ export function FocusPage() {
 
   const handleSnooze = async () => {
     if (!current) return;
-    const base = current.deadline ? new Date(current.deadline) : new Date();
+    // Отсчёт от максимума (срок, сегодня): у просроченной задачи старый дедлайн
+    // в прошлом — если считать от него, «+1д» снова окажется в прошлом и кнопка
+    // будет как будто не работать. Берём max, чтобы всегда получить будущее.
+    const now = Date.now();
+    const from = current.deadline ? Math.max(new Date(current.deadline).getTime(), now) : now;
+    const base = new Date(from);
     base.setDate(base.getDate() + 1);
     base.setHours(23, 59, 59, 999);
-    try { await updateTask.mutateAsync({ id: current.id, updates: { deadline: base.toISOString() } }); }
+    try {
+      await updateTask.mutateAsync({ id: current.id, updates: { deadline: base.toISOString() } });
+      toast(`Отложено на ${formatDeadline(base.toISOString())}`);
+    }
     catch { toast('Не удалось отложить', 'error'); }
   };
 
@@ -131,7 +158,7 @@ export function FocusPage() {
           border: `1px solid ${overdue ? 'var(--danger)' : 'var(--accent)'}`,
           borderRadius: 'var(--radius-card)',
           boxShadow: overdue
-            ? '0 0 0 1px var(--danger), 0 0 18px rgba(255,0,60,0.2)'
+            ? '0 0 0 1px var(--danger), 0 0 22px rgba(255,0,60,0.5)'
             : '0 0 0 1px var(--accent), 0 0 18px var(--accent-glow)',
           padding: 16,
           marginBottom: 12,
@@ -175,7 +202,12 @@ export function FocusPage() {
               fontWeight: overdue ? 700 : 400,
             }}>
               <Clock size={14} />
-              {overdue ? 'просрочено · ' : ''}{formatDeadline(current.deadline)}
+              {(() => {
+                const label = formatDeadline(current.deadline!);
+                // formatDeadline сам возвращает «просрочено Nд» при diff < -1 —
+                // не дублируем слово, префикс добавляем только для «сегодня/вчера».
+                return overdue && !label.startsWith('просрочено') ? `просрочено · ${label}` : label;
+              })()}
             </span>
           )}
           <button

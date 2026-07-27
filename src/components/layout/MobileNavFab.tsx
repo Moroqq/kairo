@@ -35,7 +35,7 @@ const SECTION_DEF: Record<TabId, SectionDef> = {
   focus:    { to: '/',         label: 'фокус',   Icon: Target,          cmd: 'focus' },
   board:    { to: '/board',    label: 'доска',   Icon: LayoutDashboard, cmd: 'board' },
   calendar: { to: '/calendar', label: 'план',    Icon: CalendarDays,    cmd: 'plan'  },
-  todo:     { to: '/todo',     label: 'листок',  Icon: NotebookPen,     cmd: 'todo'  },
+  todo:     { to: '/todo',     label: 'дэйлики', Icon: NotebookPen,     cmd: 'todo'  },
   weeks:    { to: '/weeks',    label: 'итоги',   Icon: BarChart3,       cmd: 'weeks' },
   expenses: { to: '/expenses', label: 'траты',   Icon: Wallet,          cmd: 'spend' },
   log:      { to: '/log',      label: 'события', Icon: ScrollText,      cmd: 'logs'  },

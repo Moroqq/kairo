@@ -1,17 +1,25 @@
 import { createContext, useContext, useState, useCallback, ReactNode } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { CheckCircle, AlertCircle, Info, X } from 'lucide-react';
+import { useIsMobile } from '@/hooks/useMediaQuery';
 
 export type ToastType = 'success' | 'error' | 'info';
+
+/** Необязательное действие в тосте — например «Отменить» после удаления. */
+export interface ToastAction {
+  label: string;
+  onClick: () => void;
+}
 
 interface ToastItem {
   id: string;
   message: string;
   type: ToastType;
+  action?: ToastAction;
 }
 
 interface ToastContextType {
-  toast: (message: string, type?: ToastType) => void;
+  toast: (message: string, type?: ToastType, action?: ToastAction) => void;
 }
 
 const ToastContext = createContext<ToastContextType | null>(null);
@@ -45,11 +53,13 @@ const CONFIG: Record<ToastType, { icon: ReactNode; color: string; tag: string; g
 
 export function ToastProvider({ children }: { children: ReactNode }) {
   const [toasts, setToasts] = useState<ToastItem[]>([]);
+  const isMobile = useIsMobile();
 
-  const toast = useCallback((message: string, type: ToastType = 'success') => {
+  const toast = useCallback((message: string, type: ToastType = 'success', action?: ToastAction) => {
     const id = crypto.randomUUID();
-    setToasts((prev) => [...prev, { id, message, type }]);
-    setTimeout(() => setToasts((prev) => prev.filter((t) => t.id !== id)), 3500);
+    setToasts((prev) => [...prev, { id, message, type, action }]);
+    // С действием (напр. «Отменить») даём больше времени среагировать.
+    setTimeout(() => setToasts((prev) => prev.filter((t) => t.id !== id)), action ? 6000 : 3500);
   }, []);
 
   const remove = (id: string) => setToasts((prev) => prev.filter((t) => t.id !== id));
@@ -57,7 +67,15 @@ export function ToastProvider({ children }: { children: ReactNode }) {
   return (
     <ToastContext.Provider value={{ toast }}>
       {children}
-      <div className="fixed top-3 right-3 z-50 flex flex-col gap-2 pointer-events-none" style={{ maxWidth: 340 }}>
+      {/* На мобиле — снизу над нижней панелью (64px + safe-area), иначе тосты
+          перекрывали кнопку «+» в правом верхнем углу. На десктопе — сверху справа. */}
+      <div
+        className="fixed z-50 flex flex-col gap-2 pointer-events-none"
+        style={isMobile
+          ? { left: 12, right: 12, bottom: 'calc(64px + env(safe-area-inset-bottom) + 12px)' }
+          : { top: 12, right: 12, maxWidth: 340 }
+        }
+      >
         <AnimatePresence initial={false}>
           {toasts.map((t) => {
             const cfg = CONFIG[t.type];
@@ -79,6 +97,19 @@ export function ToastProvider({ children }: { children: ReactNode }) {
                 <span style={{ color: cfg.color, textShadow: `0 0 6px ${cfg.glow}` }}>{cfg.icon}</span>
                 <span style={{ color: cfg.color, fontWeight: 600 }}>{cfg.tag}</span>
                 <span className="flex-1 leading-tight">{t.message}</span>
+                {t.action && (
+                  <button
+                    onClick={() => { t.action!.onClick(); remove(t.id); }}
+                    className="flex-shrink-0 font-mono"
+                    style={{
+                      background: 'transparent', border: `1px solid ${cfg.color}`,
+                      color: cfg.color, cursor: 'pointer', fontWeight: 600,
+                      padding: '2px 8px', letterSpacing: 0.5,
+                    }}
+                  >
+                    {t.action.label}
+                  </button>
+                )}
                 <button
                   onClick={() => remove(t.id)}
                   className="flex-shrink-0"

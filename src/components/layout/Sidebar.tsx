@@ -89,9 +89,13 @@ export function Sidebar() {
           >
             <Icon size={17} style={{ flexShrink: 0 }} />
             {!collapsed && (
-              <span className="flex-1 truncate">
-                <span style={{ color: 'var(--text-dim)' }}>$ </span>
-                {cmd}
+              /* Русское название + мелкая $-команда рядом: то же имя, что на
+                 мобиле (было только «$ cmd» — расходилось с телефоном). */
+              <span className="flex-1 truncate flex items-baseline gap-1.5">
+                <span>{label}</span>
+                <span className="font-mono" style={{ color: 'var(--text-dim)', fontSize: 11 }}>
+                  ${cmd}
+                </span>
               </span>
             )}
           </NavLink>
