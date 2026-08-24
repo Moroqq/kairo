@@ -17,8 +17,16 @@
 2026-11-22, автопродление настроено certbot'ом).
 
 > **Не доделано:** `https://kairoupdate.duckdns.org/health` отдаёт **404 от
-> nginx**, а не `{"ok":true}` от бэкенда — домен обслуживается server-блоком
-> без `proxy_pass`. См. «Переезд на новый домен» ниже.
+> nginx**. Причина найдена: `certbot --nginx` не добавил домен в рабочий
+> server-блок, а **создал отдельный** — с сертификатом, но без `location /`
+> и `proxy_pass`. Бэкенд при этом жив (`curl http://127.0.0.1:8787/health`
+> → `{"ok":true}`). См. «Переезд на новый домен» ниже.
+
+> **Осторожно с отключением старого домена.** В сборках до 0.4.8 зашит
+> `kairogoupyrlife.duckdns.org` — и как адрес синка, и как endpoint
+> апдейтера. Пока установленные приложения не обновятся, другого канала
+> доставки у них нет: убьёшь старый домен — они не смогут ни синкаться,
+> ни получить обновление, останется только ручная переустановка.
 
 ## Сервер
 
@@ -204,51 +212,42 @@ curl -s -H "Host: kairogoupyrlife.duckdns.org" http://127.0.0.1/health
 
 ### Что должно быть в конфиге
 
-Домен обязан стоять в `server_name` **того самого** блока, где есть
-`proxy_pass`, и все пути должны уходить на бэкенд — отдельного `location`
-со статикой под `/update/` быть не должно, иначе он перехватит запрос
-раньше и вернёт 404.
+Эталон лежит в репозитории: **`server/nginx.example.conf`**. Там оба домена,
+каждый со своим сертификатом, оба проксируют на `127.0.0.1:8787`, и есть
+заголовки `Upgrade`/`Connection` — без них WebSocket `/sync` не поднимется,
+хотя `/health` будет отвечать.
 
-```nginx
-server {
-    listen 443 ssl;
-    server_name kairogoupyrlife.duckdns.org kairoupdate.duckdns.org;
+Применение (с бэкапом и проверкой до перезагрузки):
 
-    ssl_certificate     /etc/letsencrypt/live/kairoupdate.duckdns.org/fullchain.pem;
-    ssl_certificate_key /etc/letsencrypt/live/kairoupdate.duckdns.org/privkey.pem;
+```bash
+cp /etc/nginx/sites-available/kairo /root/kairo-nginx.bak
 
-    client_max_body_size 64m;      # голосовые файлы в /ai
-    proxy_read_timeout   75s;      # long-poll /pairing/wait висит до 25 с
-
-    location / {
-        proxy_pass http://127.0.0.1:8787;
-        proxy_http_version 1.1;
-        proxy_set_header Host              $host;
-        proxy_set_header X-Real-IP         $remote_addr;
-        proxy_set_header X-Forwarded-For   $proxy_add_x_forwarded_for;
-        proxy_set_header X-Forwarded-Proto $scheme;
-
-        # WebSocket для /sync — без этих двух строк синк не поднимется
-        proxy_set_header Upgrade    $http_upgrade;
-        proxy_set_header Connection $connection_upgrade;
-    }
-}
-```
-
-`$connection_upgrade` задаётся мапом в `/etc/nginx/conf.d/websocket-map.conf`:
-
-```nginx
+# мап для WebSocket — если файла нет, без него nginx -t упадёт
+# на "unknown variable connection_upgrade"
+test -f /etc/nginx/conf.d/websocket-map.conf || cat > /etc/nginx/conf.d/websocket-map.conf <<'MAP'
 map $http_upgrade $connection_upgrade {
     default upgrade;
     ''      close;
 }
+MAP
+
+# сюда вставить содержимое server/nginx.example.conf из репозитория
+nano /etc/nginx/sites-available/kairo
+
+nginx -t && systemctl reload nginx     # reload только если тест прошёл
+
+# откат, если что-то пошло не так
+# cp /root/kairo-nginx.bak /etc/nginx/sites-available/kairo && nginx -t && systemctl reload nginx
 ```
 
-Применить и проверить:
+Минимальная альтернатива, если не хочется трогать весь файл: дописать
+`location / { ... }` (целиком, как в эталоне) внутрь блока
+`server_name kairoupdate.duckdns.org;` с `listen 443 ssl` — того самого,
+который создал certbot и оставил пустым.
+
+### Проверка
 
 ```bash
-nginx -t && systemctl reload nginx
-
 curl -s  https://kairoupdate.duckdns.org/health            # {"ok":true}
 curl -si https://kairoupdate.duckdns.org/update/latest.json | head -1
 ```
@@ -258,8 +257,19 @@ curl -si https://kairoupdate.duckdns.org/update/latest.json | head -1
 ещё не положен `latest.json`. Отличать от `404` со страницей nginx: первый
 приходит от бэкенда (JSON), второй — от nginx (HTML).
 
-Когда всё позеленеет — старый домен можно убрать из `server_name` и из
-панели DuckDNS.
+Синк проверяется только настоящим клиентом: `/health` отвечает и при
+сломанном WebSocket, поэтому после правки конфига обязательно открой
+экран SYNC в приложении — он теперь показывает реальный статус.
+
+### Порядок вывода старого домена из обращения
+
+1. Починить `kairoupdate` (выше) — все будущие сборки ходят туда.
+2. Указать в панели DuckDNS для `kairogoupyrlife` тот же IP `45.151.62.223`
+   — тогда уже установленные приложения оживают: и синк, и апдейтер.
+3. Опубликовать релиз ≥ 0.4.8 (см. «Обновления приложения»). Устройства
+   получают его по старому домену и после установки переезжают на новый.
+4. Когда все устройства обновились — убрать блок старого домена из nginx
+   и сам домен из DuckDNS.
 
 ## Быстрые команды (для дебага)
 
