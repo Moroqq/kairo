@@ -24,7 +24,7 @@
  *    молча затирал локальные правки, сделанные офлайн.
  */
 
-import { captureSnapshot, applySnapshot, type SyncSnapshot } from './sync-snapshot';
+import { captureSnapshot, applySnapshot, SYNC_KEYS, type SyncSnapshot } from './sync-snapshot';
 import { getCredentials } from '@/lib/account';
 import { wsUrl, describeNetworkError } from '@/lib/server';
 
@@ -312,9 +312,40 @@ class VpsSyncService {
    * Поднимает автосинк: стартовый обмен + реакция на возврат в фор,
    * появление сети и периодический тик. Идемпотентно.
    */
+  /**
+   * Есть ли локально хоть какие-то данные (не пустые списки).
+   */
+  private hasLocalData(): boolean {
+    return SYNC_KEYS.some((key) => {
+      const raw = localStorage.getItem(key);
+      if (!raw) return false;
+      const trimmed = raw.trim();
+      return trimmed !== '' && trimmed !== '[]' && trimmed !== '{}';
+    });
+  }
+
+  /**
+   * Первый запуск после обновления со сборки, где синка ещё не было.
+   *
+   * Ключи `kairo_sync_last_ts` / `kairo_sync_dirty` появились вместе с этим
+   * сервисом, поэтому у обновившегося устройства их нет — и syncNow() решил
+   * бы, что отдавать нечего, и начал бы с pull(). Для устройства, на котором
+   * лежат единственные актуальные данные (типичный случай: ноутбук, откуда
+   * задачи переносят на телефон), это означало бы затирание снимком из
+   * облака. Поэтому «данные есть, а истории синка нет» считаем
+   * несинхронизированными: стартовый обмен сначала отдаст их.
+   */
+  private adoptLegacyLocalData(): void {
+    if (localStorage.getItem(LAST_SYNC_KEY)) return;   // уже синкались хоть раз
+    if (this.state.pendingChanges) return;             // уже помечено
+    if (!this.hasLocalData()) return;                  // нечего терять
+    this.markDirty(true);
+  }
+
   start(): () => void {
     if (this.started) return () => { /* уже запущен */ };
     this.started = true;
+    this.adoptLegacyLocalData();
 
     const kick = () => {
       if (!getCredentials()) return;
