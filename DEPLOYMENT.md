@@ -13,14 +13,18 @@
 общей причиной того, что разом отказали синк и проверка обновлений: обе
 функции ходят на один хост.
 
-> **Не сделано на сервере:** на новый домен нужен свой TLS-сертификат —
-> см. «Переезд на новый домен» ниже. Пока его нет, `https://kairoupdate…`
-> не поднимется, а и Tauri-апдейтер, и Android требуют именно https.
+Сертификат Let's Encrypt на новый домен **выпущен** (2026-08-24, истекает
+2026-11-22, автопродление настроено certbot'ом).
+
+> **Не доделано:** `https://kairoupdate.duckdns.org/health` отдаёт **404 от
+> nginx**, а не `{"ok":true}` от бэкенда — домен обслуживается server-блоком
+> без `proxy_pass`. См. «Переезд на новый домен» ниже.
 
 ## Сервер
 
-- IP: `193.233.48.36`
-- Хостинг тот же, но это **другой VPS**. Старый (`81.90.31.239`) остаётся под Observ.
+- IP: `45.151.62.223` (hostname `147786`)
+- Прежде в этом файле числился `193.233.48.36` — устарело. Старый
+  (`81.90.31.239`) остаётся под Observ.
 - SSH: только по ключу, пароль отключён (`PasswordAuthentication no`, `PermitRootLogin prohibit-password`)
 - Юзер: `root`
 - ОС: Ubuntu 22.04.5 LTS, kernel 5.15
@@ -169,39 +173,92 @@ location в nginx. Нигде не задокументированный, он 
 
 ## Переезд на новый домен (что осталось сделать на сервере)
 
-Клиент уже собирается под `kairoupdate.duckdns.org`. Чтобы это заработало,
-на VPS нужно один раз добавить домен в nginx и выпустить сертификат.
+Клиент уже собирается под `kairoupdate.duckdns.org`. Сертификат выпущен.
+Осталось заставить nginx проксировать этот домен на бэкенд.
+
+### Как читать симптом
+
+- **404 от nginx** (в теле ответа видно `nginx/1.18.0 (Ubuntu)`) — запрос
+  дошёл до nginx, но попал в server-блок без `proxy_pass`. Проблема в
+  `server_name`, бэкенд ни при чём.
+- **502 Bad Gateway** — блок правильный, но бэкенд не отвечает:
+  `systemctl status kairo-server`.
+- **Ошибка TLS / ERR_CONNECTION** — не тот сертификат или домен не резолвится.
+
+### Диагностика
 
 ```bash
-# 1. Убедиться, что домен резолвится в этот сервер
-dig +short kairoupdate.duckdns.org        # ожидаем 45.151.62.223
-curl -s http://127.0.0.1:8787/health      # бэкенд жив локально?
+# какой блок обслуживает домен и куда он проксирует
+grep -nE "server_name|listen|proxy_pass|root |location" /etc/nginx/sites-enabled/kairo
 
-# 2. Добавить домен в server_name существующего сайта
-#    (/etc/nginx/sites-available/kairo) — рядом со старым, через пробел:
-#    server_name kairogoupyrlife.duckdns.org kairoupdate.duckdns.org;
+# все server_name во всех блоках — ищем, где потерялся kairoupdate
+nginx -T 2>/dev/null | grep -n "server_name"
+
+# бэкенд жив? (должно быть {"ok":true})
+systemctl status kairo-server --no-pager | head -5
+curl -s http://127.0.0.1:8787/health
+
+# проксирует ли старый домен — если да, блок рабочий, дело только в server_name
+curl -s -H "Host: kairogoupyrlife.duckdns.org" http://127.0.0.1/health
+```
+
+### Что должно быть в конфиге
+
+Домен обязан стоять в `server_name` **того самого** блока, где есть
+`proxy_pass`, и все пути должны уходить на бэкенд — отдельного `location`
+со статикой под `/update/` быть не должно, иначе он перехватит запрос
+раньше и вернёт 404.
+
+```nginx
+server {
+    listen 443 ssl;
+    server_name kairogoupyrlife.duckdns.org kairoupdate.duckdns.org;
+
+    ssl_certificate     /etc/letsencrypt/live/kairoupdate.duckdns.org/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/kairoupdate.duckdns.org/privkey.pem;
+
+    client_max_body_size 64m;      # голосовые файлы в /ai
+    proxy_read_timeout   75s;      # long-poll /pairing/wait висит до 25 с
+
+    location / {
+        proxy_pass http://127.0.0.1:8787;
+        proxy_http_version 1.1;
+        proxy_set_header Host              $host;
+        proxy_set_header X-Real-IP         $remote_addr;
+        proxy_set_header X-Forwarded-For   $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+
+        # WebSocket для /sync — без этих двух строк синк не поднимется
+        proxy_set_header Upgrade    $http_upgrade;
+        proxy_set_header Connection $connection_upgrade;
+    }
+}
+```
+
+`$connection_upgrade` задаётся мапом в `/etc/nginx/conf.d/websocket-map.conf`:
+
+```nginx
+map $http_upgrade $connection_upgrade {
+    default upgrade;
+    ''      close;
+}
+```
+
+Применить и проверить:
+
+```bash
 nginx -t && systemctl reload nginx
 
-# 3. Выпустить сертификат на новый домен
-certbot --nginx -d kairoupdate.duckdns.org
-
-# 4. Проверить снаружи
 curl -s  https://kairoupdate.duckdns.org/health            # {"ok":true}
 curl -si https://kairoupdate.duckdns.org/update/latest.json | head -1
 ```
 
-Пункт 4 со `/update/latest.json` вернёт 404 с текстом
-`manifest_not_published`, пока в каталог релизов не положен `latest.json` —
-это ожидаемо и означает, что маршрут работает (раньше на его месте не было
-вообще ничего, и клиент показывал невнятное `Failed to fetch`).
+Второй запрос вернёт `404` с телом `{"error":"manifest_not_published"}` —
+это **ожидаемо и правильно**: маршрут работает, просто в каталог релизов
+ещё не положен `latest.json`. Отличать от `404` со страницей nginx: первый
+приходит от бэкенда (JSON), второй — от nginx (HTML).
 
-Проверить, что nginx проксирует **все** пути на бэкенд, а не только часть:
-`/sync` (WebSocket, нужен upgrade-мап), `/accounts`, `/pairing/*`,
-`/recovery/*`, `/update/*`. Если от старой схемы остался отдельный
-`location /update/` со статикой — его надо убрать, иначе он перехватит
-запрос раньше бэкенда.
-
-Когда всё позеленеет — старый домен можно удалить из `server_name` и из
+Когда всё позеленеет — старый домен можно убрать из `server_name` и из
 панели DuckDNS.
 
 ## Быстрые команды (для дебага)
