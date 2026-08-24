@@ -76,7 +76,7 @@ export function Header() {
               width: 44, height: 44,
               display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
               background: 'var(--accent)', border: '1px solid var(--accent)',
-              color: '#000', cursor: 'pointer',
+              color: 'var(--on-accent)', cursor: 'pointer',
               boxShadow: '0 0 12px var(--accent-glow)',
             }}
           >

@@ -21,7 +21,6 @@ import { useAccountStore } from '@/stores/account.store';
 import { RecoveryCodeReveal } from '@/components/onboarding/RecoveryCodeReveal';
 import { UpdateBanner } from '@/components/updates/UpdateBanner';
 import vpsSync from '@/services/vps-sync.service';
-import { hasAccount } from '@/lib/account';
 
 /** Обёртка перехода между разделами — короткий fade + сдвиг, без блокировки ввода. */
 function PageTransition({ children }: { children: React.ReactNode }) {
@@ -86,18 +85,12 @@ export default function App() {
     return unsub;
   }, []);
 
-  // Auto-pull при старте, если есть креды. Тихо игнорируем сбой сети.
-  useEffect(() => {
-    if (!hasAccount()) return;
-    vpsSync.pull().catch((err) => console.warn('[vps-sync] initial pull failed:', err));
-  }, []);
-
-  // Ретрай залежавшегося push при восстановлении сети.
-  useEffect(() => {
-    const onOnline = () => vpsSync.retryPendingPush();
-    window.addEventListener('online', onOnline);
-    return () => window.removeEventListener('online', onOnline);
-  }, []);
+  // Автосинк целиком живёт в сервисе: стартовый обмен, реконнект после
+  // обрыва, синк при возврате приложения в фор и при появлении сети.
+  // Раньше здесь был одиночный pull() при старте — после того как сокет
+  // рвался (а на мобиле он рвётся каждый раз при сворачивании), синк
+  // молча умирал до перезапуска приложения.
+  useEffect(() => vpsSync.start(), []);
 
   return (
     <QueryClientProvider client={queryClient}>

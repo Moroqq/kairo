@@ -218,7 +218,7 @@ function MenuEditorBody({
         style={{
           marginTop: 6, height: 44, flexShrink: 0,
           display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 8,
-          background: 'var(--accent)', color: '#000',
+          background: 'var(--accent)', color: 'var(--on-accent)',
           border: 'none', borderRadius: 'var(--radius-sm)',
           fontFamily: 'var(--font-ui)', fontSize: 15, fontWeight: 600,
           cursor: 'pointer', boxShadow: '0 0 14px var(--accent-glow)',

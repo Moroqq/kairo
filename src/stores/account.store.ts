@@ -34,6 +34,10 @@ export const useAccountStore = create<AccountState>((set) => ({
       hasAccount: true,
       recoveryCodeToShow: shouldShowRecoveryCode() ? recoveryCode : null,
     });
+    // Первое устройство — источник данных для нового аккаунта: сразу
+    // заливаем то, что уже накопилось локально, иначе оно жило бы только
+    // здесь до первой мутации.
+    vpsSync.pushDebounced();
   },
 
   /** Восстановление выдаёт НОВЫЙ код взамен старого — его тоже нужно показать один раз. */
@@ -41,7 +45,8 @@ export const useAccountStore = create<AccountState>((set) => ({
     const newRecoveryCode = await redeemRecoveryCode(code);
     set({ hasAccount: true, recoveryCodeToShow: newRecoveryCode });
     // Данные на облаке уже могут быть — сразу тянем их локально.
-    vpsSync.pull().catch((err) => console.warn('[vps-sync] post-recovery pull failed:', err));
+    // adoptCloudState, а не syncNow: у аккаунта данные главнее локальных.
+    vpsSync.adoptCloudState().catch((err) => console.warn('[vps-sync] post-recovery pull failed:', err));
   },
 
   dismissRecoveryReveal: () => {
@@ -53,6 +58,6 @@ export const useAccountStore = create<AccountState>((set) => ({
     set({ hasAccount: hasAccount() });
     // После успешной парности сразу тянем данные с облака —
     // пользователю не надо жать никаких кнопок.
-    vpsSync.pull().catch((err) => console.warn('[vps-sync] post-pair pull failed:', err));
+    vpsSync.adoptCloudState().catch((err) => console.warn('[vps-sync] post-pair pull failed:', err));
   },
 }));

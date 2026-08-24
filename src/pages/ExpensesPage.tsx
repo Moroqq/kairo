@@ -144,7 +144,7 @@ export function ExpensesPage() {
                     {e.paid && (
                       <Check
                         size={13}
-                        color="#000"
+                        color="var(--on-accent)"
                         strokeWidth={3}
                         style={{ animation: 'km-pop 240ms ease-out' }}
                       />

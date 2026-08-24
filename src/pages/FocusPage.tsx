@@ -217,7 +217,7 @@ export function FocusPage() {
               marginLeft: 'auto',
               display: 'inline-flex', alignItems: 'center', gap: 8,
               height: 44, padding: '0 16px',
-              background: 'var(--accent)', color: '#000',
+              background: 'var(--accent)', color: 'var(--on-accent)',
               border: 'none', borderRadius: 'var(--radius-sm)',
               fontFamily: 'var(--font-ui)', fontSize: 14, fontWeight: 600,
               cursor: updateStatus.isPending ? 'wait' : 'pointer',

@@ -17,6 +17,9 @@ src-tauri/updater.key.pub
 server/dist
 server/data/*.db
 server/data/*.db-*
+# Файлы релиза, которые раздаёт GET /update/... — кладутся на сервер вручную,
+# в репозитории им делать нечего (шаблон манифеста: server/update.example.json).
+server/data/update/
 
 # env
 .env

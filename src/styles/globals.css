@@ -34,6 +34,10 @@
   --accent-soft:    #00B82E;
   --accent-glow:    rgba(0, 255, 65, 0.55);
   --accent-dim:     rgba(0, 255, 65, 0.10);
+  /* Контрастный цвет поверх заливки --accent (текст/иконки на акцентной кнопке).
+     Раньше во всех местах был зашит #000 — и в теме SNOW, где акцент #111111,
+     кнопка становилась чёрной на чёрном. Каждая тема задаёт своё значение. */
+  --on-accent:      #000000;
 
   /* Semantic */
   --success:        #00FF41;
@@ -56,6 +60,9 @@
   /* Скругление и шрифт интерфейса — переопределяются «мягкими» темами (claude/clay) */
   --radius:         0px;
   --font-ui:        "JetBrains Mono", "Fira Code", "IBM Plex Mono", "Lucida Console", "Consolas", monospace;
+  /* Моноширинный стек — НЕ переопределяется темами: нужен там, где цифры
+     должны стоять в колонку даже в «мягких» темах с сан-серифным --font-ui. */
+  --font-mono:      "JetBrains Mono", "Fira Code", "IBM Plex Mono", "Lucida Console", "Consolas", monospace;
 
   --shadow-card:    0 0 0 1px var(--border);
   --shadow-elevated:
@@ -340,7 +347,7 @@ input, textarea, [data-selectable] { user-select: text; }
 
 ::selection {
   background: var(--accent);
-  color: #000;
+  color: var(--on-accent);
   text-shadow: none;
 }
 
@@ -431,7 +438,7 @@ input[type="date"]::-webkit-calendar-picker-indicator {
 }
 .btn-flat[data-variant="primary"]:not(:disabled):hover {
   background: var(--accent) !important;
-  color: #000 !important;
+  color: var(--on-accent) !important;
   text-shadow: none !important;
   box-shadow: 0 0 0 1px var(--accent), 0 0 22px var(--accent);
 }
@@ -518,7 +525,7 @@ html.soft .btn-flat[data-variant="primary"]:not(:disabled):hover {
 }
 
 /* Выделение текста — светлый текст на акценте */
-html.soft ::selection { background: var(--accent); color: #fff; }
+html.soft ::selection { background: var(--accent); color: var(--on-accent); }
 
 /* Скруглённые скроллбары и трек под мягкую палитру */
 html.soft ::-webkit-scrollbar-thumb { border-radius: 999px; background: var(--border-strong); }
@@ -690,7 +697,7 @@ html.apple .btn-flat[data-variant="primary"]:not(:disabled):hover {
 html.apple .btn-flat:not(:disabled):active { transform: scale(0.96); }
 
 /* ── Selection ──────────────────────────────────────────────── */
-html.apple ::selection { background: var(--accent); color: #fff; }
+html.apple ::selection { background: var(--accent); color: var(--on-accent); }
 
 /* ── LED → no glow ─────────────────────────────────────────── */
 html.apple .led {

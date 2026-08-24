@@ -130,7 +130,7 @@ export function VoiceCapture() {
         >
           {isRecording
             ? <Square  size={24} fill="white" style={{ color: 'white' }} />
-            : <Mic     size={24} style={{ color: '#000' }} />
+            : <Mic     size={24} style={{ color: 'var(--on-accent)' }} />
           }
         </button>
       )}

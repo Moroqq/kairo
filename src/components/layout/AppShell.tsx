@@ -101,14 +101,14 @@ export function AppShell({ children }: AppShellProps) {
                   onClick={openCapture}
                   className="m3-fab absolute bottom-5 right-5 z-30 flex items-center gap-2 font-medium"
                   style={{
-                    background: 'var(--accent)', border: 'none',
+                    background: 'var(--accent)', color: 'var(--on-accent)', border: 'none',
                     height: 56, padding: '0 22px', fontSize: 15, fontWeight: 700,
                     boxShadow: '0 4px 16px rgba(0,0,0,0.35), 0 0 24px var(--accent-glow)',
                   }}
                   title="Новая задача (N)"
                 >
-                  <span style={{ fontSize: 22, lineHeight: 1, color: '#000' }}>+</span>
-                  <span style={{ color: '#000' }}>новая задача</span>
+                  <span style={{ fontSize: 22, lineHeight: 1 }}>+</span>
+                  <span>новая задача</span>
                 </button>
               )}
             </main>

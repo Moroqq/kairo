@@ -75,7 +75,7 @@ export function ExpenseForm({ initial, onSave, onCancel, onDelete, onTogglePaid,
             background: paid ? 'var(--accent)' : 'transparent',
             transition: 'background 200ms ease, border-color 200ms ease',
           }}>
-            {paid && <Check size={13} color="#000" strokeWidth={3} />}
+            {paid && <Check size={13} color="var(--on-accent)" strokeWidth={3} />}
           </span>
           <span className="font-mono" style={{ fontSize: 13 }}>
             {paid ? 'оплачено · снять отметку' : 'отметить оплаченным'}

@@ -112,7 +112,7 @@ export function RecoveryCodeReveal({ recoveryCode, onConfirm }: Props) {
           style={{
             height: 52,
             background: confirmed ? 'var(--accent)' : 'var(--bg-elevated)',
-            color: confirmed ? '#000' : 'var(--text-dim)',
+            color: confirmed ? 'var(--on-accent)' : 'var(--text-dim)',
             border: 'none', fontSize: 15, fontWeight: 700,
             cursor: confirmed ? 'pointer' : 'not-allowed',
           }}

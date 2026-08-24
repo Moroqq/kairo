@@ -3,14 +3,42 @@
  * LAN-синка, здесь есть промежуточный сервер и авторизация токеном
  * устройства, но протокол данных (SYNC_PUSH/SYNC_ACK, тот же снимок)
  * намеренно такой же — см. sync-snapshot.ts.
+ *
+ * Что здесь важно понимать:
+ *
+ * 1. Синк «тихий» по умолчанию, но НЕ безмолвный. Раньше все ошибки уходили
+ *    в console.warn, а экран SYNC при этом безусловно писал «✓ облако
+ *    подключено» — приложение врало пользователю про своё состояние.
+ *    Теперь наружу торчит `getState()` с реальным статусом и последней
+ *    ошибкой, и UI показывает именно его.
+ *
+ * 2. Соединение восстанавливается само. Мобильный клиент почти всё время
+ *    в фоне: сокет рвётся при засыпании, и раньше после этого не
+ *    происходило вообще ничего до перезапуска приложения. Теперь есть
+ *    реконнект с backoff, синк при возврате в фор и при появлении сети.
+ *
+ * 3. Порядок push/pull. Снимок — единый блоб, мержа нет: кто последний
+ *    записал, того и данные. Поэтому если на этом устройстве есть
+ *    несинхронизированные правки (флаг dirty), мы сначала ОТДАЁМ их,
+ *    и только потом забираем состояние сервера. Раньше стартовый pull
+ *    молча затирал локальные правки, сделанные офлайн.
  */
 
 import { captureSnapshot, applySnapshot, type SyncSnapshot } from './sync-snapshot';
 import { getCredentials } from '@/lib/account';
+import { wsUrl, describeNetworkError } from '@/lib/server';
 
-const SERVER_URL = (import.meta.env.VITE_KAIRO_SERVER_URL as string | undefined) ?? 'http://localhost:8787';
+export type VpsSyncStatus = 'idle' | 'connecting' | 'connected' | 'syncing' | 'error';
 
-export type VpsSyncStatus = 'idle' | 'connecting' | 'connected' | 'error';
+export interface VpsSyncState {
+  status: VpsSyncStatus;
+  /** Текст последней ошибки (человеческий), либо null. */
+  lastError: string | null;
+  /** ISO-время последнего успешного обмена с сервером, либо null. */
+  lastSyncTs: string | null;
+  /** Есть ли локальные правки, которые ещё не доехали до облака. */
+  pendingChanges: boolean;
+}
 
 type ServerMsg =
   | { type: 'AUTH_OK' }
@@ -18,147 +46,297 @@ type ServerMsg =
   | { type: 'SYNC_PUSH'; snapshot: SyncSnapshot }
   | { type: 'SYNC_ACK'; ts: string };
 
+const LAST_SYNC_KEY = 'kairo_sync_last_ts';
+const DIRTY_KEY = 'kairo_sync_dirty';
+
+const AUTH_TIMEOUT_MS = 10000;
+const REPLY_TIMEOUT_MS = 15000;
+const DEBOUNCE_MS = 3000;
+/** Периодический фоновой синк — страховка на случай пропущенных событий. */
+const PERIODIC_MS = 5 * 60 * 1000;
+
 class VpsSyncService {
   private ws: WebSocket | null = null;
-  private _status: VpsSyncStatus = 'idle';
-  private statusHandlers: ((s: VpsSyncStatus) => void)[] = [];
-  private lastSyncHandlers: ((ts: string) => void)[] = [];
+  /** In-flight connect(). Без него два одновременных вызова открывали два сокета. */
+  private connecting: Promise<void> | null = null;
 
-  get status(): VpsSyncStatus { return this._status; }
+  private state: VpsSyncState = {
+    status: 'idle',
+    lastError: null,
+    lastSyncTs: localStorage.getItem(LAST_SYNC_KEY),
+    pendingChanges: localStorage.getItem(DIRTY_KEY) === '1',
+  };
+  private handlers = new Set<(s: VpsSyncState) => void>();
 
-  onStatusChange(cb: (s: VpsSyncStatus) => void): () => void {
-    this.statusHandlers.push(cb);
-    return () => { this.statusHandlers = this.statusHandlers.filter((h) => h !== cb); };
+  private pushTimer: ReturnType<typeof setTimeout> | null = null;
+  private reconnectTimer: ReturnType<typeof setTimeout> | null = null;
+  private reconnectAttempt = 0;
+  private periodicTimer: ReturnType<typeof setInterval> | null = null;
+  private started = false;
+  /** Текущий syncNow(), чтобы параллельные вызовы не гоняли обмен дважды. */
+  private inFlightSync: Promise<void> | null = null;
+
+  // ── Наблюдаемое состояние ────────────────────────────────────────────
+
+  getState(): VpsSyncState { return this.state; }
+
+  subscribe(cb: (s: VpsSyncState) => void): () => void {
+    this.handlers.add(cb);
+    return () => { this.handlers.delete(cb); };
   }
 
-  onLastSync(cb: (ts: string) => void): () => void {
-    this.lastSyncHandlers.push(cb);
-    return () => { this.lastSyncHandlers = this.lastSyncHandlers.filter((h) => h !== cb); };
+  private patch(p: Partial<VpsSyncState>): void {
+    this.state = { ...this.state, ...p };
+    this.handlers.forEach((h) => h(this.state));
   }
 
-  private setStatus(s: VpsSyncStatus): void {
-    this._status = s;
-    this.statusHandlers.forEach((h) => h(s));
+  private markDirty(dirty: boolean): void {
+    if (dirty) localStorage.setItem(DIRTY_KEY, '1');
+    else localStorage.removeItem(DIRTY_KEY);
+    this.patch({ pendingChanges: dirty });
   }
 
-  private wsUrl(): string {
-    const url = new URL(SERVER_URL);
-    url.protocol = url.protocol === 'https:' ? 'wss:' : 'ws:';
-    url.pathname = '/sync';
-    return url.toString();
+  private markSynced(ts: string): void {
+    localStorage.setItem(LAST_SYNC_KEY, ts);
+    this.patch({ lastSyncTs: ts, lastError: null });
   }
 
-  /** Открывает соединение и авторизуется. Резолвится после AUTH_OK, реджектится на ошибке/таймауте. */
+  // ── Соединение ───────────────────────────────────────────────────────
+
+  /** Открывает соединение и авторизуется. Резолвится после AUTH_OK. */
   private connect(): Promise<void> {
     if (this.ws?.readyState === WebSocket.OPEN) return Promise.resolve();
+    if (this.connecting) return this.connecting;
 
     const creds = getCredentials();
-    if (!creds) return Promise.reject(new Error('no_account'));
+    if (!creds) return Promise.reject(new Error('нет облачного аккаунта'));
 
-    this.setStatus('connecting');
-    return new Promise((resolve, reject) => {
-      const ws = new WebSocket(this.wsUrl());
+    this.patch({ status: 'connecting' });
+
+    this.connecting = new Promise<void>((resolve, reject) => {
+      let ws: WebSocket;
+      try {
+        ws = new WebSocket(wsUrl('/sync'));
+      } catch (e) {
+        reject(new Error(describeNetworkError(e)));
+        return;
+      }
       this.ws = ws;
-      const timeout = setTimeout(() => { ws.close(); reject(new Error('auth_timeout')); }, 8000);
 
-      ws.onopen = () => {
-        ws.send(JSON.stringify({ type: 'AUTH', token: creds.deviceToken }));
+      let settled = false;
+      const finish = (err?: Error) => {
+        if (settled) return;
+        settled = true;
+        clearTimeout(timer);
+        if (err) reject(err); else resolve();
       };
+
+      const timer = setTimeout(() => {
+        try { ws.close(); } catch { /* ignore */ }
+        finish(new Error('сервер не подтвердил авторизацию за 10 с'));
+      }, AUTH_TIMEOUT_MS);
+
+      ws.onopen = () => ws.send(JSON.stringify({ type: 'AUTH', token: creds.deviceToken }));
+
       ws.onmessage = (e) => {
-        const msg = JSON.parse(e.data) as ServerMsg;
+        let msg: ServerMsg;
+        try { msg = JSON.parse(e.data as string) as ServerMsg; } catch { return; }
         if (msg.type === 'AUTH_OK') {
-          clearTimeout(timeout);
-          this.setStatus('connected');
-          resolve();
+          this.reconnectAttempt = 0;
+          this.patch({ status: 'connected', lastError: null });
+          finish();
         } else if (msg.type === 'AUTH_ERROR') {
-          clearTimeout(timeout);
-          this.setStatus('error');
-          reject(new Error('auth_error'));
+          try { ws.close(); } catch { /* ignore */ }
+          finish(new Error('сервер отклонил токен устройства — переподключи устройство заново'));
         }
       };
+
       ws.onerror = () => {
-        clearTimeout(timeout);
-        this.setStatus('error');
-        reject(new Error('connection_error'));
+        finish(new Error('не удалось открыть соединение с сервером'));
       };
+
       ws.onclose = () => {
-        if (this._status !== 'idle') this.setStatus('idle');
+        if (this.ws === ws) this.ws = null;
+        finish(new Error('соединение закрылось до авторизации'));
+        if (this.state.status === 'connected') this.patch({ status: 'idle' });
+        // Соединение упало уже после успешного синка — планируем реконнект,
+        // иначе устройство «замолкает» до перезапуска приложения.
+        if (this.started && getCredentials()) this.scheduleReconnect();
       };
-    });
+    }).finally(() => { this.connecting = null; });
+
+    return this.connecting;
+  }
+
+  /** Реконнект с экспоненциальным backoff: 5с, 10с, 20с, 40с, дальше раз в минуту. */
+  private scheduleReconnect(): void {
+    if (this.reconnectTimer) return;
+    const delay = Math.min(60000, 5000 * 2 ** Math.min(this.reconnectAttempt, 4));
+    this.reconnectAttempt += 1;
+    this.reconnectTimer = setTimeout(() => {
+      this.reconnectTimer = null;
+      void this.syncNow().catch(() => { /* статус уже записан в state */ });
+    }, delay);
   }
 
   /** Ждёт ответного сообщения нужного типа (после того как AUTH уже прошёл). */
   private waitFor<T extends ServerMsg['type']>(type: T): Promise<Extract<ServerMsg, { type: T }>> {
     return new Promise((resolve, reject) => {
-      if (!this.ws) return reject(new Error('not_connected'));
+      const ws = this.ws;
+      if (!ws || ws.readyState !== WebSocket.OPEN) return reject(new Error('соединение не открыто'));
+
+      const cleanup = () => {
+        clearTimeout(timeout);
+        ws.removeEventListener('message', onMessage);
+        ws.removeEventListener('close', onClose);
+      };
       const timeout = setTimeout(() => {
-        this.ws?.removeEventListener('message', handler);
-        reject(new Error('timeout'));
-      }, 10000);
-      const handler = (e: MessageEvent) => {
-        const msg = JSON.parse(e.data) as ServerMsg;
+        cleanup();
+        reject(new Error(`сервер не ответил на ${type} за 15 с`));
+      }, REPLY_TIMEOUT_MS);
+      const onMessage = (e: MessageEvent) => {
+        let msg: ServerMsg;
+        try { msg = JSON.parse(e.data as string) as ServerMsg; } catch { return; }
         if (msg.type === type) {
-          clearTimeout(timeout);
-          this.ws?.removeEventListener('message', handler);
+          cleanup();
           resolve(msg as Extract<ServerMsg, { type: T }>);
         }
       };
-      this.ws.addEventListener('message', handler);
+      // Раньше обрыв во время ожидания оставлял промис висеть до таймаута.
+      const onClose = () => { cleanup(); reject(new Error('соединение оборвалось')); };
+
+      ws.addEventListener('message', onMessage);
+      ws.addEventListener('close', onClose);
     });
   }
 
+  // ── Обмен ────────────────────────────────────────────────────────────
+
   /** Забирает снимок с сервера и применяет локально. */
-  async pull(): Promise<void> {
+  private async pull(): Promise<void> {
     await this.connect();
     this.ws!.send(JSON.stringify({ type: 'SYNC_PULL' }));
     const res = await this.waitFor('SYNC_PUSH');
     applySnapshot(res.snapshot);
+    this.markSynced(new Date().toISOString());
+  }
+
+  /**
+   * Принять состояние облака как истину: сбросить dirty и забрать снимок.
+   * Используется после парности и после восстановления по коду — там
+   * данные аккаунта главнее того, что успело накопиться на этом устройстве.
+   * Отдельный метод нужен именно потому, что syncNow() при dirty сначала
+   * пушит, а здесь такой push затёр бы аккаунт локальной пустотой.
+   */
+  async adoptCloudState(): Promise<void> {
+    this.markDirty(false);
+    this.patch({ status: 'syncing', lastError: null });
+    try {
+      await this.pull();
+      this.patch({ status: 'connected' });
+    } catch (err) {
+      const msg = describeNetworkError(err);
+      this.patch({ status: 'error', lastError: msg });
+      throw new Error(msg);
+    }
   }
 
   /** Отправляет локальный снимок на сервер. */
-  async push(): Promise<void> {
+  private async push(): Promise<void> {
     await this.connect();
     this.ws!.send(JSON.stringify({ type: 'SYNC_PUSH', snapshot: captureSnapshot() }));
     const res = await this.waitFor('SYNC_ACK');
-    this.lastSyncHandlers.forEach((h) => h(res.ts));
+    this.markDirty(false);
+    this.markSynced(res.ts);
+  }
+
+  /**
+   * Полный обмен. Если локально есть неотправленные правки — сначала
+   * отдаём их, потом забираем серверное состояние. Иначе просто тянем.
+   * Бросает исключение — вызывающий решает, показывать ли ошибку.
+   */
+  syncNow(): Promise<void> {
+    if (this.inFlightSync) return this.inFlightSync;
+
+    this.inFlightSync = (async () => {
+      if (!getCredentials()) throw new Error('нет облачного аккаунта');
+      this.patch({ status: 'syncing', lastError: null });
+      try {
+        if (this.state.pendingChanges) await this.push();
+        await this.pull();
+        this.patch({ status: 'connected' });
+      } catch (err) {
+        const msg = describeNetworkError(err);
+        this.patch({ status: 'error', lastError: msg });
+        if (this.started) this.scheduleReconnect();
+        throw new Error(msg);
+      }
+    })().finally(() => { this.inFlightSync = null; });
+
+    return this.inFlightSync;
   }
 
   disconnect(): void {
-    this.ws?.close();
-    this.ws = null;
-    this.setStatus('idle');
+    if (this.ws) {
+      const ws = this.ws;
+      this.ws = null;
+      ws.onclose = null;   // не запускаем реконнект на ручное отключение
+      try { ws.close(); } catch { /* ignore */ }
+    }
+    this.patch({ status: 'idle' });
   }
 
   // ── Автосинк ─────────────────────────────────────────────────────────
   // pushDebounced() схлопывает быстрые серии мутаций в один push через N сек
-  // тишины. Ошибки глушим — авто-синк не должен беспокоить пользователя,
-  // а next mutation всё равно триггернёт новый push.
-
-  private pushTimer: ReturnType<typeof setTimeout> | null = null;
-  private pushPending = false;
-  private static readonly DEBOUNCE_MS = 3000;
+  // тишины. Ошибку не показываем модально, но записываем в state — её видно
+  // на экране SYNC, и dirty-флаг гарантирует, что правки уедут позже.
 
   pushDebounced(): void {
-    if (!getCredentials()) return; // нет аккаунта — тихо no-op
+    // Помечаем dirty СРАЗУ, до всякой сети: если приложение закроют раньше,
+    // чем сработает таймер, при следующем запуске правки всё равно уедут.
+    this.markDirty(true);
+    if (!getCredentials()) return;
     if (this.pushTimer) clearTimeout(this.pushTimer);
-    this.pushTimer = setTimeout(() => { void this.tryPush(); }, VpsSyncService.DEBOUNCE_MS);
+    this.pushTimer = setTimeout(() => {
+      this.pushTimer = null;
+      void this.push().catch((err) => {
+        const msg = describeNetworkError(err);
+        this.patch({ status: 'error', lastError: msg });
+        console.warn('[vps-sync] auto-push failed:', msg);
+        if (this.started) this.scheduleReconnect();
+      });
+    }, DEBOUNCE_MS);
   }
 
-  /** Тихий push. Ошибки только в console.warn, помечаем pushPending для ретрая. */
-  private async tryPush(): Promise<void> {
-    this.pushTimer = null;
-    try {
-      await this.push();
-      this.pushPending = false;
-    } catch (err) {
-      this.pushPending = true;
-      console.warn('[vps-sync] auto-push failed:', err);
-    }
-  }
+  /**
+   * Поднимает автосинк: стартовый обмен + реакция на возврат в фор,
+   * появление сети и периодический тик. Идемпотентно.
+   */
+  start(): () => void {
+    if (this.started) return () => { /* уже запущен */ };
+    this.started = true;
 
-  /** Ретрай залежавшегося push, вызывается на `online` event. */
-  retryPendingPush(): void {
-    if (this.pushPending) this.pushDebounced();
+    const kick = () => {
+      if (!getCredentials()) return;
+      void this.syncNow().catch(() => { /* ошибка уже в state */ });
+    };
+
+    const onVisible = () => { if (document.visibilityState === 'visible') kick(); };
+    document.addEventListener('visibilitychange', onVisible);
+    window.addEventListener('online', kick);
+    window.addEventListener('focus', kick);
+    this.periodicTimer = setInterval(kick, PERIODIC_MS);
+
+    kick();
+
+    return () => {
+      this.started = false;
+      document.removeEventListener('visibilitychange', onVisible);
+      window.removeEventListener('online', kick);
+      window.removeEventListener('focus', kick);
+      if (this.periodicTimer) { clearInterval(this.periodicTimer); this.periodicTimer = null; }
+      if (this.reconnectTimer) { clearTimeout(this.reconnectTimer); this.reconnectTimer = null; }
+    };
   }
 }
 

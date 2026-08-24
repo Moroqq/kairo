@@ -46,7 +46,7 @@ export function DailyRow({ daily, onToggle, onDelete }: Props) {
           transform: daily.done ? 'scale(1.05)' : 'scale(1)',
           transition: 'background 260ms var(--ease-spring), border-color 260ms ease, box-shadow 260ms ease, transform 260ms var(--ease-spring)',
         }}>
-          {daily.done && <Check size={13} color="#000" strokeWidth={3} style={{ animation: 'km-pop 240ms ease-out' }} />}
+          {daily.done && <Check size={13} color="var(--on-accent)" strokeWidth={3} style={{ animation: 'km-pop 240ms ease-out' }} />}
         </span>
       </button>
 
