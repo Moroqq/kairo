@@ -20,6 +20,17 @@ interface BlobRow {
   updated_at: string;
 }
 
+/**
+ * 'YYYY-MM-DD HH:MM:SS' (UTC, формат sqlite) → корректный ISO-8601.
+ * Строку, которая и так ISO, пропускаем как есть: дописывать ей 'Z'
+ * нельзя — получится '...ZZ', Invalid Date и молчаливый 1970-й.
+ */
+function sqliteToISO(value: string): string {
+  const normalized = /[TZ]/.test(value) ? value : `${value.replace(' ', 'T')}Z`;
+  const parsed = new Date(normalized);
+  return Number.isNaN(parsed.getTime()) ? new Date(0).toISOString() : parsed.toISOString();
+}
+
 const getBlob = db.prepare(`SELECT data, updated_at FROM sync_blobs WHERE account_id = ?`);
 const upsertBlob = db.prepare(`
   INSERT INTO sync_blobs (account_id, data, updated_at) VALUES (?, ?, datetime('now'))
@@ -64,7 +75,12 @@ export function registerSyncRoutes(app: FastifyInstance): void {
       if (msg.type === 'SYNC_PULL') {
         const row = getBlob.get(device.accountId) as BlobRow | undefined;
         const data = row ? (JSON.parse(row.data) as Record<string, string>) : {};
-        const ts = row?.updated_at ?? new Date(0).toISOString();
+        // sqlite datetime('now') отдаёт 'YYYY-MM-DD HH:MM:SS' — без 'T' и без
+        // таймзоны, то есть не ISO. Раньше эта строка уходила в протокол как
+        // есть: клиент получал ts, который new Date() разбирает как локальное
+        // время (а где-то и вовсе не разбирает). Тот же подвох уже описан
+        // в pairing.ts про expires_at.
+        const ts = row ? sqliteToISO(row.updated_at) : new Date(0).toISOString();
         send({ type: 'SYNC_PUSH', snapshot: { data, ts } });
         return;
       }

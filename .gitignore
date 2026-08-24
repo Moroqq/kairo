@@ -40,3 +40,6 @@ server/data/update/
 Thumbs.db
 .claude/
 .vercel
+
+# Кэш npm, если бэкенд собирали на сервере под юзером kairo (HOME=/opt/kairo-server)
+.npm/
