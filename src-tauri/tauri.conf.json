@@ -46,7 +46,7 @@
     "updater": {
       "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IEFFODM1NjhCOTI2RTM0NQpSV1JGNHlhNWFEWG9DbGQ4SGZ6VWZzTkk4b3dCUytJTjh0QTY4SmYvd0o0aWxqNU01N083a21nUwo=",
       "endpoints": [
-        "https://kairogoupyrlife.duckdns.org/update/latest.json"
+        "https://kairoupdate.duckdns.org/update/latest.json"
       ]
     }
   }

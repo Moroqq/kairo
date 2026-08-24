@@ -8,6 +8,7 @@ import { useToast } from '@/components/ui/Toast';
 import {
   startPairing, waitForPairing, approvePairing, type PairingIntent,
 } from '@/lib/account';
+import { isTauri } from '@tauri-apps/api/core';
 import vpsSync, { type VpsSyncState } from '@/services/vps-sync.service';
 import { checkNow, startUpdate, useBannerState } from '@/components/updates/UpdateBanner';
 
@@ -492,6 +493,8 @@ function ScannerModal({ onClose }: { onClose: () => void }) {
 
 function UpdateCheckerRow() {
   const s = useBannerState();
+  // В вебе апдейтера нет — строка «проверить обновления» там только путает.
+  if (!isTauri()) return null;
   const hasUpdate = s.phase === 'available' && !!s.update;
   const busy = s.phase === 'checking' || s.phase === 'downloading' || s.phase === 'installing';
 

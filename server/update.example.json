@@ -6,11 +6,11 @@
   "platforms": {
     "windows-x86_64": {
       "signature": "содержимое .sig-файла из src-tauri/target/release/bundle/",
-      "url": "https://kairogoupyrlife.duckdns.org/update/Kairo_0.4.8_x64-setup.nsis.zip"
+      "url": "https://kairoupdate.duckdns.org/update/Kairo_0.4.8_x64-setup.nsis.zip"
     },
     "android-aarch64": {
       "signature": "",
-      "url": "https://kairogoupyrlife.duckdns.org/update/kairo-0.4.8.apk"
+      "url": "https://kairoupdate.duckdns.org/update/kairo-0.4.8.apk"
     }
   }
 }

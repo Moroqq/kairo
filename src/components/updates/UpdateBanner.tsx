@@ -3,6 +3,7 @@ import { Download, X, Loader2, RefreshCw } from 'lucide-react';
 import { check as pluginCheck, type Update } from '@tauri-apps/plugin-updater';
 import { relaunch } from '@tauri-apps/plugin-process';
 import { open } from '@tauri-apps/plugin-shell';
+import { isTauri } from '@tauri-apps/api/core';
 import {
   UPDATE_MANIFEST_URL, SERVER_HOST, fetchWithTimeout, describeNetworkError,
 } from '@/lib/server';
@@ -117,6 +118,13 @@ function withTimeout<T>(p: Promise<T>, ms: number, label: string): Promise<T> {
 
 export async function checkNow(): Promise<void> {
   if (state.phase === 'checking' || state.phase === 'downloading' || state.phase === 'installing') return;
+  // В обычном браузере (веб-деплой на Vercel) обновлять нечего: страница и так
+  // всегда свежая. Без этой проверки веб-версия на каждой загрузке показывала
+  // «ошибка апдейтера» — плагин там недоступен в принципе.
+  if (!isTauri()) {
+    setState({ phase: 'no-update', errorMsg: null });
+    return;
+  }
   setState({ phase: 'checking', errorMsg: null });
   // 1. Сначала пробуем встроенный плагин
   try {

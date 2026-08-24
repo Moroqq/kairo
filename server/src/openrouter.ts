@@ -27,7 +27,7 @@ export async function openRouterChat(params: ORChatParams): Promise<string> {
   const headers: Record<string, string> = {
     Authorization: `Bearer ${apiKey}`,
     'Content-Type': 'application/json',
-    'HTTP-Referer': 'https://kairogoupyrlife.duckdns.org',
+    'HTTP-Referer': 'https://kairoupdate.duckdns.org',
     'X-Title': 'Kairo',
   };
   if (PROXY_SECRET) headers['X-Proxy-Secret'] = PROXY_SECRET;

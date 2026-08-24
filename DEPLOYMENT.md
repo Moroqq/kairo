@@ -5,11 +5,17 @@
 
 ## Статус
 
-Kairo — **полностью развёрнут и доступен из интернета:**
-`https://kairogoupyrlife.duckdns.org` (HTTPS через Let's Encrypt, `/health` → `{"ok":true}`).
+Актуальный адрес бэкенда — **`https://kairoupdate.duckdns.org`** (IP `45.151.62.223`).
+Клиент переключён на него полностью: и облачный синк, и апдейтер.
 
-Осталось только: настроить клиент Kairo на этот URL, и — отдельная задача —
-подселить сюда второй проект Delta, когда будет ясен его стек.
+Старый домен `kairogoupyrlife.duckdns.org` (указывает на `193.233.48.48`)
+больше нигде в коде не используется. Именно его протухшая A-запись и была
+общей причиной того, что разом отказали синк и проверка обновлений: обе
+функции ходят на один хост.
+
+> **Не сделано на сервере:** на новый домен нужен свой TLS-сертификат —
+> см. «Переезд на новый домен» ниже. Пока его нет, `https://kairoupdate…`
+> не поднимется, а и Tauri-апдейтер, и Android требуют именно https.
 
 ## Сервер
 
@@ -54,8 +60,11 @@ Kairo — **полностью развёрнут и доступен из ин�
 
 ### Публичный URL (Kairo)
 
-- Домен: `kairogoupyrlife.duckdns.org` (DuckDNS, обновление IP ручное через панель)
-- TLS: Let's Encrypt, сертификат в `/etc/letsencrypt/live/kairogoupyrlife.duckdns.org/`
+- Домен: `kairoupdate.duckdns.org` → `45.151.62.223` (DuckDNS, обновление IP ручное через панель)
+- TLS: Let's Encrypt; сертификат на новый домен нужно выпустить (см. ниже)
+- Старый домен: `kairogoupyrlife.duckdns.org` → `193.233.48.48`, выведен из
+  обращения. Сертификат на него лежит в
+  `/etc/letsencrypt/live/kairogoupyrlife.duckdns.org/`
 - Автопродление: systemd-таймер `snap.certbot.renew` (стандартный certbot setup)
 - Nginx site: `/etc/nginx/sites-available/kairo`, симлинк в `sites-enabled`
 - WebSocket-мап: `/etc/nginx/conf.d/websocket-map.conf` (нужен для sync-соединений)
@@ -110,7 +119,7 @@ USB-tethering отмели — пользователь уже пробовал,
    сделать так же для нового).
 6. Залить новый APK на VPS через SFTP, добавить временный nginx-location
    `/kairo.apk` с `Content-Type: application/vnd.android.package-archive`.
-7. С телефона скачать по URL `https://kairogoupyrlife.duckdns.org/kairo.apk`,
+7. С телефона скачать по URL `https://kairoupdate.duckdns.org/kairo.apk`,
    поставить (если подпись совпала — в один клик обновится, если нет —
    переустановка со стиранием, но данные уже в облаке).
 8. На телефоне после установки → сгенерировать QR парности на десктопе →
@@ -151,38 +160,49 @@ location в nginx. Нигде не задокументированный, он 
 3. Скопировать артефакты в `/opt/kairo-server/server/data/update/` на VPS.
 4. Положить туда же `latest.json` по шаблону: `version`, ссылки в `platforms`,
    для десктопа — `signature` из соответствующего `.sig`.
-5. Проверить: `curl -s https://kairogoupyrlife.duckdns.org/update/latest.json`.
+5. Проверить: `curl -s https://kairoupdate.duckdns.org/update/latest.json`.
 
 > Если перед бэкендом стоит nginx, `/update/` должен проксироваться на
 > `127.0.0.1:8787` вместе с остальными маршрутами. Отдельный `location`
 > со статикой больше не нужен — но если он остался, он перехватит
 > запрос раньше бэкенда, и раздавать будет он.
 
-## Известная проблема: DNS домена
+## Переезд на новый домен (что осталось сделать на сервере)
 
-`kairogoupyrlife.duckdns.org` резолвится в **193.233.48.48**, а по этому
-документу VPS живёт на **193.233.48.36**. DuckDNS обновляется вручную через
-панель, так что расхождение вполне могло накопиться. Если IP сервера
-действительно `.36`, то с текущей A-записью не работают сразу обе функции,
-которые ходят на этот хост: облачный синк и проверка обновлений — ровно то,
-что и наблюдается в клиенте.
-
-Проверить (с любой машины, где есть доступ):
+Клиент уже собирается под `kairoupdate.duckdns.org`. Чтобы это заработало,
+на VPS нужно один раз добавить домен в nginx и выпустить сертификат.
 
 ```bash
-# куда указывает домен сейчас
-dig +short kairogoupyrlife.duckdns.org
+# 1. Убедиться, что домен резолвится в этот сервер
+dig +short kairoupdate.duckdns.org        # ожидаем 45.151.62.223
+curl -s http://127.0.0.1:8787/health      # бэкенд жив локально?
 
-# жив ли бэкенд по IP напрямую (в обход DNS)
-curl -sk --resolve kairogoupyrlife.duckdns.org:443:193.233.48.36 \
-  https://kairogoupyrlife.duckdns.org/health
+# 2. Добавить домен в server_name существующего сайта
+#    (/etc/nginx/sites-available/kairo) — рядом со старым, через пробел:
+#    server_name kairogoupyrlife.duckdns.org kairoupdate.duckdns.org;
+nginx -t && systemctl reload nginx
 
-# что видно снаружи через домен
-curl -s https://kairogoupyrlife.duckdns.org/health
+# 3. Выпустить сертификат на новый домен
+certbot --nginx -d kairoupdate.duckdns.org
+
+# 4. Проверить снаружи
+curl -s  https://kairoupdate.duckdns.org/health            # {"ok":true}
+curl -si https://kairoupdate.duckdns.org/update/latest.json | head -1
 ```
 
-Если первый и второй ответы расходятся — обновить A-запись в панели DuckDNS
-(или поднять на сервере обновлятор IP по cron, чтобы это не повторялось).
+Пункт 4 со `/update/latest.json` вернёт 404 с текстом
+`manifest_not_published`, пока в каталог релизов не положен `latest.json` —
+это ожидаемо и означает, что маршрут работает (раньше на его месте не было
+вообще ничего, и клиент показывал невнятное `Failed to fetch`).
+
+Проверить, что nginx проксирует **все** пути на бэкенд, а не только часть:
+`/sync` (WebSocket, нужен upgrade-мап), `/accounts`, `/pairing/*`,
+`/recovery/*`, `/update/*`. Если от старой схемы остался отдельный
+`location /update/` со статикой — его надо убрать, иначе он перехватит
+запрос раньше бэкенда.
+
+Когда всё позеленеет — старый домен можно удалить из `server_name` и из
+панели DuckDNS.
 
 ## Быстрые команды (для дебага)
 
