@@ -1,4 +1,4 @@
-import { randomBytes, randomUUID, createHash } from 'node:crypto';
+import { randomBytes, randomUUID, createHash, scryptSync, timingSafeEqual } from 'node:crypto';
 import * as bip39 from 'bip39';
 
 // ── Идентификаторы ───────────────────────────────────────────────────────
@@ -71,4 +71,51 @@ export const PAIRING_INTENT_TTL_MS = 5 * 60 * 1000;
 
 export function generatePairingIntentId(): string {
   return randomUUID();
+}
+
+// ── Логин и пароль ───────────────────────────────────────────────────────
+// scrypt из стандартной библиотеки: без внешних зависимостей и намеренно
+// медленный, чтобы перебор украденной базы был дорогим. Соль — своя на
+// каждый пароль, хранится рядом с хэшем.
+
+const SCRYPT_N = 16384;   // ~16 МБ памяти на проверку
+const SCRYPT_KEYLEN = 32;
+
+/** Формат: scrypt$<N>$<sol_hex>$<hash_hex>. Версия в строке — чтобы потом можно было менять параметры. */
+export function hashPassword(password: string): string {
+  const salt = randomBytes(16);
+  const hash = scryptSync(password.normalize('NFKC'), salt, SCRYPT_KEYLEN, { N: SCRYPT_N });
+  return `scrypt$${SCRYPT_N}$${salt.toString('hex')}$${hash.toString('hex')}`;
+}
+
+/** Сравнение за постоянное время: по длительности ответа нельзя подбирать пароль посимвольно. */
+export function verifyPassword(password: string, stored: string | null): boolean {
+  if (!stored) return false;
+  const parts = stored.split('$');
+  if (parts.length !== 4 || parts[0] !== 'scrypt') return false;
+  const n = Number(parts[1]);
+  if (!Number.isSafeInteger(n) || n <= 0) return false;
+  let expected: Buffer;
+  try {
+    expected = Buffer.from(parts[3], 'hex');
+  } catch {
+    return false;
+  }
+  const actual = scryptSync(password.normalize('NFKC'), Buffer.from(parts[2], 'hex'), expected.length, { N: n });
+  return actual.length === expected.length && timingSafeEqual(actual, expected);
+}
+
+/** Логин приводим к нижнему регистру — «Moroqq» и «moroqq» это один аккаунт. */
+export function normalizeLogin(login: string): string {
+  return login.trim().toLowerCase().normalize('NFKC');
+}
+
+export const LOGIN_MIN = 3;
+export const LOGIN_MAX = 32;
+export const PASSWORD_MIN = 8;
+
+/** Разрешаем буквы, цифры, точку, дефис и подчёркивание — без пробелов и служебных символов. */
+export function isValidLogin(login: string): boolean {
+  const l = normalizeLogin(login);
+  return l.length >= LOGIN_MIN && l.length <= LOGIN_MAX && /^[a-z0-9._-]+$/.test(l);
 }

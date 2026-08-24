@@ -1,63 +1,79 @@
 import { create } from 'zustand';
 import {
-  hasAccount, createAccount, shouldShowRecoveryCode, markRecoveryCodeShown,
-  redeemRecoveryCode,
+  hasAccount, markRecoveryCodeShown,
+  registerAccount, loginAccount, setAccountCredentials, fetchAccountLogin, logout,
 } from '@/lib/account';
 import vpsSync from '@/services/vps-sync.service';
 
 interface AccountState {
   ready: boolean;              // локальное состояние прочитано хотя бы раз
   hasAccount: boolean;
-  recoveryCodeToShow: string | null; // не null → показываем RecoveryCodeReveal с этим кодом
+  /** Логин текущего аккаунта; null — аккаунт есть, но входа к нему ещё нет. */
+  login: string | null;
+  /** Логин ещё не запрашивали у сервера. */
+  loginUnknown: boolean;
+  recoveryCodeToShow: string | null;
 
   checkLocalState: () => void;
-  createNewAccount: () => Promise<void>;
-  recoverWithCode: (code: string) => Promise<void>;
+  refreshLogin: () => Promise<void>;
+  signUp: (login: string, password: string) => Promise<void>;
+  signIn: (login: string, password: string) => Promise<void>;
+  /** Привязать логин к уже существующему аккаунту этого устройства. */
+  attachCredentials: (login: string, password: string) => Promise<void>;
+  signOut: () => void;
   dismissRecoveryReveal: () => void;
-  /** После успешного pairing (через SyncPage QR-flow) — обновить UI. */
-  refreshAfterPairing: () => void;
 }
 
-export const useAccountStore = create<AccountState>((set) => ({
+export const useAccountStore = create<AccountState>((set, get) => ({
   ready: false,
   hasAccount: false,
+  login: null,
+  loginUnknown: true,
   recoveryCodeToShow: null,
 
   checkLocalState: () => {
     set({ ready: true, hasAccount: hasAccount() });
+    if (hasAccount()) void get().refreshLogin();
   },
 
-  /** Явное «Создать облачный аккаунт» — только когда пользователь сам это выбрал. */
-  createNewAccount: async () => {
-    const recoveryCode = await createAccount();
-    set({
-      hasAccount: true,
-      recoveryCodeToShow: shouldShowRecoveryCode() ? recoveryCode : null,
-    });
-    // Первое устройство — источник данных для нового аккаунта: сразу
-    // заливаем то, что уже накопилось локально, иначе оно жило бы только
-    // здесь до первой мутации.
+  /** Спрашиваем у сервера, есть ли у аккаунта логин. Сбой сети — не беда, спросим позже. */
+  refreshLogin: async () => {
+    try {
+      set({ login: await fetchAccountLogin(), loginUnknown: false });
+    } catch {
+      set({ loginUnknown: true });
+    }
+  },
+
+  signUp: async (login, password) => {
+    const canonical = await registerAccount(login, password);
+    set({ hasAccount: true, login: canonical, loginUnknown: false });
+    // Первое устройство аккаунта — источник данных: то, что уже накоплено
+    // локально, надо отдать в облако.
     vpsSync.pushDebounced();
   },
 
-  /** Восстановление выдаёт НОВЫЙ код взамен старого — его тоже нужно показать один раз. */
-  recoverWithCode: async (code: string) => {
-    const newRecoveryCode = await redeemRecoveryCode(code);
-    set({ hasAccount: true, recoveryCodeToShow: newRecoveryCode });
-    // Данные на облаке уже могут быть — сразу тянем их локально.
-    // adoptCloudState, а не syncNow: у аккаунта данные главнее локальных.
-    vpsSync.adoptCloudState().catch((err) => console.warn('[vps-sync] post-recovery pull failed:', err));
+  signIn: async (login, password) => {
+    const canonical = await loginAccount(login, password);
+    set({ hasAccount: true, login: canonical, loginUnknown: false });
+    // Вход в существующий аккаунт: данные аккаунта главнее того, что
+    // случайно лежит на этом устройстве.
+    await vpsSync.adoptCloudState().catch((err) => console.warn('[vps-sync] post-login pull failed:', err));
+  },
+
+  attachCredentials: async (login, password) => {
+    const canonical = await setAccountCredentials(login, password);
+    set({ login: canonical, loginUnknown: false });
+  },
+
+  signOut: () => {
+    vpsSync.disconnect();
+    logout();
+    set({ hasAccount: false, login: null, loginUnknown: true, recoveryCodeToShow: null });
   },
 
   dismissRecoveryReveal: () => {
     markRecoveryCodeShown();
     set({ recoveryCodeToShow: null });
-  },
-
-  refreshAfterPairing: () => {
-    set({ hasAccount: hasAccount() });
-    // После успешной парности сразу тянем данные с облака —
-    // пользователю не надо жать никаких кнопок.
-    vpsSync.adoptCloudState().catch((err) => console.warn('[vps-sync] post-pair pull failed:', err));
   },
 }));

@@ -8,6 +8,7 @@ import { registerRecoveryRoutes } from './routes/recovery.js';
 import { registerSyncRoutes } from './routes/sync.js';
 import { registerAiRoutes } from './routes/ai.js';
 import { registerUpdateRoutes } from './routes/updates.js';
+import { registerAuthRoutes } from './routes/auth.js';
 import './db.js'; // инициализирует схему при старте
 
 const app = Fastify({ logger: true });
@@ -31,6 +32,7 @@ registerRecoveryRoutes(app);
 registerSyncRoutes(app);
 registerAiRoutes(app);
 registerUpdateRoutes(app);
+registerAuthRoutes(app);
 
 const port = Number(process.env.PORT ?? 8787);
 const host = process.env.HOST ?? '0.0.0.0';

@@ -62,6 +62,29 @@ db.exec(`
   );
 `);
 
+/**
+ * Вход по логину и паролю. Колонки добавляются миграцией, а не правкой
+ * CREATE TABLE выше: у боевой базы таблица уже существует, и CREATE TABLE
+ * IF NOT EXISTS её не тронет — новые колонки просто не появились бы.
+ *
+ * Оба поля nullable: аккаунты, заведённые до этой версии (в том числе тот,
+ * где сейчас лежат данные), живут без логина, пока владелец его не задаст
+ * через POST /auth/credentials.
+ */
+function addColumnIfMissing(table: string, column: string, definition: string): void {
+  const columns = db.prepare(`PRAGMA table_info(${table})`).all() as { name: string }[];
+  if (columns.some((c) => c.name === column)) return;
+  db.exec(`ALTER TABLE ${table} ADD COLUMN ${column} ${definition}`);
+}
+
+addColumnIfMissing('accounts', 'login', 'TEXT');
+addColumnIfMissing('accounts', 'password_hash', 'TEXT');
+
+// UNIQUE-индекс, а не UNIQUE в колонке: ALTER TABLE ADD COLUMN такого не умеет.
+// В sqlite NULL-ы в уникальном индексе не конфликтуют — аккаунтов без логина
+// может быть сколько угодно.
+db.exec(`CREATE UNIQUE INDEX IF NOT EXISTS idx_accounts_login ON accounts(login)`);
+
 /** node:sqlite не даёт db.transaction() — оборачиваем вручную, с откатом при ошибке. */
 export function withTransaction<T>(fn: () => T): T {
   db.exec('BEGIN');

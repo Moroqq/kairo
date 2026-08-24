@@ -1,13 +1,8 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
-import QRCode from 'qrcode';
-import QrScanner from 'qr-scanner';
-import { QrCode, Camera, X, Loader2, RefreshCw } from 'lucide-react';
+import { useCallback, useEffect, useState } from 'react';
+import { Loader2, RefreshCw } from 'lucide-react';
 import { useAccountStore } from '@/stores/account.store';
-import { useTheme } from '@/stores/theme.store';
 import { useToast } from '@/components/ui/Toast';
-import {
-  startPairing, waitForPairing, approvePairing, type PairingIntent,
-} from '@/lib/account';
+import { describeAuthError, LOGIN_MIN, PASSWORD_MIN } from '@/lib/account';
 import { isTauri } from '@tauri-apps/api/core';
 import vpsSync, { type VpsSyncState } from '@/services/vps-sync.service';
 import { checkNow, startUpdate, useBannerState } from '@/components/updates/UpdateBanner';
@@ -51,241 +46,118 @@ function CardTitle({ children }: { children: React.ReactNode }) {
   );
 }
 
-function ActionRow({ icon, label, desc, onClick, disabled = false }: {
-  icon: React.ReactNode; label: string; desc?: string; onClick: () => void; disabled?: boolean;
+// ── Экран входа ────────────────────────────────────────────────────────
+
+/** Общее поле формы — чтобы вход и регистрация выглядели одинаково. */
+function Field({ label, value, onChange, type = 'text', placeholder, autoComplete, onEnter }: {
+  label: string; value: string; onChange: (v: string) => void;
+  type?: string; placeholder?: string; autoComplete?: string; onEnter?: () => void;
 }) {
   return (
-    <button
-      onClick={onClick}
-      disabled={disabled}
-      className="w-full flex items-start gap-3 text-left px-3 py-3 rounded"
-      style={{
-        background: 'transparent',
-        border: '1px solid transparent',
-        cursor: disabled ? 'not-allowed' : 'pointer',
-        opacity: disabled ? 0.5 : 1,
-      }}
-    >
-      <span style={{ color: 'var(--text-primary)', marginTop: 2 }}>{icon}</span>
-      <span className="flex-1">
-        <span style={{ color: 'var(--text-primary)', fontSize: 13 }}>{label}</span>
-        {desc && (
-          <span className="block" style={{ color: 'var(--text-muted)', fontSize: 11, marginTop: 2 }}>{desc}</span>
-        )}
+    <label className="block">
+      <span className="block font-mono" style={{ fontSize: 11, color: 'var(--text-muted)', letterSpacing: 1, marginBottom: 4 }}>
+        {label}
       </span>
-    </button>
+      <input
+        type={type}
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        placeholder={placeholder}
+        autoComplete={autoComplete}
+        onKeyDown={(e) => { if (e.key === 'Enter' && onEnter) onEnter(); }}
+        className="w-full font-mono px-3 py-2 rounded"
+        style={{
+          background: 'var(--bg-input)', color: 'var(--text-primary)',
+          border: '1px solid var(--border)', fontSize: 16,   // 16px — иначе iOS зумит форму
+        }}
+      />
+    </label>
   );
 }
 
-// ── Экран без аккаунта ─────────────────────────────────────────────────
-
-function UnpairedView() {
-  const createNewAccount = useAccountStore((s) => s.createNewAccount);
-  const recoverWithCode = useAccountStore((s) => s.recoverWithCode);
-  const refreshAfterPairing = useAccountStore((s) => s.refreshAfterPairing);
+function AuthView() {
+  const signIn = useAccountStore((s) => s.signIn);
+  const signUp = useAccountStore((s) => s.signUp);
   const { toast } = useToast();
 
-  const [intent, setIntent] = useState<PairingIntent | null>(null);
-  const [status, setStatus] = useState<'idle' | 'waiting' | 'busy'>('idle');
-  const [code, setCode] = useState('');
-  const [showRecovery, setShowRecovery] = useState(false);
-  const canvasRef = useRef<HTMLCanvasElement>(null);
-  const stopRef = useRef(false);
-  const theme = useTheme();   // смена темы → перерисовать QR в новых цветах
+  const [mode, setMode] = useState<'in' | 'up'>('in');
+  const [login, setLogin] = useState('');
+  const [password, setPassword] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  const startWait = useCallback(async () => {
-    setStatus('busy');
-    stopRef.current = false;
+  const submit = useCallback(async () => {
+    const l = login.trim();
+    if (!l || !password) return;
+    setBusy(true);
+    setError(null);
     try {
-      const it = await startPairing();
-      setIntent(it);
-      setStatus('waiting');
-      // Long-poll loop
-      while (!stopRef.current) {
-        const res = await waitForPairing(it.intentId);
-        if (stopRef.current) return;
-        if (res.status === 'approved') {
-          refreshAfterPairing();
-          toast('Устройство подключено');
-          return;
-        }
-        if (res.status === 'expired' || res.status === 'not_found') {
-          // Автоматически создаём новый intent
-          const fresh = await startPairing();
-          setIntent(fresh);
-          continue;
-        }
-        // pending → просто снова полим
-      }
-    } catch (err) {
-      toast('Не удалось получить код. Проверь интернет.', 'error');
-      setStatus('idle');
-    }
-  }, [refreshAfterPairing, toast]);
-
-  const cancelWait = useCallback(() => {
-    stopRef.current = true;
-    setStatus('idle');
-    setIntent(null);
-  }, []);
-
-  useEffect(() => {
-    if (!intent || !canvasRef.current) return;
-    // QR рисуем ПОД тему. Раньше цвета были зашиты (`dark: '#F5F5F5'` на
-    // прозрачном фоне) — на светлых темах (paper/claude/snow) получался
-    // почти белый код на белой карточке: глазами не видно, камерой не
-    // читается. qrcode не понимает CSS-переменные, поэтому берём уже
-    // вычисленные значения темы и всегда даём коду непрозрачную подложку.
-    const css = getComputedStyle(document.documentElement);
-    const dark = css.getPropertyValue('--text-primary').trim() || '#111111';
-    const light = css.getPropertyValue('--bg-surface').trim() || '#FFFFFF';
-    QRCode.toCanvas(canvasRef.current, intent.intentId, {
-      width: 220, margin: 2, color: { dark, light },
-    }).catch(() => {});
-  }, [intent, theme]);
-
-  useEffect(() => () => { stopRef.current = true; }, []);
-
-  const handleCreate = useCallback(async () => {
-    setStatus('busy');
-    try {
-      await createNewAccount();
-      toast('Новый облачный аккаунт создан');
-    } catch {
-      toast('Не удалось создать аккаунт — сервер недоступен', 'error');
-      setStatus('idle');
-    }
-  }, [createNewAccount, toast]);
-
-  const handleRecover = useCallback(async () => {
-    const c = code.trim();
-    if (!c) return;
-    setStatus('busy');
-    try {
-      await recoverWithCode(c);
-      toast('Восстановление успешно');
-      setCode('');
+      if (mode === 'in') await signIn(l, password);
+      else await signUp(l, password);
+      setPassword('');
+      toast(mode === 'in' ? 'Вход выполнен' : 'Аккаунт создан');
     } catch (e) {
-      const err = e instanceof Error ? e.message : 'unknown';
-      const msg =
-        err === 'too_many_attempts' ? 'Слишком много попыток. Подожди и попробуй ещё.' :
-        err === 'recovery_code_not_found' ? 'Код не подходит' :
-        err === 'invalid_recovery_code_format' ? 'Неверный формат кода' :
-        'Не удалось восстановить';
-      toast(msg, 'error');
-      setStatus('idle');
+      setError(describeAuthError(e));
+    } finally {
+      setBusy(false);
     }
-  }, [code, recoverWithCode, toast]);
-
-  const busy = status === 'busy';
+  }, [login, password, mode, signIn, signUp, toast]);
 
   return (
     <>
-      <Header title="SYNC" subtitle="облако · подключение устройства" />
+      <Header title="SYNC" subtitle="облако · вход в аккаунт" />
 
-      {/* Основной сценарий: показать QR, ждать одобрения */}
       <Card>
-        <CardTitle>ПОДКЛЮЧИТЬ К СУЩЕСТВУЮЩЕМУ АККАУНТУ</CardTitle>
-        <div className="p-4">
-          {status === 'idle' && (
-            <>
-              <p className="font-mono mb-3" style={{ fontSize: 12, color: 'var(--text-muted)', lineHeight: 1.5 }}>
-                Открой Kairo на устройстве, где уже настроен облачный аккаунт,
-                нажми «подключить новое устройство» и сосканируй QR ниже.
-              </p>
-              <button
-                onClick={startWait}
-                disabled={busy}
-                className="w-full font-mono py-3 rounded"
-                style={{ background: 'var(--accent)', color: 'var(--on-accent)', border: 'none', cursor: 'pointer', boxShadow: '0 0 12px var(--accent-glow)' }}
-              >
-                <QrCode size={14} style={{ display: 'inline', marginRight: 8 }} />
-                показать QR для сканирования
-              </button>
-            </>
-          )}
-          {status === 'waiting' && intent && (
-            <div className="flex flex-col items-center gap-2">
-              <canvas ref={canvasRef} style={{ imageRendering: 'pixelated' }} />
-              <div className="font-mono flex items-center gap-2" style={{ fontSize: 12, color: 'var(--text-muted)' }}>
-                <Loader2 size={12} className="animate-spin" /> ждём одобрения…
-              </div>
-              <button
-                onClick={cancelWait}
-                className="font-mono text-xs"
-                style={{ background: 'transparent', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', padding: '4px 8px' }}
-              >
-                отмена
-              </button>
-            </div>
-          )}
-          {status === 'busy' && !intent && (
-            <div className="flex items-center gap-2 justify-center py-4" style={{ color: 'var(--text-muted)' }}>
-              <Loader2 size={14} className="animate-spin" /> <span className="font-mono text-xs">…</span>
-            </div>
-          )}
-        </div>
-      </Card>
-
-      {/* Первое устройство: создать аккаунт */}
-      <Card dim={status !== 'idle'}>
-        <CardTitle>ПЕРВОЕ УСТРОЙСТВО</CardTitle>
-        <div className="p-4">
-          <p className="font-mono mb-3" style={{ fontSize: 12, color: 'var(--text-muted)', lineHeight: 1.5 }}>
-            Если Kairo с облаком у тебя ещё нигде не настроен — создай новый аккаунт здесь.
+        <CardTitle>{mode === 'in' ? 'ВХОД' : 'НОВЫЙ АККАУНТ'}</CardTitle>
+        <div className="p-4 flex flex-col gap-3">
+          <p className="font-mono" style={{ fontSize: 12, color: 'var(--text-muted)', lineHeight: 1.5 }}>
+            {mode === 'in'
+              ? 'Введи логин и пароль — задачи, планы и траты подтянутся из облака.'
+              : `Логин от ${LOGIN_MIN} символов (латиница, цифры, точка, дефис, подчёркивание), пароль от ${PASSWORD_MIN}.`}
           </p>
+
+          <Field
+            label="логин" value={login} onChange={setLogin}
+            placeholder="например, moroqq" autoComplete="username" onEnter={submit}
+          />
+          <Field
+            label="пароль" value={password} onChange={setPassword} type="password"
+            autoComplete={mode === 'in' ? 'current-password' : 'new-password'} onEnter={submit}
+          />
+
+          {error && (
+            <div className="font-mono" style={{ fontSize: 11, color: 'var(--danger)', lineHeight: 1.4 }}>
+              {error}
+            </div>
+          )}
+
           <button
-            onClick={handleCreate}
-            disabled={busy}
-            className="w-full font-mono py-3 rounded"
-            style={{ background: 'transparent', color: 'var(--text-primary)', border: '1px solid var(--border)', cursor: 'pointer' }}
+            onClick={submit}
+            disabled={busy || !login.trim() || !password}
+            className="w-full font-mono py-3 rounded flex items-center justify-center gap-2"
+            style={{
+              background: 'var(--accent)', color: 'var(--on-accent)', border: 'none',
+              cursor: busy ? 'wait' : 'pointer', opacity: busy || !login.trim() || !password ? 0.5 : 1,
+              boxShadow: '0 0 12px var(--accent-glow)',
+            }}
           >
-            создать облачный аккаунт
+            {busy && <Loader2 size={14} className="animate-spin" />}
+            {mode === 'in' ? 'войти' : 'создать аккаунт'}
           </button>
         </div>
       </Card>
 
-      {/* Восстановление */}
-      <div className="mt-6">
-        <button
-          onClick={() => setShowRecovery((v) => !v)}
-          className="font-mono text-xs"
-          style={{ background: 'transparent', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', padding: 0 }}
-        >
-          {showRecovery ? '▾ ' : '▸ '}потерял все устройства?
-        </button>
-        {showRecovery && (
-          <Card>
-            <div className="p-4">
-              <p className="font-mono mb-2" style={{ fontSize: 12, color: 'var(--text-muted)' }}>
-                Введи 6-символьный код восстановления. Старые аккаунты
-                с 12-словной фразой тоже принимаются.
-              </p>
-              <div className="flex flex-col gap-2">
-                <textarea
-                  value={code}
-                  onChange={(e) => setCode(e.target.value)}
-                  placeholder="XXXXXX или 12 слов через пробел"
-                  rows={2}
-                  className="w-full font-mono px-3 py-2 rounded"
-                  style={{ background: 'var(--bg-input)', color: 'var(--text-primary)', border: '1px solid var(--border)', fontSize: 14, resize: 'vertical' }}
-                />
-                <button
-                  onClick={handleRecover}
-                  disabled={busy || !code.trim()}
-                  className="font-mono py-2 rounded"
-                  style={{ background: 'transparent', color: 'var(--text-primary)', border: '1px solid var(--border)', cursor: 'pointer' }}
-                >
-                  войти
-                </button>
-              </div>
-            </div>
-          </Card>
-        )}
-      </div>
+      <button
+        onClick={() => { setMode(mode === 'in' ? 'up' : 'in'); setError(null); }}
+        className="font-mono text-xs"
+        style={{ background: 'transparent', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', padding: '4px 0' }}
+      >
+        {mode === 'in' ? '▸ нет аккаунта — создать' : '▸ уже есть аккаунт — войти'}
+      </button>
     </>
   );
 }
+
 
 // ── Экран с аккаунтом ──────────────────────────────────────────────────
 
@@ -365,8 +237,119 @@ function SyncStatusCard() {
   );
 }
 
+/**
+ * Аккаунт без логина — наследие схемы с токенами устройств. Именно в таком
+ * аккаунте сейчас лежат данные ноутбука, поэтому здесь не «создай новый»,
+ * а «привяжи логин к этому»: иначе данные остались бы в аккаунте, в который
+ * невозможно войти с другого устройства.
+ */
+function AttachCredentialsCard() {
+  const attach = useAccountStore((s) => s.attachCredentials);
+  const { toast } = useToast();
+  const [login, setLogin] = useState('');
+  const [password, setPassword] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const submit = useCallback(async () => {
+    const l = login.trim();
+    if (!l || !password) return;
+    setBusy(true);
+    setError(null);
+    try {
+      await attach(l, password);
+      setPassword('');
+      toast('Теперь можно входить с других устройств');
+    } catch (e) {
+      setError(describeAuthError(e));
+    } finally {
+      setBusy(false);
+    }
+  }, [login, password, attach, toast]);
+
+  return (
+    <Card>
+      <CardTitle>ЗАДАТЬ ЛОГИН И ПАРОЛЬ</CardTitle>
+      <div className="p-4 flex flex-col gap-3">
+        <p className="font-mono" style={{ fontSize: 12, color: 'var(--text-muted)', lineHeight: 1.5 }}>
+          У этого аккаунта ещё нет логина — зайти в него с другого устройства
+          нельзя. Задай логин и пароль, данные останутся те же.
+        </p>
+        <Field label="логин" value={login} onChange={setLogin} placeholder="например, moroqq" autoComplete="username" onEnter={submit} />
+        <Field label="пароль" value={password} onChange={setPassword} type="password" autoComplete="new-password" onEnter={submit} />
+        {error && (
+          <div className="font-mono" style={{ fontSize: 11, color: 'var(--danger)', lineHeight: 1.4 }}>{error}</div>
+        )}
+        <button
+          onClick={submit}
+          disabled={busy || !login.trim() || !password}
+          className="w-full font-mono py-3 rounded flex items-center justify-center gap-2"
+          style={{
+            background: 'var(--accent)', color: 'var(--on-accent)', border: 'none',
+            cursor: busy ? 'wait' : 'pointer', opacity: busy || !login.trim() || !password ? 0.5 : 1,
+          }}
+        >
+          {busy && <Loader2 size={14} className="animate-spin" />}
+          сохранить
+        </button>
+      </div>
+    </Card>
+  );
+}
+
+function AccountCard() {
+  const login = useAccountStore((s) => s.login);
+  const signOut = useAccountStore((s) => s.signOut);
+  const pending = useSyncState().pendingChanges;
+  const [confirming, setConfirming] = useState(false);
+
+  return (
+    <Card>
+      <div className="px-4 py-3 font-mono">
+        <div style={{ fontSize: 11, color: 'var(--text-muted)', letterSpacing: 1 }}>АККАУНТ</div>
+        <div style={{ fontSize: 14, color: 'var(--text-primary)', marginTop: 2 }}>{login}</div>
+
+        {!confirming ? (
+          <button
+            onClick={() => setConfirming(true)}
+            className="font-mono text-xs"
+            style={{ background: 'transparent', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', padding: '8px 0 0' }}
+          >
+            выйти
+          </button>
+        ) : (
+          <div style={{ marginTop: 8 }}>
+            <div style={{ fontSize: 11, color: pending ? 'var(--danger)' : 'var(--text-muted)', lineHeight: 1.5 }}>
+              {pending
+                ? 'Есть изменения, которые ещё не уехали в облако — при выходе они пропадут. Сначала синхронизируй.'
+                : 'Устройство забудет аккаунт и локальные данные. В облаке они останутся.'}
+            </div>
+            <div className="flex gap-2" style={{ marginTop: 8 }}>
+              <button
+                onClick={signOut}
+                className="font-mono py-2 px-3 rounded"
+                style={{ background: 'transparent', color: 'var(--danger)', border: '1px solid var(--border-danger)', cursor: 'pointer', fontSize: 12 }}
+              >
+                выйти
+              </button>
+              <button
+                onClick={() => setConfirming(false)}
+                className="font-mono py-2 px-3 rounded"
+                style={{ background: 'transparent', color: 'var(--text-muted)', border: '1px solid var(--border)', cursor: 'pointer', fontSize: 12 }}
+              >
+                отмена
+              </button>
+            </div>
+          </div>
+        )}
+      </div>
+    </Card>
+  );
+}
+
 function PairedView() {
-  const [scannerOpen, setScannerOpen] = useState(false);
+  const login = useAccountStore((s) => s.login);
+  const loginUnknown = useAccountStore((s) => s.loginUnknown);
 
   return (
     <>
@@ -374,118 +357,18 @@ function PairedView() {
 
       <SyncStatusCard />
 
-      <Card>
-        <CardTitle>ДОБАВИТЬ ЕЩЁ УСТРОЙСТВО</CardTitle>
-        <div className="p-4">
-          <button
-            onClick={() => setScannerOpen(true)}
-            className="w-full font-mono py-3 rounded"
-            style={{ background: 'var(--accent)', color: 'var(--on-accent)', border: 'none', cursor: 'pointer', boxShadow: '0 0 12px var(--accent-glow)' }}
-          >
-            <Camera size={14} style={{ display: 'inline', marginRight: 8 }} />
-            подключить новое устройство
-          </button>
-        </div>
-      </Card>
+      {login ? <AccountCard /> : (!loginUnknown && <AttachCredentialsCard />)}
 
       <Card>
         <div className="px-4 py-3 font-mono" style={{ fontSize: 11, color: 'var(--text-muted)', lineHeight: 1.5 }}>
           Синхронизация автоматическая: изменения уходят в облако через
           пару секунд после того как ты замер, а при открытии приложения
-          и возврате из фона данные подтягиваются сами. Кнопка выше — для
-          случая «хочу прямо сейчас и хочу видеть результат».
+          и возврате из фона данные подтягиваются сами. Чтобы работать
+          с этими же данными на другом устройстве — просто войди там под
+          тем же логином.
         </div>
       </Card>
-
-      {scannerOpen && <ScannerModal onClose={() => setScannerOpen(false)} />}
     </>
-  );
-}
-
-// ── Модалка со сканером ────────────────────────────────────────────────
-
-function ScannerModal({ onClose }: { onClose: () => void }) {
-  const videoRef = useRef<HTMLVideoElement>(null);
-  const scannerRef = useRef<QrScanner | null>(null);
-  const { toast } = useToast();
-  const [error, setError] = useState<string | null>(null);
-  const [approving, setApproving] = useState(false);
-  const handledRef = useRef(false);
-
-  useEffect(() => {
-    if (!videoRef.current) return;
-    const video = videoRef.current;
-    const s = new QrScanner(
-      video,
-      async (result) => {
-        if (handledRef.current) return;
-        handledRef.current = true;
-        // ВАЖНО: останавливаем сканер сразу после первой ловли, чтобы
-        // при ошибке не тыкали approve каждый кадр (иначе получаем 6 тостов).
-        try { s.stop(); } catch { /* ignore */ }
-        setApproving(true);
-        try {
-          await approvePairing(result.data);
-          toast('Новое устройство подключено');
-          onClose();
-        } catch (e) {
-          const err = e instanceof Error ? e.message : 'unknown';
-          const msg =
-            err === 'intent_expired' ? 'Код устарел. Попроси у нового устройства свежий.' :
-            err === 'intent_already_approved' ? 'Этот код уже использован.' :
-            err === 'intent_not_found' ? 'Код не найден.' :
-            'Не удалось подключить устройство';
-          toast(msg, 'error');
-          setApproving(false);
-          // Закрываем модалку — пусть пользователь откроет её заново и попробует ещё раз.
-          onClose();
-        }
-      },
-      { highlightScanRegion: true, highlightCodeOutline: true },
-    );
-    scannerRef.current = s;
-    s.start().catch((e: unknown) => {
-      setError(e instanceof Error ? e.message : String(e));
-    });
-    return () => { s.stop(); s.destroy(); };
-  }, [onClose, toast]);
-
-  return (
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center p-4"
-      style={{ background: 'rgba(0,0,0,0.85)' }}
-      onClick={onClose}
-    >
-      <div
-        className="font-mono"
-        style={{ background: 'var(--panel-bg, #101010)', border: '1px solid var(--border)', maxWidth: 380, width: '100%' }}
-        onClick={(e) => e.stopPropagation()}
-      >
-        <div className="flex items-center justify-between px-4 py-2" style={{ borderBottom: '1px solid var(--border-subtle)' }}>
-          <span style={{ fontSize: 11, color: 'var(--text-muted)', letterSpacing: 1 }}>СКАНИРОВАНИЕ QR</span>
-          <button onClick={onClose} style={{ background: 'transparent', border: 'none', color: 'var(--text-muted)', cursor: 'pointer' }}>
-            <X size={16} />
-          </button>
-        </div>
-        <div className="p-3" style={{ position: 'relative' }}>
-          {error ? (
-            <div className="text-sm p-3" style={{ color: 'var(--danger, #ef4444)' }}>
-              Нет доступа к камере: {error}
-            </div>
-          ) : (
-            <video ref={videoRef} style={{ width: '100%', display: 'block', background: '#000' }} playsInline />
-          )}
-          {approving && (
-            <div className="absolute inset-0 flex items-center justify-center" style={{ background: 'rgba(0,0,0,0.6)' }}>
-              <Loader2 className="animate-spin" size={24} />
-            </div>
-          )}
-        </div>
-        <div className="px-4 py-2 font-mono" style={{ fontSize: 11, color: 'var(--text-muted)', borderTop: '1px solid var(--border-subtle)' }}>
-          Наведи на QR-код с экрана другого устройства.
-        </div>
-      </div>
-    </div>
   );
 }
 
@@ -553,7 +436,7 @@ export function SyncPage() {
   return (
     <div className="flex-1 overflow-y-auto" style={{ padding: 12 }}>
       <div style={{ maxWidth: 480, margin: '0 auto', paddingBottom: 96 }}>
-        {hasAccount ? <PairedView /> : <UnpairedView />}
+        {hasAccount ? <PairedView /> : <AuthView />}
 
         <div style={{ marginTop: 12 }}>
           <UpdateCheckerRow />

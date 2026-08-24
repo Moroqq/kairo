@@ -18,7 +18,6 @@ import { TrashPage } from '@/pages/TrashPage';
 import { SyncPage } from '@/pages/SyncPage';
 import { pruneTrash } from '@/services/tasks.service';
 import { useAccountStore } from '@/stores/account.store';
-import { RecoveryCodeReveal } from '@/components/onboarding/RecoveryCodeReveal';
 import { UpdateBanner } from '@/components/updates/UpdateBanner';
 import vpsSync from '@/services/vps-sync.service';
 
@@ -58,8 +57,6 @@ function AnimatedRoutes() {
 
 export default function App() {
   const theme = useTheme();
-  const recoveryCodeToShow = useAccountStore((s) => s.recoveryCodeToShow);
-  const dismissRecoveryReveal = useAccountStore((s) => s.dismissRecoveryReveal);
   const checkLocalState = useAccountStore((s) => s.checkLocalState);
 
   useEffect(() => applyTheme(theme), [theme]);
@@ -100,9 +97,6 @@ export default function App() {
             <AnimatedRoutes />
           </AppShell>
         </BrowserRouter>
-        {recoveryCodeToShow && (
-          <RecoveryCodeReveal recoveryCode={recoveryCodeToShow} onConfirm={dismissRecoveryReveal} />
-        )}
         <UpdateBanner />
       </ToastProvider>
     </QueryClientProvider>
