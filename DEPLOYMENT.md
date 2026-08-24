@@ -210,56 +210,76 @@ curl -s http://127.0.0.1:8787/health
 curl -s -H "Host: kairogoupyrlife.duckdns.org" http://127.0.0.1/health
 ```
 
-### Что должно быть в конфиге
+### Применение (всё копируется в терминал целиком)
 
-Эталон лежит в репозитории: **`server/nginx.example.conf`**. Там оба домена,
-каждый со своим сертификатом, оба проксируют на `127.0.0.1:8787`, и есть
-заголовки `Upgrade`/`Connection` — без них WebSocket `/sync` не поднимется,
-хотя `/health` будет отвечать.
+`/opt/kairo-server` — клон этого репозитория, поэтому конфиг nginx берётся
+прямо из него: `server/nginx.example.conf`. Руками редактировать ничего не
+нужно.
 
-Применение (с бэкапом и проверкой до перезагрузки):
+**Шаг 1. Обновить и пересобрать бэкенд.** Без этого `/update/latest.json`
+не заработает даже при правильном nginx — маршрута нет в старом коде.
+
+```bash
+cd /opt/kairo-server
+git fetch origin
+git checkout -B claude/project-audit-2s70zz origin/claude/project-audit-2s70zz
+cd /opt/kairo-server/server
+sudo -u kairo npm ci --include=dev
+sudo -u kairo npm run build
+systemctl restart kairo-server
+```
+
+Проверка, что новый маршрут поднялся:
+
+```bash
+curl -s http://127.0.0.1:8787/health
+curl -s http://127.0.0.1:8787/update/latest.json
+```
+
+Ожидаем `{"ok":true}` и `{"error":"manifest_not_published",...}`. Вторая
+строка — именно то, что нужно: маршрут отвечает, релиз просто ещё не
+опубликован. Если вместо неё приходит HTML — бэкенд не пересобрался.
+
+**Шаг 2. Заменить конфиг nginx.**
 
 ```bash
 cp /etc/nginx/sites-available/kairo /root/kairo-nginx.bak
+cp /opt/kairo-server/server/nginx.example.conf /etc/nginx/sites-available/kairo
+```
 
-# мап для WebSocket — если файла нет, без него nginx -t упадёт
-# на "unknown variable connection_upgrade"
-test -f /etc/nginx/conf.d/websocket-map.conf || cat > /etc/nginx/conf.d/websocket-map.conf <<'MAP'
+```bash
+cat > /etc/nginx/conf.d/websocket-map.conf <<'MAP'
 map $http_upgrade $connection_upgrade {
     default upgrade;
     ''      close;
 }
 MAP
-
-# сюда вставить содержимое server/nginx.example.conf из репозитория
-nano /etc/nginx/sites-available/kairo
-
-nginx -t && systemctl reload nginx     # reload только если тест прошёл
-
-# откат, если что-то пошло не так
-# cp /root/kairo-nginx.bak /etc/nginx/sites-available/kairo && nginx -t && systemctl reload nginx
 ```
 
-Минимальная альтернатива, если не хочется трогать весь файл: дописать
-`location / { ... }` (целиком, как в эталоне) внутрь блока
-`server_name kairoupdate.duckdns.org;` с `listen 443 ssl` — того самого,
-который создал certbot и оставил пустым.
+```bash
+nginx -t && systemctl reload nginx
+```
 
-### Проверка
+`reload` выполнится только если `nginx -t` прошёл. Откат, если что-то не так:
 
 ```bash
-curl -s  https://kairoupdate.duckdns.org/health            # {"ok":true}
+cp /root/kairo-nginx.bak /etc/nginx/sites-available/kairo && nginx -t && systemctl reload nginx
+```
+
+**Шаг 3. Проверить снаружи.**
+
+```bash
+curl -s  https://kairoupdate.duckdns.org/health
 curl -si https://kairoupdate.duckdns.org/update/latest.json | head -1
 ```
 
-Второй запрос вернёт `404` с телом `{"error":"manifest_not_published"}` —
-это **ожидаемо и правильно**: маршрут работает, просто в каталог релизов
-ещё не положен `latest.json`. Отличать от `404` со страницей nginx: первый
-приходит от бэкенда (JSON), второй — от nginx (HTML).
+Первое — `{"ok":true}`. Второе — `HTTP/1.1 404` **с JSON-телом**
+`manifest_not_published`; это норма. Отличать от `404` со страницей nginx
+(HTML) — та означает, что конфиг всё ещё не тот.
 
-Синк проверяется только настоящим клиентом: `/health` отвечает и при
-сломанном WebSocket, поэтому после правки конфига обязательно открой
-экран SYNC в приложении — он теперь показывает реальный статус.
+Синк по `/health` не проверяется: WebSocket может быть сломан при живом
+`/health`. После правки обязательно открой экран SYNC в приложении — он
+теперь показывает реальный статус, а не безусловное «облако подключено».
 
 ### Порядок вывода старого домена из обращения
 
