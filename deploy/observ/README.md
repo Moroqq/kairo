@@ -1,7 +1,7 @@
 # ObserV на VPS с Kairo — деплой
 
 Сайт [ObserV](https://github.com/Moroqq/observ) подселяется на тот же VPS,
-где живёт sync-бэкенд Kairo (`193.233.48.36`). Общие сведения о сервере —
+где живёт sync-бэкенд Kairo (`45.151.62.223`). Общие сведения о сервере —
 в корневом [`DEPLOYMENT.md`](../../DEPLOYMENT.md).
 
 ## Что где будет лежать
@@ -36,7 +36,7 @@ Next.js 16 + React 19, `next-intl` (локали `ru` — по умолчани�
 
 Домены: **`observ.team` — главный**, `observ.space` и `observ.tech` — зеркала.
 
-A-записи всех трёх (и их `www`) → `193.233.48.36`, проксирование включено
+A-записи всех трёх (и их `www`) → `45.151.62.223`, проксирование включено
 (оранжевое облако). Режим SSL/TLS: **Full (strict)** — при `Flexible`
 CF пойдёт на origin по HTTP, наш vhost ответит редиректом на HTTPS и получится
 петля.
@@ -44,7 +44,7 @@ CF пойдёт на origin по HTTP, наш vhost ответит редире�
 ### 1. Забрать деплой-кит на сервер
 
 ```bash
-ssh root@193.233.48.36
+ssh root@45.151.62.223
 git clone --branch claude/deploy-site-to-server-rzow45 \
   https://github.com/Moroqq/kairo /root/kairo-deploy
 cd /root/kairo-deploy/deploy/observ
