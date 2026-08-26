@@ -19,6 +19,25 @@ HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 [[ "$EUID" -eq 0 ]] || { echo "Нужен root" >&2; exit 1; }
 
+# ── Установка зависимостей ───────────────────────────────────────────────────
+# package-lock.json в репозитории рассинхронизирован с package.json
+# (не хватает записей @swc/helpers — Next 16 дописывает их сам на сборке),
+# поэтому npm ci падает с EUSAGE. Пробуем его первым — он воспроизводимый —
+# и только при этой ошибке откатываемся на npm install.
+npm_deps() {
+  local app="$1" cache="$2"
+  if sudo -u observ env npm_config_cache="$cache" npm --prefix "$app" ci; then
+    return 0
+  fi
+  echo
+  echo "!! npm ci не прошёл (скорее всего lock-файл не синхронизирован)."
+  echo "!! Ставлю через npm install — версии могут отличаться от lock-файла."
+  echo "!! Чинится в репозитории ObserV: npm install && git commit package-lock.json"
+  echo
+  sudo -u observ env npm_config_cache="$cache" npm --prefix "$app" install
+}
+
+
 # ── Node ─────────────────────────────────────────────────────────────────────
 # Next 16 требует Node >= 20.9. На сервере стоит 22.x для kairo — переиспользуем.
 NODE_MAJOR="$(node -v 2>/dev/null | sed 's/^v\([0-9]*\).*/\1/')"
@@ -63,8 +82,8 @@ fi
 # devDependencies нужны: сборку тянут typescript, tailwind, postcss.
 # 1 vCPU / 1.9 ГБ — ограничиваем кучу V8, чтобы сборка ушла в swap,
 # а не под OOM-killer.
-echo "npm ci (это надолго — один vCPU)"
-sudo -u observ env npm_config_cache="$ROOT/.npm" npm --prefix "$APP" ci
+echo "ставлю зависимости (это надолго — один vCPU)"
+npm_deps "$APP" "$ROOT/.npm"
 
 echo "next build"
 sudo -u observ env npm_config_cache="$ROOT/.npm" NODE_OPTIONS=--max-old-space-size=1024 \

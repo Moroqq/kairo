@@ -14,8 +14,8 @@ Kairo — **полностью развёрнут и доступен из ин�
 ## Сервер
 
 - IP: `193.233.48.36`
-- Хостинг тот же, но это **другой VPS**. Старый (`81.90.31.239`) — прежний дом
-  сайта ObserV; после переезда (см. `deploy/observ/`) он освобождается.
+- Хостинг тот же, но это **другой VPS**. Старый (`81.90.31.239`) снесён —
+  сайт ObserV с него уехал и ставится сюда заново, см. `deploy/observ/`.
 - SSH: только по ключу, пароль отключён (`PasswordAuthentication no`, `PermitRootLogin prohibit-password`)
 - Юзер: `root`
 - ОС: Ubuntu 22.04.5 LTS, kernel 5.15
@@ -72,8 +72,8 @@ Kairo — **полностью развёрнут и доступен из ин�
   нужен Node-процесс.
 - Порт: `127.0.0.1:3000` (у kairo — `8787`), пользователь `observ`,
   код в `/opt/observ/app`, секреты в `/etc/observ.env`.
-- Домены за Cloudflare (основной + зеркало для ру-аудитории), TLS —
-  Cloudflare Origin CA, режим Full (strict).
+- Домены за Cloudflare: `observ.team` (главный), `observ.space` и
+  `observ.tech` (зеркала). TLS — Cloudflare Origin CA, режим Full (strict).
 - nginx разводит запросы по `server_name`, домен kairo не задет.
 
 ## Клиент — прогресс миграции
