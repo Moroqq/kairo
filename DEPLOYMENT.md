@@ -8,13 +8,14 @@
 Kairo — **полностью развёрнут и доступен из интернета:**
 `https://kairogoupyrlife.duckdns.org` (HTTPS через Let's Encrypt, `/health` → `{"ok":true}`).
 
-Осталось только: настроить клиент Kairo на этот URL, и — отдельная задача —
-подселить сюда второй проект Delta, когда будет ясен его стек.
+Осталось только: настроить клиент Kairo на этот URL. Вторым проектом на
+этот же VPS въезжает сайт ObserV — см. `deploy/observ/`.
 
 ## Сервер
 
 - IP: `193.233.48.36`
-- Хостинг тот же, но это **другой VPS**. Старый (`81.90.31.239`) остаётся под Observ.
+- Хостинг тот же, но это **другой VPS**. Старый (`81.90.31.239`) — прежний дом
+  сайта ObserV; после переезда (см. `deploy/observ/`) он освобождается.
 - SSH: только по ключу, пароль отключён (`PasswordAuthentication no`, `PermitRootLogin prohibit-password`)
 - Юзер: `root`
 - ОС: Ubuntu 22.04.5 LTS, kernel 5.15
@@ -60,6 +61,20 @@ Kairo — **полностью развёрнут и доступен из ин�
 - Nginx site: `/etc/nginx/sites-available/kairo`, симлинк в `sites-enabled`
 - WebSocket-мап: `/etc/nginx/conf.d/websocket-map.conf` (нужен для sync-соединений)
 - HTTP → HTTPS редирект включён certbot'ом автоматически
+
+### Сайт ObserV (второй проект на этом же VPS)
+
+Деплой-кит: [`deploy/observ/`](deploy/observ/README.md) — systemd-юнит,
+шаблон nginx-вхоста, скрипты установки и обновления.
+
+- Стек: Next.js 16 + React 19, локали ru/en через `next-intl`. Есть серверные
+  роуты (`/api/lead`, `/api/telegram/webhook`), поэтому статикой не отдаётся —
+  нужен Node-процесс.
+- Порт: `127.0.0.1:3000` (у kairo — `8787`), пользователь `observ`,
+  код в `/opt/observ/app`, секреты в `/etc/observ.env`.
+- Домены за Cloudflare (основной + зеркало для ру-аудитории), TLS —
+  Cloudflare Origin CA, режим Full (strict).
+- nginx разводит запросы по `server_name`, домен kairo не задет.
 
 ## Клиент — прогресс миграции
 
@@ -142,6 +157,12 @@ ls -la /opt/kairo-backups/
 cd /opt/kairo-server && git pull
 cd server && sudo -u kairo npm ci && sudo -u kairo npm run build
 systemctl restart kairo-server
+
+# Сайт ObserV
+systemctl status observ
+journalctl -u observ -f
+curl -s -o /dev/null -w '%{http_code}\n' http://127.0.0.1:3000/ru
+bash /root/kairo-deploy/deploy/observ/update.sh   # выкатить новую версию
 ```
 
 ## Как зайти с НОВОГО устройства
