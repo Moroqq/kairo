@@ -13,7 +13,7 @@
 | Сервис | `observ.service`, Node слушает `127.0.0.1:3000` |
 | Пользователь | системный `observ`, без логина |
 | nginx | `/etc/nginx/sites-available/observ` |
-| TLS | `/etc/ssl/observ/origin.{pem,key}` (Cloudflare Origin CA) |
+| TLS | `/etc/letsencrypt/live/observ/` (Let's Encrypt, автопродление) |
 | Логи | `journalctl -u observ`, `/var/log/nginx/observ.{access,error}.log` |
 
 Kairo не трогается: у него свой юзер, свой порт (`8787`), свой vhost на
@@ -81,39 +81,51 @@ systemctl restart observ
 
 ### 4. TLS-сертификат
 
-**Рекомендуемый путь — Cloudflare Origin CA.** Домены и так за CF, а
-Origin-сертификат выдаётся на 15 лет и не требует ни валидации, ни
-автопродления:
+**Рекомендуемый путь — Let's Encrypt.** Certbot на сервере уже стоит и
+обслуживает домен kairo, сертификат признают браузеры, продление
+автоматическое, копировать руками ничего не надо.
 
-панель CF → SSL/TLS → Origin Server → Create Certificate → RSA, все нужные
-хосты (`observ.team`, `*.observ.team`, домены зеркал) → скопировать обе
-части.
+Перед выпуском переведите все домены в Cloudflare в режим **DNS only**
+(серое облако). При оранжевом CF редиректит ACME-челлендж на HTTPS, а
+валидного сертификата на origin ещё нет — проверка не пройдёт.
 
 ```bash
-mkdir -p /etc/ssl/observ && chmod 700 /etc/ssl/observ
-nano /etc/ssl/observ/origin.pem   # вставить сертификат
-nano /etc/ssl/observ/origin.key   # вставить приватный ключ
-chmod 600 /etc/ssl/observ/*
+DOMAINS="observ.team www.observ.team observ.space www.observ.space observ.tech www.observ.tech" \
+bash certbot-observ.sh
 ```
 
-<details>
-<summary>Альтернатива: Let's Encrypt</summary>
+Скрипт сам поднимет временный HTTP-vhost под `/.well-known`, выпустит
+сертификат и временный vhost уберёт (в том числе если certbot упадёт).
+Пути на выходе:
 
-Certbot на сервере уже есть. Но HTTP-01 через проксирующий Cloudflare —
-курица и яйцо: пока на origin нет валидного сертификата, а в CF включён
-`Always Use HTTPS`, челлендж не доходит. Варианты: временно погасить
-оранжевое облако (`DNS only`), выпустить сертификат, включить обратно —
-либо использовать DNS-01 с `certbot-dns-cloudflare` и API-токеном.
-Origin CA проще; LE имеет смысл, только если домен когда-нибудь уйдёт
-из-под CF.
+```
+/etc/letsencrypt/live/observ/fullchain.pem
+/etc/letsencrypt/live/observ/privkey.pem
+```
+
+После выпуска облако можно включать обратно — с сертификатом Let's Encrypt
+режим Full (strict) работает как надо.
+
+<details>
+<summary>Альтернатива: Cloudflare Origin CA</summary>
+
+Origin-сертификат выдаётся на 15 лет и не требует продления, но его
+признаёт **только Cloudflare** — домен, идущий напрямую (серое облако),
+с ним отдаст браузеру «сайт небезопасен». Годится, только если все домены
+постоянно проксируются через CF. Плюс его приходится вставлять в терминал
+целиком, а это тридцать с лишним строк PEM.
+
+Панель CF → SSL/TLS → Origin Server → Create Certificate, затем на сервер
+в `/etc/ssl/observ/origin.pem` и `origin.key` (chmod 600). Приватный ключ
+Cloudflare показывает один раз.
 </details>
 
 ### 5. nginx
 
 ```bash
 DOMAINS="observ.team www.observ.team observ.space www.observ.space observ.tech www.observ.tech" \
-CERT=/etc/ssl/observ/origin.pem \
-KEY=/etc/ssl/observ/origin.key \
+CERT=/etc/letsencrypt/live/observ/fullchain.pem \
+KEY=/etc/letsencrypt/live/observ/privkey.pem \
 bash render-nginx.sh --install
 ```
 

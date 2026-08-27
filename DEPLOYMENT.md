@@ -75,7 +75,8 @@ Kairo — **полностью развёрнут и доступен из ин�
 - Порт: `127.0.0.1:3000` (у kairo — `8787`), пользователь `observ`,
   код в `/opt/observ/app`, секреты в `/etc/observ.env`.
 - Домены за Cloudflare: `observ.team` (главный), `observ.space` и
-  `observ.tech` (зеркала). TLS — Cloudflare Origin CA, режим Full (strict).
+  `observ.tech` (зеркала). TLS — Let's Encrypt через `certbot-observ.sh`
+  (сертификат `observ`, автопродление тем же таймером, что у kairo).
 - nginx разводит запросы по `server_name`, домен kairo не задет.
 
 ## Клиент — прогресс миграции
