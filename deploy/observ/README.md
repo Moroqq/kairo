@@ -165,6 +165,39 @@ curl -s "https://api.telegram.org/bot$TELEGRAM_BOT_TOKEN/setWebhook" \
 Если где-то параллельно крутится `bot-polling.mjs` — его надо остановить:
 Telegram не отдаёт `getUpdates`, пока установлен вебхук.
 
+## Прокси до Telegram (если нужен)
+
+Заявки с сайта и бот ходят в `api.telegram.org`. Если с сервера он
+недоступен, `/api/lead` вернёт `telegram_failed`. Проверить:
+
+```bash
+curl -s -o /dev/null -w '%{http_code}\n' --max-time 15 https://api.telegram.org/
+```
+
+Любой HTTP-код — доступен, ничего делать не надо. `000` — режут, тогда
+поднимаем локальный SOCKS5 через sing-box:
+
+```bash
+VLESS_URL='vless://…?security=reality&…' bash proxy/singbox-install.sh
+```
+
+Ссылку берут из подписки (`curl -s "<адрес>" | base64 -d`) — нужна строка
+с `security=reality`. Скрипт разбирает её сам, ставит sing-box, пишет
+конфиг в `/etc/sing-box/config.json` (chmod 600, в репозиторий ключи не
+попадают), поднимает systemd-юнит и проверяет, что через прокси Telegram
+отвечает. Дальше в `/etc/observ.env`:
+
+```
+PROXY_URL=socks5://127.0.0.1:1080
+```
+
+и `systemctl restart observ`.
+
+Учтите цену решения: это ещё один постоянно работающий сервис. Упал
+sing-box, протухла подписка, заблокировали узел — заявки перестанут
+доходить, причём молча. Если Telegram доступен напрямую, эту точку отказа
+лучше не создавать.
+
 ## Грабли, о которых стоит знать заранее
 
 **1. Белый список Origin захардкожен.** В `app/api/lead/route.ts`:
