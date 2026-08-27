@@ -54,6 +54,15 @@ __LISTEN_443_V6__
     gzip_types      text/plain text/css application/javascript application/json image/svg+xml;
     gzip_min_length 1024;
 
+    # Продление сертификата. Certbot кладёт челлендж в /var/www/html и
+    # ходит по http://, но Cloudflare с включённым Always Use HTTPS
+    # редиректит проверку на https:// ещё до origin — и тогда запрос
+    # приходит сюда. Без этого location Next вернёт 404, и продление
+    # молча провалится. Дублируем и на 443.
+    location /.well-known/acme-challenge/ {
+        root /var/www/html;
+    }
+
     location / {
         proxy_pass         http://127.0.0.1:3000;
         proxy_http_version 1.1;
