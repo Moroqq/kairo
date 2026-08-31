@@ -2,7 +2,8 @@ import { useCallback, useEffect, useState } from 'react';
 import { Download, X, Loader2, RefreshCw } from 'lucide-react';
 import { check as pluginCheck, type Update } from '@tauri-apps/plugin-updater';
 import { relaunch } from '@tauri-apps/plugin-process';
-import { open } from '@tauri-apps/plugin-shell';
+import { openUrl } from '@tauri-apps/plugin-opener';
+import { open as shellOpen } from '@tauri-apps/plugin-shell';
 import { isTauri } from '@tauri-apps/api/core';
 import {
   UPDATE_MANIFEST_URL, SERVER_HOST, fetchWithTimeout, describeNetworkError,
@@ -56,6 +57,31 @@ const setState = (patch: Partial<BannerState>) => {
   state = { ...state, ...patch };
   listeners.forEach((l) => l(state));
 };
+
+/**
+ * Открыть ссылку во внешнем браузере.
+ *
+ * Почему не просто shell.open: на Android он падает с
+ * «Scoped shell IO error: No such file or directory (os error 2)» — плагин
+ * пытается запустить системный xdg-open, которого в Android нет. Из-за
+ * этого обновление находилось и предлагалось, но нажатие на «обновить»
+ * ничего не открывало: скачать APK было нечем.
+ *
+ * plugin-opener для той же задачи уходит в Android Intent и работает на
+ * всех платформах. shell оставлен запасным путём — на случай сборки, где
+ * opener не зарегистрирован; ошибку наружу отдаём от opener, она точнее.
+ */
+async function openExternal(url: string): Promise<void> {
+  try {
+    await openUrl(url);
+  } catch (openerErr) {
+    try {
+      await shellOpen(url);
+    } catch {
+      throw openerErr;
+    }
+  }
+}
 
 /** Сравнение семверов X.Y.Z. Возвращает true если a > b. */
 function isNewer(a: string, b: string): boolean {
@@ -170,7 +196,7 @@ export async function startUpdate(): Promise<void> {
     // Android: открываем URL — браузер скачает APK, Android спросит установку.
     setState({ phase: 'installing', errorMsg: null });
     try {
-      await open(u.downloadUrl);
+      await openExternal(u.downloadUrl);
       setState({ phase: 'done' });
     } catch (e) {
       setState({ phase: 'error', errorMsg: describeNetworkError(e) });

@@ -8,6 +8,7 @@
     "core:default",
     "shell:allow-open",
     "shell:default",
+    "opener:default",
     "notification:default",
     "store:allow-get",
     "store:allow-set",
