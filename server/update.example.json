@@ -1,16 +1,16 @@
 {
   "_comment": "Шаблон манифеста апдейтера. Копировать в $KAIRO_UPDATE_DIR/latest.json (по умолчанию server/data/update/latest.json) и править версию + ссылки. Раздаётся маршрутом GET /update/latest.json, см. server/src/routes/updates.ts.",
-  "version": "0.4.8",
+  "version": "0.4.9",
   "notes": "что нового в этой версии",
   "pub_date": "2026-08-24T10:00:00Z",
   "platforms": {
     "windows-x86_64": {
       "signature": "содержимое .sig-файла из src-tauri/target/release/bundle/",
-      "url": "https://kairoupdate.duckdns.org/update/Kairo_0.4.8_x64-setup.nsis.zip"
+      "url": "https://kairoupdate.duckdns.org/update/Kairo_0.4.9_x64-setup.nsis.zip"
     },
     "android-aarch64": {
       "signature": "",
-      "url": "https://kairoupdate.duckdns.org/update/kairo-0.4.8.apk"
+      "url": "https://kairoupdate.duckdns.org/update/kairo-0.4.9.apk"
     }
   }
 }
