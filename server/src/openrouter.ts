@@ -14,6 +14,9 @@ const BASE = process.env.OPENROUTER_BASE_URL ?? 'https://openrouter.ai';
 const URL = `${BASE.replace(/\/$/, '')}/api/v1/chat/completions`;
 const PROXY_SECRET = process.env.OPENROUTER_PROXY_SECRET ?? '';
 
+/** Столько ждём одну vision-модель. Их перебирается несколько — держим короче чата. */
+const TIMEOUT_MS = Number(process.env.AI_IMAGE_TIMEOUT_MS ?? 30_000);
+
 type Content =
   | string
   | Array<
@@ -52,6 +55,7 @@ export async function openRouterChat(params: ORChatParams): Promise<string> {
       messages: params.messages,
       max_tokens: params.maxTokens ?? 512,
     }),
+    signal: AbortSignal.timeout(TIMEOUT_MS),
   });
 
   if (!res.ok) {

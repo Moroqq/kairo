@@ -11,6 +11,15 @@ const URL_CHAT = `${BASE.replace(/\/$/, '')}/openai/v1/chat/completions`;
 const PROXY_SECRET = process.env.OPENROUTER_PROXY_SECRET ?? '';
 const MODEL = process.env.GROQ_STT_MODEL ?? 'whisper-large-v3-turbo';
 
+/**
+ * Таймауты. Без них зависший апстрим вешает запрос навсегда: сервер молчит,
+ * приложение крутит «разбираю…» и не показывает даже ошибки — состояние
+ * хуже любого честного отказа. Именно так выглядел разбор текста, когда
+ * прокси переставал отвечать: в логе оставался только «incoming request».
+ */
+const CHAT_TIMEOUT_MS = Number(process.env.AI_CHAT_TIMEOUT_MS ?? 45_000);
+const STT_TIMEOUT_MS = Number(process.env.AI_STT_TIMEOUT_MS ?? 120_000);
+
 // ── Текстовый чат через Groq (OpenAI-совместимый) ───────────────────────────
 // Бесплатный и быстрый; используется для парсинга текста в задачу вместо
 // ':free'-моделей OpenRouter, которые часто отдают 429/503.
@@ -46,7 +55,12 @@ export async function groqChat(params: GroqChatParams): Promise<string> {
       temperature: 0.2,
     };
     if (json) body.response_format = { type: 'json_object' };
-    return fetch(URL_CHAT, { method: 'POST', headers, body: JSON.stringify(body) });
+    return fetch(URL_CHAT, {
+      method: 'POST',
+      headers,
+      body: JSON.stringify(body),
+      signal: AbortSignal.timeout(CHAT_TIMEOUT_MS),
+    });
   };
 
   let res = await send(params.json ?? false);
@@ -125,7 +139,12 @@ export async function groqTranscribe(audio: Buffer, _mime: string, _filename: st
   const headers: Record<string, string> = { Authorization: `Bearer ${apiKey}` };
   if (PROXY_SECRET) headers['X-Proxy-Secret'] = PROXY_SECRET;
 
-  const res = await fetch(URL_TRANSCRIBE, { method: 'POST', headers, body: form });
+  const res = await fetch(URL_TRANSCRIBE, {
+    method: 'POST',
+    headers,
+    body: form,
+    signal: AbortSignal.timeout(STT_TIMEOUT_MS),
+  });
   if (!res.ok) {
     const body = await res.text().catch(() => '');
     throw new Error(`groq ${res.status}: ${body.slice(0, 500)}`);

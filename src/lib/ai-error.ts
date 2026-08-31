@@ -42,6 +42,9 @@ export function describeAiError(err: unknown): string {
   if (/model_not_found|does not exist|No endpoints found/i.test(detail)) {
     return `Модель ИИ снята с раздачи провайдером — нужно поменять её на сервере. ${short(detail, 100)}`;
   }
+  if (/TimeoutError|aborted due to timeout|ETIMEDOUT/i.test(detail)) {
+    return 'ИИ-провайдер не ответил вовремя — попробуй ещё раз.';
+  }
   if (/rate.?limit|quota|429|temporarily/i.test(detail)) {
     return 'Бесплатный пул модели сейчас перегружен — попробуй через минуту.';
   }
