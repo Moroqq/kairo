@@ -8,6 +8,7 @@ import { useAudioRecorder } from '@/hooks/useAudioRecorder';
 import { parseVoice } from '@/services/parser.service';
 import { useCreateTask } from '@/hooks/useTasks';
 import { useToast } from '@/components/ui/Toast';
+import { describeAiError } from '@/lib/ai-error';
 import { useUIStore } from '@/stores/ui.store';
 import type { TaskPreview } from '@/types';
 
@@ -28,8 +29,8 @@ export function VoiceCapture() {
       const { transcript: t, preview: p } = await parseVoice(blob);
       setTranscript(t);
       setPreview(p);
-    } catch {
-      toast('Не удалось обработать голос', 'error');
+    } catch (err) {
+      toast(describeAiError(err), 'error');
     } finally {
       setProcessing(false);
     }

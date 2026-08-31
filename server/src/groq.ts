@@ -38,15 +38,34 @@ export async function groqChat(params: GroqChatParams): Promise<string> {
   };
   if (PROXY_SECRET) headers['X-Proxy-Secret'] = PROXY_SECRET;
 
-  const body: Record<string, unknown> = {
-    model: params.model,
-    messages: params.messages,
-    max_tokens: params.maxTokens ?? 512,
-    temperature: 0.2,
+  const send = (json: boolean) => {
+    const body: Record<string, unknown> = {
+      model: params.model,
+      messages: params.messages,
+      max_tokens: params.maxTokens ?? 1024,
+      temperature: 0.2,
+    };
+    if (json) body.response_format = { type: 'json_object' };
+    return fetch(URL_CHAT, { method: 'POST', headers, body: JSON.stringify(body) });
   };
-  if (params.json) body.response_format = { type: 'json_object' };
 
-  const res = await fetch(URL_CHAT, { method: 'POST', headers, body: JSON.stringify(body) });
+  let res = await send(params.json ?? false);
+
+  // Строгий JSON-режим поддерживают не все модели, а рассуждающие (gpt-oss)
+  // умеют потратить весь бюджет токенов на размышление и вернуть пустой
+  // ответ — Groq отвечает на это 400 json_validate_failed. Ответ модели при
+  // этом нам всё равно годится: extractJson выше по стеку достаёт объект
+  // регуляркой из любого текста. Поэтому один раз пробуем без режима,
+  // вместо того чтобы объявлять всю функцию сломанной.
+  if (!res.ok && params.json && res.status === 400) {
+    const probe = await res.text().catch(() => '');
+    if (probe.includes('json_validate_failed') || probe.includes('response_format')) {
+      res = await send(false);
+    } else {
+      throw new Error(`groq_chat 400: ${probe.slice(0, 500)}`);
+    }
+  }
+
   if (!res.ok) {
     const t = await res.text().catch(() => '');
     throw new Error(`groq_chat ${res.status}: ${t.slice(0, 500)}`);

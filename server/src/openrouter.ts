@@ -1,3 +1,15 @@
+/**
+ * Ошибка с кодом ответа: вызывающая сторона по нему решает, имеет ли смысл
+ * повторить запрос на другой модели. 429 от общего бесплатного пула — имеет,
+ * 400 из-за кривого запроса — нет.
+ */
+export class OpenRouterError extends Error {
+  constructor(readonly status: number, message: string) {
+    super(message);
+    this.name = 'OpenRouterError';
+  }
+}
+
 const BASE = process.env.OPENROUTER_BASE_URL ?? 'https://openrouter.ai';
 const URL = `${BASE.replace(/\/$/, '')}/api/v1/chat/completions`;
 const PROXY_SECRET = process.env.OPENROUTER_PROXY_SECRET ?? '';
@@ -44,7 +56,7 @@ export async function openRouterChat(params: ORChatParams): Promise<string> {
 
   if (!res.ok) {
     const body = await res.text().catch(() => '');
-    throw new Error(`openrouter ${res.status}: ${body.slice(0, 500)}`);
+    throw new OpenRouterError(res.status, `openrouter ${res.status}: ${body.slice(0, 500)}`);
   }
 
   const data = (await res.json()) as {

@@ -6,6 +6,7 @@ import { ParsedPreview } from './ParsedPreview';
 import { parseImage } from '@/services/parser.service';
 import { useCreateTask } from '@/hooks/useTasks';
 import { useToast } from '@/components/ui/Toast';
+import { describeAiError } from '@/lib/ai-error';
 import { useUIStore } from '@/stores/ui.store';
 import type { TaskPreview } from '@/types';
 
@@ -32,8 +33,8 @@ export function ImageCapture() {
     try {
       const result = await parseImage(file);
       setPreview(result);
-    } catch {
-      toast('Не удалось обработать изображение', 'error');
+    } catch (err) {
+      toast(describeAiError(err), 'error');
     } finally {
       setParsing(false);
     }

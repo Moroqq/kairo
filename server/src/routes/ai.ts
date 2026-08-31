@@ -1,13 +1,46 @@
 import type { FastifyInstance } from 'fastify';
 import { requireAuth } from '../auth.js';
-import { openRouterChat } from '../openrouter.js';
+import { openRouterChat, OpenRouterError } from '../openrouter.js';
 import { groqTranscribe, groqChat } from '../groq.js';
 
-// Текст → задача: бесплатный Groq (ключ уже есть, используется для голоса).
-// Раньше был ':free'-Nemotron на OpenRouter — free-модели лимитируются (429/503).
-const TEXT_MODEL = process.env.GROQ_TEXT_MODEL ?? 'llama-3.3-70b-versatile';
-// Картинки остаются на OpenRouter (vision) — Groq стабильного vision пока не даёт.
-const IMAGE_MODEL = process.env.OPENROUTER_IMAGE_MODEL ?? 'nvidia/nemotron-nano-12b-v2-vl:free';
+/**
+ * Имена моделей — расходник, а не константа.
+ *
+ * Провайдеры снимают модели с раздачи молча: в какой-то момент и
+ * `llama-3.3-70b-versatile` у Groq, и `nemotron-nano-12b-v2-vl:free` у
+ * OpenRouter стали отвечать 404 `model_not_found`. Наружу это выглядело как
+ * «ИИ не работает» сразу в трёх местах — текст, картинки и голос (голос
+ * ходит через транскрибацию в тот же текстовый разбор).
+ *
+ * Отсюда два правила ниже: значения переопределяются переменными окружения,
+ * чтобы чинить это правкой конфига без пересборки, а для картинок хранится
+ * список, а не одно имя, — бесплатные vision-модели живут в общем пуле
+ * провайдера и регулярно отдают 429, поэтому нужен не «упасть», а «взять
+ * следующую».
+ *
+ * Актуальный список моделей всегда можно посмотреть у провайдера:
+ *   curl -H "authorization: Bearer $GROQ_API_KEY" $GROQ_BASE_URL/openai/v1/models
+ */
+const TEXT_MODEL = process.env.GROQ_TEXT_MODEL ?? 'openai/gpt-oss-120b';
+
+const DEFAULT_IMAGE_MODELS = [
+  'minimax/minimax-m3:free',
+  'dots-studio/dots-3-note-preview:free',
+  'google/gemma-4-31b-it:free',
+  'google/gemma-4-26b-a4b-it:free',
+];
+const IMAGE_MODELS = (process.env.OPENROUTER_IMAGE_MODELS ?? process.env.OPENROUTER_IMAGE_MODEL ?? '')
+  .split(',')
+  .map((m) => m.trim())
+  .filter(Boolean);
+const IMAGE_MODEL_CHAIN = IMAGE_MODELS.length > 0 ? IMAGE_MODELS : DEFAULT_IMAGE_MODELS;
+
+/**
+ * Коды, при которых имеет смысл взять следующую модель: перегруз, лимит,
+ * снятая с раздачи модель, недоступный провайдер. На 400 и 401 перебор
+ * бесполезен — проблема в запросе или ключе, и повторится на любой модели.
+ */
+const TRY_NEXT_MODEL = new Set([402, 403, 404, 408, 429, 500, 502, 503, 504]);
 
 const SYSTEM_PROMPT = `You are a task parser for a personal operational management system.
 Extract task information from the user's input and return ONLY valid JSON — no markdown, no explanation.
@@ -50,7 +83,9 @@ export function registerAiRoutes(app: FastifyInstance): void {
     try {
       const raw = await groqChat({
         model: TEXT_MODEL,
-        maxTokens: 512,
+        // Рассуждающие модели (gpt-oss) часть бюджета тратят на размышление
+        // до первого видимого токена; 512 не хватало на ответ целиком.
+        maxTokens: 1024,
         json: true,
         messages: [
           { role: 'system', content: SYSTEM_PROMPT.replace('{TODAY}', today) },
@@ -70,26 +105,40 @@ export function registerAiRoutes(app: FastifyInstance): void {
     if (!image) return reply.code(400).send({ error: 'image_required' });
 
     const today = new Date().toISOString().split('T')[0];
-    try {
-      const raw = await openRouterChat({
-        model: IMAGE_MODEL,
-        maxTokens: 512,
-        messages: [
-          { role: 'system', content: SYSTEM_PROMPT.replace('{TODAY}', today) },
-          {
-            role: 'user',
-            content: [
-              { type: 'image_url', image_url: { url: `data:${mime};base64,${image}` } },
-              { type: 'text', text: 'Extract the task from this screenshot/image.' },
-            ],
-          },
-        ],
-      });
-      return extractJson(raw);
-    } catch (err) {
-      req.log.error({ err }, 'ai_parse_image_failed');
-      return reply.code(502).send({ error: 'ai_failed', detail: String(err) });
+    let lastErr: unknown = new Error('no image models configured');
+
+    for (const model of IMAGE_MODEL_CHAIN) {
+      try {
+        const raw = await openRouterChat({
+          model,
+          maxTokens: 512,
+          messages: [
+            { role: 'system', content: SYSTEM_PROMPT.replace('{TODAY}', today) },
+            {
+              role: 'user',
+              content: [
+                { type: 'image_url', image_url: { url: `data:${mime};base64,${image}` } },
+                { type: 'text', text: 'Extract the task from this screenshot/image.' },
+              ],
+            },
+          ],
+        });
+        return extractJson(raw);
+      } catch (err) {
+        lastErr = err;
+        const status = err instanceof OpenRouterError ? err.status : 0;
+        // Ошибка не из-за перегруза — следующая модель не спасёт, выходим сразу.
+        if (status !== 0 && !TRY_NEXT_MODEL.has(status)) break;
+        req.log.warn({ model, err }, 'ai_image_model_unavailable');
+      }
     }
+
+    req.log.error({ err: lastErr, tried: IMAGE_MODEL_CHAIN }, 'ai_parse_image_failed');
+    return reply.code(502).send({
+      error: 'ai_failed',
+      detail: String(lastErr),
+      tried: IMAGE_MODEL_CHAIN,
+    });
   });
 
   /**

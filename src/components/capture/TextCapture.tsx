@@ -6,6 +6,7 @@ import { ParsedPreview } from './ParsedPreview';
 import { parseText } from '@/services/parser.service';
 import { useCreateTask } from '@/hooks/useTasks';
 import { useToast } from '@/components/ui/Toast';
+import { describeAiError } from '@/lib/ai-error';
 import { useUIStore } from '@/stores/ui.store';
 import type { TaskPreview } from '@/types';
 
@@ -23,8 +24,8 @@ export function TextCapture() {
     try {
       const result = await parseText(text);
       setPreview(result);
-    } catch {
-      toast('Не удалось разобрать', 'error');
+    } catch (err) {
+      toast(describeAiError(err), 'error');
     } finally {
       setParsing(false);
     }
