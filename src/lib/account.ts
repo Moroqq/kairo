@@ -135,18 +135,29 @@ export async function fetchAccountLogin(): Promise<string | null> {
 }
 
 /**
- * Выход. Стираем и креды, и синхронизируемые данные: устройство должно
+ * Выход из аккаунта.
+ *
+ * По умолчанию стираем и креды, и синхронизируемые данные: устройство должно
  * полностью забыть аккаунт, иначе при входе под другим логином локальные
  * остатки уехали бы в чужой аккаунт. Данные при этом остаются в облаке.
+ *
+ * `keepData` — для случая, когда единственная актуальная копия данных лежит
+ * ИМЕННО здесь, а войти в старый аккаунт невозможно (например, сервер не
+ * принимает токен устройства, оставшийся от прежнего бэкенда). Тогда стираем
+ * только вход, а данные оставляем, чтобы отдать их в новый аккаунт: маркеры
+ * синка тоже убираем, и adoptLegacyLocalData() при следующем запуске сочтёт
+ * их несинхронизированными и отправит наверх.
  */
-export function logout(): void {
+export function logout(options: { keepData?: boolean } = {}): void {
   for (const key of [ACCOUNT_ID_KEY, DEVICE_ID_KEY, DEVICE_TOKEN_KEY, RECOVERY_SHOWN_KEY]) {
     localStorage.removeItem(key);
   }
   for (const key of ['kairo_sync_last_ts', 'kairo_sync_dirty']) {
     localStorage.removeItem(key);
   }
-  for (const key of SYNC_KEYS) localStorage.removeItem(key);
+  if (!options.keepData) {
+    for (const key of SYNC_KEYS) localStorage.removeItem(key);
+  }
 }
 
 /** Человеческие тексты для кодов ошибок сервера. */

@@ -300,14 +300,21 @@ function AttachCredentialsCard() {
 function AccountCard() {
   const login = useAccountStore((s) => s.login);
   const signOut = useAccountStore((s) => s.signOut);
-  const pending = useSyncState().pendingChanges;
+  const sync = useSyncState();
+  const pending = sync.pendingChanges;
+  // Сервер не принимает токен этого устройства (например, креды остались от
+  // прежнего бэкенда). Отправить накопленное всё равно невозможно, поэтому
+  // выход — не потеря, а единственный способ войти заново.
+  const rejected = (sync.lastError ?? '').includes('отклонил токен');
   const [confirming, setConfirming] = useState(false);
 
   return (
     <Card>
       <div className="px-4 py-3 font-mono">
         <div style={{ fontSize: 11, color: 'var(--text-muted)', letterSpacing: 1 }}>АККАУНТ</div>
-        <div style={{ fontSize: 14, color: 'var(--text-primary)', marginTop: 2 }}>{login}</div>
+        <div style={{ fontSize: 14, color: login ? 'var(--text-primary)' : 'var(--text-muted)', marginTop: 2 }}>
+          {login ?? 'логин не определён — нет связи с сервером'}
+        </div>
 
         {!confirming ? (
           <button
@@ -319,18 +326,30 @@ function AccountCard() {
           </button>
         ) : (
           <div style={{ marginTop: 8 }}>
-            <div style={{ fontSize: 11, color: pending ? 'var(--danger)' : 'var(--text-muted)', lineHeight: 1.5 }}>
-              {pending
-                ? 'Есть изменения, которые ещё не уехали в облако — при выходе они пропадут. Сначала синхронизируй.'
-                : 'Устройство забудет аккаунт и локальные данные. В облаке они останутся.'}
+            <div style={{ fontSize: 11, color: pending && !rejected ? 'var(--danger)' : 'var(--text-muted)', lineHeight: 1.5 }}>
+              {rejected
+                ? 'Сервер не принимает вход этого устройства, отправить данные отсюда нельзя. Выйди и войди заново по логину и паролю.'
+                : pending
+                  ? 'Есть изменения, которые ещё не уехали в облако — при выходе они пропадут. Сначала синхронизируй.'
+                  : 'Устройство забудет аккаунт и локальные данные. В облаке они останутся.'}
             </div>
-            <div className="flex gap-2" style={{ marginTop: 8 }}>
+            <div className="flex flex-col gap-2" style={{ marginTop: 8 }}>
+              {/* Выход с сохранением данных — для устройства, на котором лежит
+                  единственная копия задач, а войти в старый аккаунт нельзя.
+                  Данные останутся здесь и уедут в тот аккаунт, куда войдёшь. */}
               <button
-                onClick={signOut}
+                onClick={() => signOut({ keepData: true })}
+                className="font-mono py-2 px-3 rounded"
+                style={{ background: 'transparent', color: 'var(--text-primary)', border: '1px solid var(--border)', cursor: 'pointer', fontSize: 12 }}
+              >
+                выйти, оставив задачи на этом устройстве
+              </button>
+              <button
+                onClick={() => signOut()}
                 className="font-mono py-2 px-3 rounded"
                 style={{ background: 'transparent', color: 'var(--danger)', border: '1px solid var(--border-danger)', cursor: 'pointer', fontSize: 12 }}
               >
-                выйти
+                выйти и стереть всё локальное
               </button>
               <button
                 onClick={() => setConfirming(false)}
@@ -357,7 +376,11 @@ function PairedView() {
 
       <SyncStatusCard />
 
-      {login ? <AccountCard /> : (!loginUnknown && <AttachCredentialsCard />)}
+      {/* AccountCard рисуем всегда: если сервер отверг токен, логин узнать
+          нельзя, и раньше кнопка «выйти» просто не появлялась — устройство
+          застревало в этом состоянии без способа перелогиниться. */}
+      {login === null && !loginUnknown && <AttachCredentialsCard />}
+      <AccountCard />
 
       <Card>
         <div className="px-4 py-3 font-mono" style={{ fontSize: 11, color: 'var(--text-muted)', lineHeight: 1.5 }}>

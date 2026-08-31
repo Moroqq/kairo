@@ -20,7 +20,7 @@ interface AccountState {
   signIn: (login: string, password: string) => Promise<void>;
   /** Привязать логин к уже существующему аккаунту этого устройства. */
   attachCredentials: (login: string, password: string) => Promise<void>;
-  signOut: () => void;
+  signOut: (options?: { keepData?: boolean }) => void;
   dismissRecoveryReveal: () => void;
 }
 
@@ -66,9 +66,9 @@ export const useAccountStore = create<AccountState>((set, get) => ({
     set({ login: canonical, loginUnknown: false });
   },
 
-  signOut: () => {
+  signOut: (options) => {
     vpsSync.disconnect();
-    logout();
+    logout(options);
     set({ hasAccount: false, login: null, loginUnknown: true, recoveryCodeToShow: null });
   },
 
