@@ -44,6 +44,9 @@ export async function openRouterChat(params: ORChatParams): Promise<string> {
     'Content-Type': 'application/json',
     'HTTP-Referer': 'https://kairoupdate.duckdns.org',
     'X-Title': 'Kairo',
+    // См. комментарий про identity в groq.ts: прокси врёт про gzip,
+    // и undici разбивается о битую распаковку раньше, чем видит ответ.
+    'Accept-Encoding': 'identity',
   };
   if (PROXY_SECRET) headers['X-Proxy-Secret'] = PROXY_SECRET;
 

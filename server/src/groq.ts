@@ -17,6 +17,21 @@ const MODEL = process.env.GROQ_STT_MODEL ?? 'whisper-large-v3-turbo';
  * хуже любого честного отказа. Именно так выглядел разбор текста, когда
  * прокси переставал отвечать: в логе оставался только «incoming request».
  */
+/**
+ * Просим несжатый ответ намеренно.
+ *
+ * Прокси перед провайдером ставит `Content-Encoding: gzip` на тело, которое
+ * gzip-ом не является. curl этого не замечает — он по умолчанию сжатие не
+ * запрашивает; а `fetch` в Node всегда шлёт `Accept-Encoding: gzip, deflate`,
+ * получает битый поток и падает в `Error: incorrect header check` внутри
+ * zlib. Наружу это выглядело хуже, чем ошибка: разбор текста просто висел,
+ * а живые vision-модели, отвечавшие в curl двухсоткой, считались мёртвыми.
+ *
+ * `identity` убирает сжатие из уравнения целиком. Тела здесь маленькие
+ * (JSON на пару килобайт), так что терять нечего.
+ */
+const NO_COMPRESSION = { 'Accept-Encoding': 'identity' } as const;
+
 const CHAT_TIMEOUT_MS = Number(process.env.AI_CHAT_TIMEOUT_MS ?? 45_000);
 const STT_TIMEOUT_MS = Number(process.env.AI_STT_TIMEOUT_MS ?? 120_000);
 
@@ -44,6 +59,7 @@ export async function groqChat(params: GroqChatParams): Promise<string> {
   const headers: Record<string, string> = {
     Authorization: `Bearer ${apiKey}`,
     'Content-Type': 'application/json',
+    ...NO_COMPRESSION,
   };
   if (PROXY_SECRET) headers['X-Proxy-Secret'] = PROXY_SECRET;
 
@@ -136,7 +152,7 @@ export async function groqTranscribe(audio: Buffer, _mime: string, _filename: st
   form.append('model', MODEL);
   form.append('response_format', 'json');
 
-  const headers: Record<string, string> = { Authorization: `Bearer ${apiKey}` };
+  const headers: Record<string, string> = { Authorization: `Bearer ${apiKey}`, ...NO_COMPRESSION };
   if (PROXY_SECRET) headers['X-Proxy-Secret'] = PROXY_SECRET;
 
   const res = await fetch(URL_TRANSCRIBE, {
