@@ -20,11 +20,41 @@
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
     <script>
-      if ('serviceWorker' in navigator) {
-        window.addEventListener('load', () => {
+      /*
+       * Service worker — только для веб-версии.
+       *
+       * В нативном приложении он не нужен и вреден: файлы и так лежат локально,
+       * а кэш с фиксированным именем после обновления отдаёт старый index.html,
+       * который ссылается на бандлы с прежними хешами. Их в новой сборке нет —
+       * получается белый экран при первом запуске, лечившийся ручной
+       * перезагрузкой. Поэтому внутри приложения не регистрируем, а заодно
+       * сносим то, что успели зарегистрировать прежние версии.
+       */
+      (function () {
+        if (!('serviceWorker' in navigator)) return;
+
+        var native =
+          location.protocol === 'tauri:' ||
+          location.hostname === 'tauri.localhost' ||
+          !!window.__TAURI_INTERNALS__ ||
+          !!window.__TAURI__;
+
+        if (native) {
+          navigator.serviceWorker.getRegistrations()
+            .then(function (rs) { rs.forEach(function (r) { r.unregister(); }); })
+            .catch(function () {});
+          if (window.caches && caches.keys) {
+            caches.keys()
+              .then(function (ks) { ks.forEach(function (k) { caches.delete(k); }); })
+              .catch(function () {});
+          }
+          return;
+        }
+
+        window.addEventListener('load', function () {
           navigator.serviceWorker.register('/sw.js');
         });
-      }
+      })();
     </script>
   </body>
 </html>

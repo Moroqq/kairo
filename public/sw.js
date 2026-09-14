@@ -1,4 +1,9 @@
-const CACHE = 'kairo-v1';
+/*
+ * Кэш веб-версии. Имя версионируем: при смене activate удаляет все прежние
+ * кэши, и клиент не остаётся с index.html, который ссылается на бандлы
+ * с исчезнувшими хешами.
+ */
+const CACHE = 'kairo-v2';
 const PRECACHE = ['/', '/index.html'];
 
 self.addEventListener('install', (e) => {
