@@ -1,10 +1,6 @@
 import type { KanbanColumnId } from '@/types';
 
-export type ThemeId =
-  | 'paper' | 'nord' | 'samurai'
-  | 'claude' | 'clay'
-  | 'liquid' | 'material'
-  | 'void' | 'snow';
+export type ThemeId = 'nord' | 'void' | 'snow';
 
 export interface ThemeDef {
   id: ThemeId;
@@ -16,12 +12,6 @@ export interface ThemeDef {
   soft?: boolean;
   /** Светлая тема — статус-бар на мобиле получает тёмные иконки вместо светлых. */
   light?: boolean;
-  /**
-   * Дизайн-семейство для структурных CSS-оверрайдов.
-   * 'apple'    → html.apple: нет bevel-границ, iOS nav bar, subtle shadows, SF Pro
-   * 'material' → html.material: Material You elevation system (будущее)
-   */
-  family?: 'apple' | 'material';
   /** CSS custom properties — полный набор, чтобы переключение туда-обратно было чистым. */
   vars: Record<string, string>;
   /** «Личность» интерфейса: лексика меняется вместе с темой. */
@@ -88,39 +78,6 @@ const matrixVars: Record<string, string> = {
 
 export const THEMES: Record<ThemeId, ThemeDef> = {
 
-  paper: {
-    id: 'paper',
-    name: 'PAPER',
-    tagline: 'светлая · чистая · для дневной работы',
-    fx: false,
-    light: true,
-    vars: {
-      ...matrixVars,
-      '--bg-base': '#F6F6F3', '--bg-surface': '#FFFFFF', '--bg-card': '#FFFFFF',
-      '--bg-elevated': '#EFEFEA', '--bg-input': '#FFFFFF',
-      '--border': 'rgba(0,0,0,0.16)', '--border-strong': 'rgba(0,0,0,0.34)',
-      '--border-subtle': 'rgba(0,0,0,0.08)', '--border-danger': 'rgba(220,38,38,0.5)',
-      '--text-primary': '#1A1A1A', '--text-secondary': '#454545', '--text-muted': '#757575',
-      '--text-dim': '#A8A8A8', '--text-bright': '#111111',
-      '--accent': '#2563EB', '--accent-soft': '#1D4ED8',
-      '--accent-glow': 'rgba(37,99,235,0.25)', '--accent-dim': 'rgba(37,99,235,0.08)',
-      '--on-accent': '#FFFFFF',
-      '--success': '#16A34A', '--warning': '#D97706', '--danger': '#DC2626', '--info': '#0284C7',
-      '--shadow-card': '0 1px 3px rgba(0,0,0,0.08)',
-      '--shadow-elevated': '0 0 0 1px rgba(0,0,0,0.10), 0 8px 24px rgba(0,0,0,0.14)',
-      '--desktop-bg': '#EDEDE8', '--shell-bg': 'rgba(255,255,255,0.96)',
-      '--panel-bg': 'rgba(250,250,248,0.9)', '--statusbar-bg': '#F0F0EC',
-      '--overlay-bg': 'rgba(255,255,255,0.98)', '--titlebar-bg': '#FAFAF8',
-      '--well-bg': 'rgba(0,0,0,0.04)',
-      '--radius': '6px', '--radius-pill': '999px',
-    },
-    vocab: {
-      titlebar: 'KAIRO — планировщик',
-      titlebarShort: 'KAIRO',
-      columns: { todo: 'Входящие', inprogress: 'В работе', blocked: 'Ожидание', done: 'Готово' },
-    },
-    preview: ['#F6F6F3', '#2563EB', '#1A1A1A'],
-  },
 
   nord: {
     id: 'nord',
@@ -154,214 +111,10 @@ export const THEMES: Record<ThemeId, ThemeDef> = {
     preview: ['#2E3440', '#88C0D0', '#ECEFF4'],
   },
 
-  samurai: {
-    id: 'samurai',
-    name: 'SAMURAI',
-    tagline: 'чёрный · алый · золото · бусидо',
-    fx: false,
-    vars: {
-      ...matrixVars,
-      '--bg-base': '#0A0606', '--bg-surface': '#140C0A', '--bg-card': '#190F0C',
-      '--bg-elevated': '#221410', '--bg-input': '#0D0807',
-      '--border': 'rgba(229,72,77,0.2)', '--border-strong': 'rgba(229,72,77,0.48)',
-      '--border-subtle': 'rgba(229,72,77,0.08)', '--border-danger': 'rgba(255,85,85,0.55)',
-      '--text-primary': '#F2E8DC', '--text-secondary': '#C9B8A3', '--text-muted': '#8A7560',
-      '--text-dim': '#57493B', '--text-bright': '#E8B54A',
-      '--accent': '#E5484D', '--accent-soft': '#C13338',
-      '--accent-glow': 'rgba(229,72,77,0.5)', '--accent-dim': 'rgba(229,72,77,0.12)',
-      '--on-accent': '#0A0606',
-      '--success': '#7FB069', '--warning': '#E8B54A', '--danger': '#FF5555', '--info': '#6FA8DC',
-      '--shadow-elevated': '0 0 0 1px var(--border-strong), 0 0 32px rgba(229,72,77,0.18), 0 8px 32px rgba(0,0,0,0.8)',
-      '--desktop-bg': '#070404', '--shell-bg': 'rgba(16,9,8,0.94)',
-      '--panel-bg': 'rgba(20,12,10,0.8)', '--statusbar-bg': '#0B0606',
-      '--overlay-bg': 'rgba(20,12,10,0.97)', '--titlebar-bg': '#120A08',
-      '--well-bg': 'rgba(6,3,3,0.5)',
-      '--radius': '2px', '--radius-pill': '999px',
-    },
-    vocab: {
-      titlebar: 'KAIRO 侍 — свитки приказов',
-      titlebarShort: 'KAIRO 侍',
-      columns: { todo: 'ПРИКАЗЫ', inprogress: 'В БОЮ', blocked: 'ЗАСАДА', done: 'ИСПОЛНЕНО' },
-    },
-    preview: ['#0A0606', '#E5484D', '#E8B54A'],
-  },
 
-  claude: {
-    id: 'claude',
-    name: 'IVORY',
-    tagline: 'тёплый крем · Anthropic-вайб · сан-сериф',
-    fx: false,
-    soft: true,
-    light: true,
-    vars: {
-      ...matrixVars,
-      '--bg-base': '#F5F4EE', '--bg-surface': '#FAF9F5', '--bg-card': '#FFFFFF',
-      '--bg-elevated': '#EFEDE4', '--bg-input': '#FFFFFF',
-      '--border': 'rgba(60,55,45,0.14)', '--border-strong': 'rgba(60,55,45,0.30)',
-      '--border-subtle': 'rgba(60,55,45,0.07)', '--border-danger': 'rgba(192,57,43,0.45)',
-      '--text-primary': '#3D3D3A', '--text-secondary': '#5C5A52', '--text-muted': '#8A8578',
-      '--text-dim': '#B6B0A2', '--text-bright': '#1F1E1D',
-      '--accent': '#D97757', '--accent-soft': '#C25E3F',
-      '--accent-glow': 'rgba(217,119,87,0.28)', '--accent-dim': 'rgba(217,119,87,0.10)',
-      '--on-accent': '#2D1B12',
-      '--success': '#5B8A4E', '--warning': '#C8821E', '--danger': '#C0392B', '--info': '#3B7EA1',
-      '--shadow-card': '0 1px 2px rgba(0,0,0,0.06)',
-      '--shadow-elevated': '0 1px 3px rgba(0,0,0,0.10), 0 12px 32px rgba(0,0,0,0.12)',
-      '--desktop-bg': '#ECEAE1', '--shell-bg': '#FAF9F5',
-      '--panel-bg': 'rgba(245,244,238,0.92)', '--statusbar-bg': '#F0EEE6',
-      '--overlay-bg': '#FFFFFF', '--titlebar-bg': '#FAF9F5',
-      '--well-bg': 'rgba(60,55,45,0.04)',
-      '--font-ui': "'Söhne', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif",
-      '--radius': '10px', '--radius-pill': '999px',
-    },
-    vocab: {
-      titlebar: 'Kairo',
-      titlebarShort: 'Kairo',
-      columns: { todo: 'Входящие', inprogress: 'В работе', blocked: 'Ожидание', done: 'Готово' },
-    },
-    preview: ['#F5F4EE', '#D97757', '#3D3D3A'],
-  },
 
-  clay: {
-    id: 'clay',
-    name: 'COCO',
-    tagline: 'тёмная глина · тёплый графит · сан-сериф',
-    fx: false,
-    soft: true,
-    vars: {
-      ...matrixVars,
-      // Тёплый графит как в тёмной теме claude.ai
-      '--bg-base': '#262624', '--bg-surface': '#30302E', '--bg-card': '#353532',
-      '--bg-elevated': '#3D3C39', '--bg-input': '#1F1E1D',
-      '--border': 'rgba(235,230,220,0.10)', '--border-strong': 'rgba(235,230,220,0.24)',
-      '--border-subtle': 'rgba(235,230,220,0.06)', '--border-danger': 'rgba(232,107,90,0.5)',
-      '--text-primary': '#ECEAE3', '--text-secondary': '#C2BFB6', '--text-muted': '#908D83',
-      '--text-dim': '#5E5B52', '--text-bright': '#FAF9F5',
-      '--accent': '#D97757', '--accent-soft': '#C96442',
-      '--accent-glow': 'rgba(217,119,87,0.35)', '--accent-dim': 'rgba(217,119,87,0.13)',
-      '--on-accent': '#2D1B12',
-      '--success': '#7FB069', '--warning': '#D9A441', '--danger': '#E86B5A', '--info': '#6FA8DC',
-      '--shadow-card': '0 1px 2px rgba(0,0,0,0.3)',
-      '--shadow-elevated': '0 1px 3px rgba(0,0,0,0.4), 0 12px 32px rgba(0,0,0,0.5)',
-      '--desktop-bg': '#1A1916', '--shell-bg': '#262624',
-      '--panel-bg': '#30302E', '--statusbar-bg': '#1F1E1D',
-      '--overlay-bg': '#30302E', '--titlebar-bg': '#262624',
-      '--well-bg': 'rgba(0,0,0,0.20)',
-      '--font-ui': "'Söhne', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif",
-      '--radius': '10px', '--radius-pill': '999px',
-    },
-    vocab: {
-      titlebar: 'Kairo',
-      titlebarShort: 'Kairo',
-      columns: { todo: 'Входящие', inprogress: 'В работе', blocked: 'Ожидание', done: 'Готово' },
-    },
-    preview: ['#262624', '#D97757', '#ECEAE3'],
-  },
 
-  liquid: {
-    id: 'liquid',
-    name: 'LIQUID',
-    tagline: 'Apple Design · тёмное стекло · iOS 27 Dark',
-    fx: false,
-    soft: true,
-    family: 'apple',
-    vars: {
-      ...matrixVars,
-      '--bg-base':        '#000000',
-      '--bg-surface':     'rgba(28,28,30,0.90)',
-      '--bg-card':        '#1C1C1E',
-      '--bg-elevated':    '#2C2C2E',
-      '--bg-input':       'rgba(28,28,30,0.80)',
-      '--border':         'rgba(255,255,255,0.10)',
-      '--border-strong':  'rgba(255,255,255,0.20)',
-      '--border-subtle':  'rgba(255,255,255,0.05)',
-      '--border-danger':  'rgba(255,69,58,0.45)',
-      '--text-primary':   '#FFFFFF',
-      '--text-secondary': 'rgba(235,235,245,0.72)',
-      '--text-muted':     'rgba(235,235,245,0.40)',
-      '--text-dim':       'rgba(235,235,245,0.20)',
-      '--text-bright':    '#FFFFFF',
-      '--accent':         '#0A84FF',
-      '--accent-soft':    '#409CFF',
-      '--accent-glow':    'rgba(10,132,255,0.28)',
-      '--on-accent':      '#FFFFFF',
-      '--accent-dim':     'rgba(10,132,255,0.14)',
-      '--success':        '#30D158',
-      '--warning':        '#FF9F0A',
-      '--danger':         '#FF453A',
-      '--info':           '#64D2FF',
-      '--shadow-card':    '0 2px 8px rgba(0,0,0,0.35), 0 0 0 0.5px rgba(255,255,255,0.06)',
-      '--shadow-elevated':'0 8px 30px rgba(0,0,0,0.50), 0 0 0 0.5px rgba(255,255,255,0.08)',
-      '--desktop-bg':     '#000000',
-      '--shell-bg':       'rgba(18,18,18,0.92)',
-      '--panel-bg':       'rgba(28,28,30,0.88)',
-      '--statusbar-bg':   'rgba(10,10,10,0.96)',
-      '--overlay-bg':     'rgba(28,28,30,0.96)',
-      '--titlebar-bg':    'rgba(18,18,18,0.92)',
-      '--well-bg':        'rgba(255,255,255,0.04)',
-      '--font-ui':        "system-ui, -apple-system, 'SF Pro Display', 'Helvetica Neue', sans-serif",
-      '--radius':         '14px',
-      '--radius-pill':    '999px',
-    },
-    vocab: {
-      titlebar: 'Kairo',
-      titlebarShort: 'Kairo',
-      columns: { todo: 'Входящие', inprogress: 'В работе', blocked: 'Ожидание', done: 'Готово' },
-    },
-    preview: ['#000000', '#0A84FF', '#FFFFFF'],
-  },
 
-  material: {
-    id: 'material',
-    name: 'MATERIAL',
-    tagline: 'Material You · Android · без свечения',
-    fx: false,
-    soft: true,
-    vars: {
-      ...matrixVars,
-      '--bg-base':        '#141218',
-      '--bg-surface':     '#1C1B1F',
-      '--bg-card':        '#211F26',
-      '--bg-elevated':    '#2B2930',
-      '--bg-input':       '#141218',
-      '--border':         'rgba(204,194,220,0.12)',
-      '--border-strong':  'rgba(204,194,220,0.28)',
-      '--border-subtle':  'rgba(204,194,220,0.06)',
-      '--border-danger':  'rgba(242,184,181,0.45)',
-      '--text-primary':   '#E6E1E5',
-      '--text-secondary': '#CAC4D0',
-      '--text-muted':     '#938F99',
-      '--text-dim':       '#49454F',
-      '--text-bright':    '#FFFFFF',
-      '--accent':         '#D0BCFF',
-      '--accent-soft':    '#9A82DB',
-      '--accent-glow':    'rgba(208,188,255,0.12)',
-      '--on-accent':      '#381E72',
-      '--accent-dim':     'rgba(208,188,255,0.10)',
-      '--success':        '#6DD07A',
-      '--warning':        '#E8D44D',
-      '--danger':         '#F2B8B5',
-      '--info':           '#82CDF2',
-      '--shadow-card':    '0 1px 2px rgba(0,0,0,0.30)',
-      '--shadow-elevated':'0 2px 8px rgba(0,0,0,0.40), 0 0 0 1px rgba(204,194,220,0.08)',
-      '--desktop-bg':     '#0F0D13',
-      '--shell-bg':       '#1C1B1F',
-      '--panel-bg':       '#211F26',
-      '--statusbar-bg':   '#141218',
-      '--overlay-bg':     '#2B2930',
-      '--titlebar-bg':    '#1C1B1F',
-      '--well-bg':        'rgba(0,0,0,0.25)',
-      '--font-ui':        "'Google Sans', 'Roboto', system-ui, -apple-system, sans-serif",
-      '--radius':         '16px',
-      '--radius-pill':    '999px',
-    },
-    vocab: {
-      titlebar: 'Kairo',
-      titlebarShort: 'Kairo',
-      columns: { todo: 'Входящие', inprogress: 'В работе', blocked: 'Ожидание', done: 'Готово' },
-    },
-    preview: ['#1C1B1F', '#D0BCFF', '#E6E1E5'],
-  },
 
   void: {
     id: 'void',
@@ -477,8 +230,6 @@ export function applyTheme(t: ThemeDef): void {
   for (const [k, v] of Object.entries(t.vars)) root.style.setProperty(k, v);
   root.classList.toggle('no-fx',    !t.fx);
   root.classList.toggle('soft',     !!t.soft);
-  root.classList.toggle('apple',    t.family === 'apple');
-  root.classList.toggle('material', t.family === 'material');
 
   // Статус-бар должен красится под тему, а не оставаться всегда чёрным
   document.querySelector('meta[name="theme-color"]')
