@@ -63,6 +63,30 @@ type Listener = (s: BannerState) => void;
 
 let state: BannerState = { phase: 'idle', update: null, errorMsg: null, progress: { done: 0, total: null } };
 const listeners = new Set<Listener>();
+
+/**
+ * Плашка «браузер начал скачивание» — терминальное состояние: дальше всё
+ * происходит вне приложения, и убрать её было нечем. Она висела поверх
+ * интерфейса до перезапуска. Прячем сами через несколько секунд — успеть
+ * прочитать хватает, мешать не начинает.
+ */
+let autoHideTimer: ReturnType<typeof setTimeout> | null = null;
+
+function cancelAutoHide(): void {
+  if (autoHideTimer !== null) {
+    clearTimeout(autoHideTimer);
+    autoHideTimer = null;
+  }
+}
+
+function autoHideAfter(ms: number): void {
+  cancelAutoHide();
+  autoHideTimer = setTimeout(() => {
+    autoHideTimer = null;
+    // Пока ждали, могла начаться новая проверка — тогда прятать нечего.
+    if (state.phase === 'done') setState({ phase: 'idle', update: null });
+  }, ms);
+}
 const setState = (patch: Partial<BannerState>) => {
   state = { ...state, ...patch };
   listeners.forEach((l) => l(state));
@@ -131,6 +155,7 @@ export async function checkNow(): Promise<void> {
     setState({ phase: 'no-update', errorMsg: null });
     return;
   }
+  cancelAutoHide();
   setState({ phase: 'checking', errorMsg: null });
 
   let manifest: UpdateManifest;
@@ -201,6 +226,7 @@ export async function startUpdate(): Promise<void> {
     try {
       await openExternal(u.downloadUrl);
       setState({ phase: 'done' });
+      autoHideAfter(8000);
     } catch (e) {
       setState({ phase: 'error', errorMsg: describeNetworkError(e) });
     }
