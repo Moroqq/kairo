@@ -1,4 +1,4 @@
-import { ReactNode, useEffect, useState } from 'react';
+import { ReactNode, useEffect } from 'react';
 import { Sidebar } from './Sidebar';
 import { MobileNavFab } from './MobileNavFab';
 import { Header } from './Header';
@@ -7,11 +7,8 @@ import { TaskDrawer } from '@/components/task/TaskDrawer';
 import { CaptureModal } from '@/components/capture/CaptureModal';
 import { useUIStore } from '@/stores/ui.store';
 import { useTheme } from '@/stores/theme.store';
-import { useTasks } from '@/hooks/useTasks';
 import { useIsMobile } from '@/hooks/useMediaQuery';
-import { useOnline } from '@/hooks/useOnline';
 import { initNotifications } from '@/services/notifications.service';
-import { isOverdue } from '@/hooks/useDeadlineWatcher';
 
 initNotifications().catch(() => {});
 
@@ -19,12 +16,19 @@ interface AppShellProps {
   children: ReactNode;
 }
 
+/**
+ * Каркас приложения.
+ *
+ * Здесь когда-то жили два декоративных элемента десктопа: фальшивый титулбар
+ * с глифами окна и нижний статусбар со счётчиками и часами. Убраны намеренно.
+ * Титулбар дублировал настоящую рамку окна Tauri, а его «кнопки» ничего не
+ * делали; статусбар показывал числа, которые и так видны на доске, и держал
+ * два интервала (часы и обратный отсчёт), тикавших на каждом экране.
+ */
 export function AppShell({ children }: AppShellProps) {
   const openCapture = useUIStore((s) => s.openCapture);
   const isMobile = useIsMobile();
   const theme = useTheme();
-  const online = useOnline();
-  const { data: tasks } = useTasks();
 
   // Глобальный хоткей N — новая задача. Раньше слушатель жил в Dashboard и
   // работал только на /board, хотя кнопка «+ новая задача (N)» видна везде.
@@ -39,18 +43,6 @@ export function AppShell({ children }: AppShellProps) {
     window.addEventListener('keydown', handler);
     return () => window.removeEventListener('keydown', handler);
   }, [openCapture]);
-
-  const active   = (tasks ?? []).filter((t) => t.status !== 'Resolved' && t.status !== 'Archived');
-  const total    = tasks?.length ?? 0;
-  const open     = active.length;
-  const resolved = tasks?.filter((t) => t.status === 'Resolved').length ?? 0;
-  const overdue  = active.filter((t) => isOverdue(t.deadline)).length;
-
-  // Ближайший дедлайн среди активных (не просрочённых)
-  const nextDeadline = active
-    .filter((t) => t.deadline && !isOverdue(t.deadline))
-    .map((t) => new Date(t.deadline!).getTime())
-    .sort((a, b) => a - b)[0];
 
   return (
     <div
@@ -68,21 +60,6 @@ export function AppShell({ children }: AppShellProps) {
           zIndex: 3,
         }}
       >
-        {/* Terminal title bar — desktop only */}
-        {!isMobile && (
-          <div className="titlebar">
-            <span className="neon-text">●</span>
-            <span className="flex-1 truncate cursor-blink">{theme.vocab.titlebar}</span>
-            {/* Декоративные глифы окна — терминальная эстетика, не интерактивны.
-                Раньше были <button> с title «Свернуть/Развернуть/Закрыть», но ничего
-                не делали (ложная affordance). Пока нет реального Tauri-управления окном —
-                это просто оформление, aria-hidden. */}
-            <span className="titlebar-btn" aria-hidden style={{ pointerEvents: 'none' }}>_</span>
-            <span className="titlebar-btn" aria-hidden style={{ pointerEvents: 'none' }}>□</span>
-            <span className="titlebar-btn" aria-hidden style={{ pointerEvents: 'none' }}>✕</span>
-          </div>
-        )}
-
         {/* Body */}
         <div className="flex flex-1 min-h-0" style={{ padding: isMobile ? 0 : 8, gap: 8 }}>
           {!isMobile && <Sidebar />}
@@ -115,57 +92,6 @@ export function AppShell({ children }: AppShellProps) {
           </div>
         </div>
 
-        {/* Status bar — desktop only (на мобиле вместо него BottomNav) */}
-        {!isMobile && (
-        <div
-          className="flex items-center gap-2 px-2 py-1 text-xs"
-          style={{ background: 'var(--statusbar-bg)', borderTop: '1px solid var(--border-subtle)' }}
-        >
-          <span className="flex items-center gap-1.5">
-            <span className={online ? 'led led-blink' : 'led led-red'} />
-            {online ? (
-              <span className="neon-text" style={{ letterSpacing: 1 }}>В СЕТИ</span>
-            ) : (
-              <span style={{ letterSpacing: 1, color: 'var(--text-muted)' }}>НЕ В СЕТИ</span>
-            )}
-          </span>
-          <Sep />
-          <span style={{ color: 'var(--text-muted)' }}>
-            всего <span className="font-mono" style={{ color: 'var(--text-bright)', fontVariantNumeric: 'tabular-nums' }}>{pad(total)}</span>
-          </span>
-          <Sep />
-          <span style={{ color: 'var(--text-muted)' }}>
-            активных <span className="font-mono" style={{ color: 'var(--text-bright)', fontVariantNumeric: 'tabular-nums' }}>{pad(open)}</span>
-          </span>
-          <Sep />
-          <span style={{ color: 'var(--text-muted)' }}>
-            выполнено <span className="font-mono" style={{ color: 'var(--text-bright)', fontVariantNumeric: 'tabular-nums' }}>{pad(resolved)}</span>
-          </span>
-          {overdue > 0 && (
-            <>
-              <Sep />
-              <span className="flex items-center gap-1.5">
-                <span className="led led-red led-blink" />
-                <span className="neon-pink-text font-bold">ПРОСРОЧЕНО {pad(overdue)}</span>
-              </span>
-            </>
-          )}
-          <div className="flex-1" />
-          {nextDeadline !== undefined && (
-            <span style={{ color: 'var(--text-muted)' }}>
-              ближайший дедлайн{' '}
-              <span className="font-mono" style={{ color: 'var(--text-bright)', fontVariantNumeric: 'tabular-nums' }}>
-                <Countdown to={nextDeadline} />
-              </span>
-              <span style={{ color: 'var(--text-dim)' }}> │ </span>
-            </span>
-          )}
-          <span className="font-mono" style={{ color: 'var(--text-muted)', fontVariantNumeric: 'tabular-nums' }}>
-            <Clock />
-          </span>
-        </div>
-        )}
-
         {isMobile && <MobileNavFab />}
       </div>
 
@@ -173,38 +99,4 @@ export function AppShell({ children }: AppShellProps) {
       <CaptureModal />
     </div>
   );
-}
-
-function Sep() {
-  return <span style={{ color: 'var(--text-dim)' }}>│</span>;
-}
-
-function pad(n: number) {
-  return n.toString().padStart(3, '0');
-}
-
-function Clock() {
-  const [now, setNow] = useState(() => new Date());
-  useEffect(() => {
-    const id = setInterval(() => setNow(new Date()), 1000);
-    return () => clearInterval(id);
-  }, []);
-  return <>{now.toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}</>;
-}
-
-/** Обратный отсчёт «12ч 34м» до целевой timestamp. */
-function Countdown({ to }: { to: number }) {
-  const [now, setNow] = useState(() => Date.now());
-  useEffect(() => {
-    const id = setInterval(() => setNow(Date.now()), 30_000);
-    return () => clearInterval(id);
-  }, []);
-  const diff = Math.max(0, to - now);
-  const min  = Math.floor(diff / 60_000);
-  const days = Math.floor(min / (60 * 24));
-  const hrs  = Math.floor((min % (60 * 24)) / 60);
-  const m    = min % 60;
-  if (days > 0) return <>{days}д {hrs}ч</>;
-  if (hrs > 0)  return <>{hrs}ч {m}м</>;
-  return <>{m}м</>;
 }

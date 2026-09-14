@@ -6,6 +6,13 @@
 
 import { queryClient } from '@/lib/query-client';
 
+/**
+ * В облачных снимках, снятых до удаления раздела «дэйлики», ещё лежат ключи
+ * `kairo_dailies` и `kairo_daily_marks`. Это безопасно: applySnapshot берёт
+ * только то, что перечислено здесь, а лишнее молча игнорирует. Локальные
+ * копии этих ключей на устройствах тоже не трогаем — они никому не мешают,
+ * а удалять чужие данные ради чистоты не стоит.
+ */
 export const SYNC_KEYS = [
   'kairo_tasks',
   'kairo_event_logs',
@@ -13,8 +20,6 @@ export const SYNC_KEYS = [
   'kairo_plan_patterns',
   'kairo_plan_overrides',
   'kairo_expenses',
-  'kairo_dailies',
-  'kairo_daily_marks',
 ] as const;
 
 export type SyncKey = typeof SYNC_KEYS[number];

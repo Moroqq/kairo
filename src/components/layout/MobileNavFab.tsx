@@ -3,7 +3,7 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import { AnimatePresence, motion } from 'framer-motion';
 import type { LucideIcon } from 'lucide-react';
 import {
-  Target, LayoutDashboard, NotebookPen, MoreHorizontal,
+  Target, LayoutDashboard, MoreHorizontal,
   CalendarDays, BarChart3, Wallet, ScrollText, Trash2, Wifi, X,
   Palette, ChevronRight, SlidersHorizontal, Menu,
   ChevronUp, ChevronDown, Minus, Plus,
@@ -21,7 +21,7 @@ export const TAB_BAR_HEIGHT = 64;
 
 // ─── Настраиваемые разделы ──────────────────────────────────────────────────
 
-const ALL_IDS = ['focus', 'board', 'calendar', 'todo', 'weeks', 'expenses', 'log'] as const;
+const ALL_IDS = ['focus', 'board', 'calendar', 'weeks', 'expenses', 'log'] as const;
 type TabId = (typeof ALL_IDS)[number];
 
 interface SectionDef {
@@ -35,7 +35,6 @@ const SECTION_DEF: Record<TabId, SectionDef> = {
   focus:    { to: '/',         label: 'фокус',   Icon: Target,          cmd: 'focus' },
   board:    { to: '/board',    label: 'доска',   Icon: LayoutDashboard, cmd: 'board' },
   calendar: { to: '/calendar', label: 'план',    Icon: CalendarDays,    cmd: 'plan'  },
-  todo:     { to: '/todo',     label: 'дэйлики', Icon: NotebookPen,     cmd: 'todo'  },
   weeks:    { to: '/weeks',    label: 'итоги',   Icon: BarChart3,       cmd: 'weeks' },
   expenses: { to: '/expenses', label: 'траты',   Icon: Wallet,          cmd: 'spend' },
   log:      { to: '/log',      label: 'события', Icon: ScrollText,      cmd: 'logs'  },
@@ -47,7 +46,7 @@ const FIXED_MORE: SectionDef[] = [
   { to: '/sync',  label: 'синк',    Icon: Wifi,   cmd: 'sync'  },
 ];
 
-const DEFAULT_TAB_IDS: TabId[] = ['focus', 'board', 'calendar', 'todo'];
+const DEFAULT_TAB_IDS: TabId[] = ['focus', 'board', 'calendar', 'weeks'];
 const NAV_KEY = 'kairo.mobile.tabs';
 const TAB_MIN = 2, TAB_MAX = 4;
 

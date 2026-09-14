@@ -8,15 +8,25 @@ import { isTauri } from '@tauri-apps/api/core';
 import {
   UPDATE_MANIFEST_URL, SERVER_HOST, fetchWithTimeout, describeNetworkError,
 } from '@/lib/server';
+import {
+  isNewer, pickPlatformEntry, chooseDelivery, describeMissingPlatform,
+  type UpdateManifest,
+} from '@/lib/update-manifest';
 
 /**
- * Гибридный updater. Причина: tauri-plugin-updater v2.10 не поддерживает
- * Android — check() кидает "Unsupported OS". Стратегия:
- * 1. Пробуем встроенный плагин (работает на Windows/macOS/Linux).
- * 2. Если он падает — идём ручным путём: fetch manifest, semver-сравнение,
- *    доставка через shell.open(url) — Android откроет URL в браузере,
- *    браузер скачает APK, тапнешь по уведомлению, Android спросит
- *    подтверждение установки.
+ * Гибридный updater: два способа доставки одного и того же релиза.
+ *
+ * `plugin` — tauri-plugin-updater: качает и ставит внутри приложения, сам
+ * перезапускается. Требует подписанного релиза и не работает на Android
+ * (check() кидает «Unsupported OS»).
+ *
+ * `browser` — открываем ссылку системным браузером, дальше человек запускает
+ * установщик сам. Работает везде и не требует приватного ключа для подписи.
+ *
+ * Выбор между ними делает chooseDelivery по содержимому манифеста, а не
+ * методом проб: подписи нет — плагин даже не дёргаем. Раньше он вызывался
+ * первым всегда, и на десктопе без записи в манифесте пользователь получал
+ * его внутреннюю жалобу вместо внятной причины.
  *
  * Оба пути ходят на один и тот же хост (см. lib/server.ts). Если он лежит —
  * не работает ни проверка обновлений, ни синк; поэтому в тексте ошибки
@@ -83,55 +93,16 @@ async function openExternal(url: string): Promise<void> {
   }
 }
 
-/** Сравнение семверов X.Y.Z. Возвращает true если a > b. */
-function isNewer(a: string, b: string): boolean {
-  const pa = a.split('.').map((n) => parseInt(n, 10) || 0);
-  const pb = b.split('.').map((n) => parseInt(n, 10) || 0);
-  for (let i = 0; i < Math.max(pa.length, pb.length); i++) {
-    const x = pa[i] ?? 0, y = pb[i] ?? 0;
-    if (x > y) return true;
-    if (x < y) return false;
-  }
-  return false;
-}
-
-/** Android ли мы. На Android доставка идёт через браузер + APK, на десктопе — через плагин. */
+/** Android ли мы. На Android плагина апдейтера нет вовсе — только доставка через браузер. */
 function isAndroid(): boolean {
   return typeof navigator !== 'undefined' && /android/i.test(navigator.userAgent);
 }
 
-/**
- * Достаёт ссылку под текущую платформу.
- * Раньше последним вариантом стоял `Object.values(p).find(...)` — то есть на
- * десктопе можно было получить ссылку на APK и «обновиться» в никуда.
- * Теперь берём только ключи своей платформы и честно падаем, если их нет.
- */
-function pickPlatformUrl(p: Record<string, { url?: string } | undefined>): string | null {
-  const androidKeys = ['android-aarch64', 'android-arm64', 'android-arm64-v8a', 'android-armv7', 'android-arm', 'android'];
-  const desktopKeys = ['windows-x86_64', 'darwin-aarch64', 'darwin-x86_64', 'linux-x86_64'];
-  const keys = isAndroid() ? androidKeys : desktopKeys;
-  for (const k of keys) {
-    const url = p[k]?.url;
-    if (url) return url;
-  }
-  return null;
-}
-
-/** Ручной fallback — качаем latest.json сами и сравниваем версии. */
-async function customCheck(): Promise<AvailableUpdate | null> {
+/** Скачивает и разбирает latest.json. Единственный источник правды о релизе. */
+async function fetchManifest(): Promise<UpdateManifest> {
   const res = await fetchWithTimeout(UPDATE_MANIFEST_URL, { cache: 'no-store' });
   if (!res.ok) throw new Error(`манифест вернул HTTP ${res.status} (${UPDATE_MANIFEST_URL})`);
-  const data = (await res.json()) as {
-    version?: string;
-    platforms?: Record<string, { url?: string }>;
-  };
-  if (!data.version) throw new Error('в манифесте нет поля version');
-  if (!isNewer(data.version, __APP_VERSION__)) return null;
-
-  const url = pickPlatformUrl(data.platforms ?? {});
-  if (!url) throw new Error(`в манифесте нет сборки под эту платформу (${isAndroid() ? 'android' : 'desktop'})`);
-
-  return { version: data.version, source: 'custom', downloadUrl: url };
+  return (await res.json()) as UpdateManifest;
 }
 
 /** Обёртка-таймаут поверх произвольного промиса — плагин тоже умеет висеть. */
@@ -142,6 +113,15 @@ function withTimeout<T>(p: Promise<T>, ms: number, label: string): Promise<T> {
   ]);
 }
 
+/**
+ * Проверка обновления.
+ *
+ * Порядок важен и отличается от прежнего. Раньше первым дёргался плагин, и
+ * когда в манифесте не было записи под десктоп, пользователь видел его
+ * внутреннюю жалобу «None of the fallback platforms were found» вперёд
+ * настоящей причины. Теперь манифест читаем сами: он и решает, есть ли
+ * обновление и как его ставить, а плагин — лишь один из способов доставки.
+ */
 export async function checkNow(): Promise<void> {
   if (state.phase === 'checking' || state.phase === 'downloading' || state.phase === 'installing') return;
   // В обычном браузере (веб-деплой на Vercel) обновлять нечего: страница и так
@@ -152,34 +132,56 @@ export async function checkNow(): Promise<void> {
     return;
   }
   setState({ phase: 'checking', errorMsg: null });
-  // 1. Сначала пробуем встроенный плагин
+
+  let manifest: UpdateManifest;
   try {
-    const u = await withTimeout(pluginCheck(), 20000, 'плагин апдейтера');
-    if (u) {
-      setState({ phase: 'available', update: { version: u.version, source: 'plugin', pluginUpdate: u } });
-      return;
-    }
+    manifest = await fetchManifest();
+  } catch (err) {
+    const msg = describeNetworkError(err);
+    setState({
+      phase: 'error',
+      errorMsg: msg.includes(SERVER_HOST)
+        ? `${SERVER_HOST} не отвечает. Проверь, что сервер поднят и что домен указывает на его текущий IP.`
+        : msg,
+    });
+    return;
+  }
+
+  if (!manifest.version) {
+    setState({ phase: 'error', errorMsg: 'в манифесте нет поля version' });
+    return;
+  }
+  if (!isNewer(manifest.version, __APP_VERSION__)) {
     setState({ phase: 'no-update' });
     return;
-  } catch (pluginErr) {
-    // 2. Если плагин не поддерживает эту платформу (Android) — идём вручную
+  }
+
+  const android = isAndroid();
+  const entry = pickPlatformEntry(manifest.platforms ?? {}, android);
+  if (!entry) {
+    setState({ phase: 'error', errorMsg: describeMissingPlatform(manifest, android) });
+    return;
+  }
+
+  // Подписанный десктопный релиз ставим плагином — внутри приложения, с
+  // проверкой подписи и перезапуском. Если он почему-то не справился,
+  // это не повод показывать ошибку: ниже есть рабочий путь через браузер.
+  if (chooseDelivery(entry, android) === 'plugin') {
     try {
-      const u = await customCheck();
-      if (u) setState({ phase: 'available', update: u });
-      else setState({ phase: 'no-update' });
-    } catch (customErr) {
-      const msg = describeNetworkError(customErr);
-      const pluginMsg = describeNetworkError(pluginErr);
-      // Обе ветки упали на сети → это не баг клиента, а недоступный хост.
-      const bothNetwork = msg.includes(SERVER_HOST) && pluginMsg.includes(SERVER_HOST);
-      setState({
-        phase: 'error',
-        errorMsg: bothNetwork
-          ? `${SERVER_HOST} не отвечает. Проверь, что сервер поднят и что домен указывает на его текущий IP.`
-          : `${msg} · плагин: ${pluginMsg}`,
-      });
+      const u = await withTimeout(pluginCheck(), 20000, 'плагин апдейтера');
+      if (u) {
+        setState({ phase: 'available', update: { version: u.version, source: 'plugin', pluginUpdate: u } });
+        return;
+      }
+    } catch (err) {
+      console.warn('[updater] плагин не справился, ставим через браузер:', err);
     }
   }
+
+  setState({
+    phase: 'available',
+    update: { version: manifest.version, source: 'custom', downloadUrl: entry.url },
+  });
 }
 
 /**
@@ -193,7 +195,8 @@ export async function startUpdate(): Promise<void> {
   if (!u) return;
 
   if (u.source === 'custom' && u.downloadUrl) {
-    // Android: открываем URL — браузер скачает APK, Android спросит установку.
+    // Открываем URL системным браузером: он скачает APK или установщик,
+    // дальше система сама предложит установку.
     setState({ phase: 'installing', errorMsg: null });
     try {
       await openExternal(u.downloadUrl);

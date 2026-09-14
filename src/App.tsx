@@ -10,7 +10,6 @@ import { AppShell } from '@/components/layout/AppShell';
 import { FocusPage } from '@/pages/FocusPage';
 import { Dashboard } from '@/pages/Dashboard';
 import { CalendarPage } from '@/pages/CalendarPage';
-import { TodoPage } from '@/pages/TodoPage';
 import { WeeksPage } from '@/pages/WeeksPage';
 import { ExpensesPage } from '@/pages/ExpensesPage';
 import { EventLog } from '@/pages/EventLog';
@@ -43,7 +42,6 @@ function AnimatedRoutes() {
         <Route path="/"         element={<PageTransition><FocusPage /></PageTransition>} />
         <Route path="/board"    element={<PageTransition><Dashboard /></PageTransition>} />
         <Route path="/calendar" element={<PageTransition><CalendarPage /></PageTransition>} />
-        <Route path="/todo"     element={<PageTransition><TodoPage /></PageTransition>} />
         <Route path="/weeks"    element={<PageTransition><WeeksPage /></PageTransition>} />
         <Route path="/expenses" element={<PageTransition><ExpensesPage /></PageTransition>} />
         <Route path="/log"      element={<PageTransition><EventLog /></PageTransition>} />

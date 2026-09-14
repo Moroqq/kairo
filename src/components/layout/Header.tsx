@@ -11,7 +11,6 @@ const ROUTE_CMD: Record<string, string> = {
   '/':         'focus',
   '/board':    'board',
   '/calendar': 'plan',
-  '/todo':     'todo',
   '/weeks':    'weeks',
   '/expenses': 'spend',
   '/log':      'logs',
