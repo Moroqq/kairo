@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { Loader2, RefreshCw } from 'lucide-react';
 import { useAccountStore } from '@/stores/account.store';
 import { useToast } from '@/components/ui/Toast';
+import { AboutFooter } from '@/components/ui/AboutFooter';
 import { describeAuthError, LOGIN_MIN, PASSWORD_MIN } from '@/lib/account';
 import { isTauri } from '@tauri-apps/api/core';
 import vpsSync, { type VpsSyncState } from '@/services/vps-sync.service';
@@ -510,12 +511,7 @@ export function SyncPage() {
           <UpdateCheckerRow />
         </div>
 
-        <div
-          className="font-mono"
-          style={{ marginTop: 12, textAlign: 'right', fontSize: 10, color: 'var(--text-muted)', letterSpacing: 1 }}
-        >
-          kairo v{__APP_VERSION__}
-        </div>
+        <AboutFooter version={__APP_VERSION__} />
       </div>
     </div>
   );
