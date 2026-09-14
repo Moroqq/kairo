@@ -1,5 +1,15 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!--
+  Каталоги, файлы из которых FileProvider готов отдать другим приложениям.
+  Первые две записи были здесь изначально; остальные добавлены, чтобы
+  установщик мог прочитать скачанный APK, куда бы его ни положил клиент —
+  иначе getUriForFile бросает IllegalArgumentException.
+-->
 <paths xmlns:android="http://schemas.android.com/apk/res/android">
   <external-path name="my_images" path="." />
   <cache-path name="my_cache_images" path="." />
+
+  <files-path name="files" path="." />
+  <external-files-path name="external_files" path="." />
+  <external-cache-path name="external_cache" path="." />
 </paths>

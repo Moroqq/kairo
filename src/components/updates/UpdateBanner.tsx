@@ -12,6 +12,7 @@ import {
   isNewer, pickPlatformEntry, chooseDelivery, describeMissingPlatform,
   type UpdateManifest,
 } from '@/lib/update-manifest';
+import { downloadUpdate, installDownloaded } from '@/lib/update-install';
 
 /**
  * Гибридный updater: два способа доставки одного и того же релиза.
@@ -39,6 +40,8 @@ type Phase =
   | 'available'
   | 'no-update'
   | 'downloading'
+  /** Файл скачан и лежит на диске — ждём нажатия «установить». */
+  | 'ready'
   | 'installing'
   | 'done'
   | 'error';
@@ -50,6 +53,8 @@ interface AvailableUpdate {
   source: Source;
   pluginUpdate?: Update;   // только для source='plugin'
   downloadUrl?: string;    // только для source='custom'
+  /** Путь к скачанному файлу — появляется после успешной загрузки. */
+  filePath?: string;
 }
 
 export interface BannerState {
@@ -57,11 +62,13 @@ export interface BannerState {
   update: AvailableUpdate | null;
   errorMsg: string | null;
   progress: { done: number; total: number | null };
+  /** Чем в итоге доставили обновление — от этого зависит текст в фазе done. */
+  deliveredVia: 'app' | 'browser' | null;
 }
 
 type Listener = (s: BannerState) => void;
 
-let state: BannerState = { phase: 'idle', update: null, errorMsg: null, progress: { done: 0, total: null } };
+let state: BannerState = { phase: 'idle', update: null, errorMsg: null, progress: { done: 0, total: null }, deliveredVia: null };
 const listeners = new Set<Listener>();
 
 /**
@@ -209,51 +216,90 @@ export async function checkNow(): Promise<void> {
   });
 }
 
+/** Последний рубеж: отдать ссылку браузеру, как было до своей загрузки. */
+async function deliverViaBrowser(url: string): Promise<void> {
+  setState({ phase: 'installing', errorMsg: null });
+  try {
+    await openExternal(url);
+    setState({ phase: 'done', deliveredVia: 'browser' });
+    autoHideAfter(8000);
+  } catch (e) {
+    setState({ phase: 'error', errorMsg: describeNetworkError(e) });
+  }
+}
+
 /**
- * Запуск установки найденного обновления. Вынесено из компонента, чтобы
- * кнопку «обновить» можно было нажать не только в баннере (см. SyncPage) —
- * раньше строка на экране SYNC умела только перепроверять, а поставить
- * обновление было нечем, если баннер закрыли крестиком.
+ * Скачать обновление. Вынесено из компонента, чтобы кнопку можно было нажать
+ * не только в баннере (см. SyncPage) — раньше строка на экране SYNC умела
+ * только перепроверять, а поставить обновление было нечем, если баннер
+ * закрыли крестиком.
+ *
+ * Три пути, в порядке предпочтения: подписанный релиз ставит плагин целиком;
+ * иначе качаем сами и показываем прогресс; если своя загрузка не удалась —
+ * отдаём ссылку браузеру, как раньше. Последнее важно: сбой нового пути не
+ * должен оставлять человека без обновления.
  */
 export async function startUpdate(): Promise<void> {
   const u = state.update;
   if (!u) return;
 
-  if (u.source === 'custom' && u.downloadUrl) {
-    // Открываем URL системным браузером: он скачает APK или установщик,
-    // дальше система сама предложит установку.
-    setState({ phase: 'installing', errorMsg: null });
+  // Подписанный десктопный релиз — плагин скачает, проверит подпись,
+  // поставит и перезапустит приложение сам.
+  if (u.source === 'plugin' && u.pluginUpdate) {
+    setState({ phase: 'downloading', errorMsg: null, progress: { done: 0, total: null } });
     try {
-      await openExternal(u.downloadUrl);
-      setState({ phase: 'done' });
-      autoHideAfter(8000);
+      let total: number | null = null;
+      let done = 0;
+      await u.pluginUpdate.downloadAndInstall((event) => {
+        if (event.event === 'Started') {
+          total = event.data.contentLength ?? null;
+          setState({ progress: { done: 0, total } });
+        } else if (event.event === 'Progress') {
+          done += event.data.chunkLength;
+          setState({ progress: { done, total } });
+        } else if (event.event === 'Finished') {
+          setState({ phase: 'installing' });
+        }
+      });
+      setState({ phase: 'done', deliveredVia: 'app' });
+      try { await relaunch(); } catch { /* Android не поддерживает */ }
     } catch (e) {
       setState({ phase: 'error', errorMsg: describeNetworkError(e) });
     }
     return;
   }
 
-  // Desktop: обычный поток через плагин
-  if (!u.pluginUpdate) return;
+  if (!u.downloadUrl) return;
+
   setState({ phase: 'downloading', errorMsg: null, progress: { done: 0, total: null } });
   try {
-    let total: number | null = null;
-    let done = 0;
-    await u.pluginUpdate.downloadAndInstall((event) => {
-      if (event.event === 'Started') {
-        total = event.data.contentLength ?? null;
-        setState({ progress: { done: 0, total } });
-      } else if (event.event === 'Progress') {
-        done += event.data.chunkLength;
-        setState({ progress: { done, total } });
-      } else if (event.event === 'Finished') {
-        setState({ phase: 'installing' });
-      }
+    const filePath = await downloadUpdate(u.downloadUrl, u.version, (p) => {
+      setState({ progress: p });
     });
-    setState({ phase: 'done' });
-    try { await relaunch(); } catch { /* Android не поддерживает */ }
-  } catch (e) {
-    setState({ phase: 'error', errorMsg: describeNetworkError(e) });
+    setState({ phase: 'ready', update: { ...u, filePath } });
+  } catch (err) {
+    console.warn('[updater] своя загрузка не удалась, отдаём браузеру:', err);
+    await deliverViaBrowser(u.downloadUrl);
+  }
+}
+
+/** Запуск установщика для уже скачанного файла. */
+export async function installNow(): Promise<void> {
+  const u = state.update;
+  if (!u?.filePath) return;
+
+  setState({ phase: 'installing', errorMsg: null });
+  try {
+    await installDownloaded(u.filePath);
+    setState({ phase: 'done', deliveredVia: 'app' });
+    autoHideAfter(8000);
+  } catch (err) {
+    console.warn('[updater] установщик не запустился, отдаём браузеру:', err);
+    if (u.downloadUrl) {
+      await deliverViaBrowser(u.downloadUrl);
+    } else {
+      setState({ phase: 'error', errorMsg: describeNetworkError(err) });
+    }
   }
 }
 
@@ -267,6 +313,28 @@ export function useBannerState(): BannerState {
     return () => { listeners.delete(setS); };
   }, []);
   return s;
+}
+
+/**
+ * Полоса загрузки. При неизвестном общем размере (сервер не прислал
+ * content-length) показываем бегущую полосу вместо доли — честнее, чем
+ * рисовать проценты от нуля.
+ */
+function ProgressBar({ pct }: { pct: number | null }) {
+  return (
+    <div style={{ height: 4, background: 'var(--border-subtle)', borderRadius: 2, overflow: 'hidden' }}>
+      <div
+        style={{
+          height: '100%',
+          width: pct !== null ? `${pct}%` : '35%',
+          background: 'var(--accent)',
+          borderRadius: 2,
+          transition: 'width 180ms linear',
+          animation: pct === null ? 'km-indeterminate 1.1s ease-in-out infinite' : undefined,
+        }}
+      />
+    </div>
+  );
 }
 
 export function UpdateBanner() {
@@ -308,7 +376,7 @@ export function UpdateBanner() {
               className="flex items-center gap-1 px-3 py-1 rounded"
               style={{ background: 'var(--accent)', color: 'var(--on-accent)', border: 'none', cursor: 'pointer' }}
             >
-              <Download size={12} /> обновить
+              <Download size={12} /> скачать
             </button>
             <button
               onClick={() => setState({ phase: 'idle' })}
@@ -322,12 +390,30 @@ export function UpdateBanner() {
         </div>
       )}
       {s.phase === 'downloading' && (
-        <div className="flex items-center gap-3">
-          <Loader2 size={14} className="animate-spin" />
+        <div className="flex flex-col gap-2">
+          <div className="flex items-center justify-between gap-3">
+            <span style={{ color: 'var(--text-muted)' }}>
+              скачивание {humanSize(s.progress.done)}{s.progress.total ? ` из ${humanSize(s.progress.total)}` : ''}
+            </span>
+            <span style={{ color: 'var(--text-primary)', fontVariantNumeric: 'tabular-nums' }}>
+              {pct !== null ? `${pct}%` : ''}
+            </span>
+          </div>
+          <ProgressBar pct={pct} />
+        </div>
+      )}
+      {s.phase === 'ready' && s.update && (
+        <div className="flex items-center justify-between gap-3">
           <span style={{ color: 'var(--text-muted)' }}>
-            скачивание {humanSize(s.progress.done)}{s.progress.total ? ` из ${humanSize(s.progress.total)}` : ''}
-            {pct !== null ? ` — ${pct}%` : ''}
+            v{s.update.version} скачана
           </span>
+          <button
+            onClick={() => { void installNow(); }}
+            className="flex items-center gap-1 px-3 py-1 rounded"
+            style={{ background: 'var(--accent)', color: 'var(--on-accent)', border: 'none', cursor: 'pointer' }}
+          >
+            <Download size={12} /> установить
+          </button>
         </div>
       )}
       {s.phase === 'installing' && (
@@ -340,9 +426,11 @@ export function UpdateBanner() {
       )}
       {s.phase === 'done' && (
         <div style={{ color: 'var(--text-muted)' }}>
-          {s.update?.source === 'custom'
+          {s.deliveredVia === 'browser'
             ? 'браузер начал скачивание. подтверди установку когда закончится.'
-            : 'готово. перезапуск…'}
+            : s.update?.source === 'plugin'
+              ? 'готово. перезапуск…'
+              : 'установщик запущен. подтверди установку.'}
         </div>
       )}
       {s.phase === 'error' && (

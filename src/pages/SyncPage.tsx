@@ -5,7 +5,7 @@ import { useToast } from '@/components/ui/Toast';
 import { describeAuthError, LOGIN_MIN, PASSWORD_MIN } from '@/lib/account';
 import { isTauri } from '@tauri-apps/api/core';
 import vpsSync, { type VpsSyncState } from '@/services/vps-sync.service';
-import { checkNow, startUpdate, useBannerState } from '@/components/updates/UpdateBanner';
+import { checkNow, startUpdate, useBannerState, installNow } from '@/components/updates/UpdateBanner';
 
 // ── Мелкие UI-хелперы (используются только здесь) ───────────────────────
 
@@ -401,19 +401,34 @@ function UpdateCheckerRow() {
   const s = useBannerState();
   // В вебе апдейтера нет — строка «проверить обновления» там только путает.
   if (!isTauri()) return null;
-  const hasUpdate = s.phase === 'available' && !!s.update;
+
+  const hasUpdate  = s.phase === 'available' && !!s.update;
+  const downloaded = s.phase === 'ready' && !!s.update;
   const busy = s.phase === 'checking' || s.phase === 'downloading' || s.phase === 'installing';
+  const highlighted = hasUpdate || downloaded;
+
+  const humanSize = (b: number) => `${(b / (1024 * 1024)).toFixed(1)} МБ`;
+  const pct = s.progress.total
+    ? Math.min(100, Math.round((s.progress.done / s.progress.total) * 100))
+    : null;
 
   const label = (() => {
     if (s.phase === 'checking')    return 'проверяю…';
     if (s.phase === 'downloading') return 'скачиваю…';
-    if (s.phase === 'installing')  return 'ставлю…';
+    if (s.phase === 'installing')  return 'запускаю установщик…';
     if (s.phase === 'done')        return 'обновление запущено';
-    if (hasUpdate)                 return `установить v${s.update!.version}`;
+    if (downloaded)                return `установить v${s.update!.version}`;
+    if (hasUpdate)                 return `скачать v${s.update!.version}`;
     if (s.phase === 'no-update')   return 'уже последняя версия';
     if (s.phase === 'error')       return 'проверить ещё раз';
     return 'проверить обновления';
   })();
+
+  const onClick = () => {
+    if (downloaded) { void installNow(); return; }
+    if (hasUpdate)  { void startUpdate(); return; }
+    void checkNow();
+  };
 
   return (
     <>
@@ -421,13 +436,13 @@ function UpdateCheckerRow() {
         // Раньше эта строка умела только перепроверять: даже когда обновление
         // было найдено, нажатие ничего не устанавливало — поставить можно было
         // только из баннера, а его легко закрыть крестиком.
-        onClick={() => { void (hasUpdate ? startUpdate() : checkNow()); }}
+        onClick={onClick}
         disabled={busy}
         className="w-full font-mono py-2 rounded flex items-center justify-center gap-2"
         style={{
-          background: hasUpdate ? 'var(--accent)' : 'transparent',
-          color: hasUpdate ? 'var(--on-accent)' : 'var(--text-muted)',
-          border: `1px solid ${hasUpdate ? 'var(--accent)' : 'var(--border)'}`,
+          background: highlighted ? 'var(--accent)' : 'transparent',
+          color: highlighted ? 'var(--on-accent)' : 'var(--text-muted)',
+          border: `1px solid ${highlighted ? 'var(--accent)' : 'var(--border)'}`,
           cursor: busy ? 'wait' : 'pointer',
           fontSize: 12,
           opacity: busy ? 0.6 : 1,
@@ -436,6 +451,36 @@ function UpdateCheckerRow() {
         {busy && <Loader2 size={12} className="animate-spin" />}
         {label}
       </button>
+
+      {s.phase === 'downloading' && (
+        <div style={{ marginTop: 8 }}>
+          <div
+            className="font-mono flex items-center justify-between"
+            style={{ fontSize: 11, color: 'var(--text-muted)', marginBottom: 4 }}
+          >
+            <span>
+              {humanSize(s.progress.done)}
+              {s.progress.total ? ` из ${humanSize(s.progress.total)}` : ''}
+            </span>
+            <span style={{ color: 'var(--text-primary)', fontVariantNumeric: 'tabular-nums' }}>
+              {pct !== null ? `${pct}%` : ''}
+            </span>
+          </div>
+          <div style={{ height: 4, background: 'var(--border-subtle)', borderRadius: 2, overflow: 'hidden' }}>
+            <div
+              style={{
+                height: '100%',
+                width: pct !== null ? `${pct}%` : '35%',
+                background: 'var(--accent)',
+                borderRadius: 2,
+                transition: 'width 180ms linear',
+                animation: pct === null ? 'km-indeterminate 1.1s ease-in-out infinite' : undefined,
+              }}
+            />
+          </div>
+        </div>
+      )}
+
       {s.phase === 'error' && s.errorMsg && (
         <div
           className="font-mono"
