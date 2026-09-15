@@ -6,7 +6,7 @@ import { AboutFooter } from '@/components/ui/AboutFooter';
 import { describeAuthError, LOGIN_MIN, PASSWORD_MIN } from '@/lib/account';
 import { isTauri } from '@tauri-apps/api/core';
 import vpsSync, { type VpsSyncState } from '@/services/vps-sync.service';
-import { checkNow, startUpdate, useBannerState, installNow } from '@/components/updates/UpdateBanner';
+import { checkNow, startUpdate, useUpdateState, installNow } from '@/lib/updater';
 
 // ── Мелкие UI-хелперы (используются только здесь) ───────────────────────
 
@@ -399,7 +399,7 @@ function PairedView() {
 // ── Root ────────────────────────────────────────────────────────────────
 
 function UpdateCheckerRow() {
-  const s = useBannerState();
+  const s = useUpdateState();
   // В вебе апдейтера нет — строка «проверить обновления» там только путает.
   if (!isTauri()) return null;
 
@@ -424,6 +424,17 @@ function UpdateCheckerRow() {
     if (s.phase === 'error')       return 'проверить ещё раз';
     return 'проверить обновления';
   })();
+
+  // Проверяем при открытии раздела. Раньше это делала плашка при запуске
+  // приложения; плашки больше нет, а узнавать об обновлении где-то надо.
+  //
+  // Только из состояния покоя: состояние живёт дольше компонента, и если
+  // уйти с экрана во время загрузки и вернуться, проверка сбросила бы уже
+  // скачанный файл и потребовала качать заново.
+  useEffect(() => {
+    if (s.phase === 'idle') void checkNow();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const onClick = () => {
     if (downloaded) { void installNow(); return; }

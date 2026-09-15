@@ -1,5 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
-import { Download, X, Loader2, RefreshCw } from 'lucide-react';
+import { useEffect, useState } from 'react';
 import { check as pluginCheck, type Update } from '@tauri-apps/plugin-updater';
 import { relaunch } from '@tauri-apps/plugin-process';
 import { openUrl } from '@tauri-apps/plugin-opener';
@@ -15,6 +14,14 @@ import {
 import { downloadUpdate, installDownloaded } from '@/lib/update-install';
 
 /**
+ * Состояние обновления приложения.
+ *
+ * Раньше этот модуль назывался UpdateBanner и рисовал плашку поверх всего
+ * интерфейса. Плашка убрана: обновления — не то, что должно перекрывать
+ * работу. Всё, что о них нужно знать, показывает раздел SYNC, а здесь
+ * осталась только логика: проверка, загрузка, установка и состояние,
+ * которое переживает уход с экрана.
+ *
  * Гибридный updater: два способа доставки одного и того же релиза.
  *
  * `plugin` — tauri-plugin-updater: качает и ставит внутри приложения, сам
@@ -57,7 +64,7 @@ interface AvailableUpdate {
   filePath?: string;
 }
 
-export interface BannerState {
+export interface UpdateState {
   phase: Phase;
   update: AvailableUpdate | null;
   errorMsg: string | null;
@@ -66,9 +73,9 @@ export interface BannerState {
   deliveredVia: 'app' | 'browser' | null;
 }
 
-type Listener = (s: BannerState) => void;
+type Listener = (s: UpdateState) => void;
 
-let state: BannerState = { phase: 'idle', update: null, errorMsg: null, progress: { done: 0, total: null }, deliveredVia: null };
+let state: UpdateState = { phase: 'idle', update: null, errorMsg: null, progress: { done: 0, total: null }, deliveredVia: null };
 const listeners = new Set<Listener>();
 
 /**
@@ -94,7 +101,7 @@ function autoHideAfter(ms: number): void {
     if (state.phase === 'done') setState({ phase: 'idle', update: null });
   }, ms);
 }
-const setState = (patch: Partial<BannerState>) => {
+const setState = (patch: Partial<UpdateState>) => {
   state = { ...state, ...patch };
   listeners.forEach((l) => l(state));
 };
@@ -303,8 +310,8 @@ export async function installNow(): Promise<void> {
   }
 }
 
-export function useBannerState(): BannerState {
-  const [s, setS] = useState<BannerState>(state);
+export function useUpdateState(): UpdateState {
+  const [s, setS] = useState<UpdateState>(state);
   useEffect(() => {
     listeners.add(setS);
     // Состояние модульное и живёт дольше компонента — подтягиваем актуальное
@@ -313,152 +320,4 @@ export function useBannerState(): BannerState {
     return () => { listeners.delete(setS); };
   }, []);
   return s;
-}
-
-/**
- * Полоса загрузки. При неизвестном общем размере (сервер не прислал
- * content-length) показываем бегущую полосу вместо доли — честнее, чем
- * рисовать проценты от нуля.
- */
-function ProgressBar({ pct }: { pct: number | null }) {
-  return (
-    <div style={{ height: 4, background: 'var(--border-subtle)', borderRadius: 2, overflow: 'hidden' }}>
-      <div
-        style={{
-          height: '100%',
-          width: pct !== null ? `${pct}%` : '35%',
-          background: 'var(--accent)',
-          borderRadius: 2,
-          transition: 'width 180ms linear',
-          animation: pct === null ? 'km-indeterminate 1.1s ease-in-out infinite' : undefined,
-        }}
-      />
-    </div>
-  );
-}
-
-export function UpdateBanner() {
-  const s = useBannerState();
-
-  useEffect(() => { void checkNow(); }, []);
-
-  const doUpdate = useCallback(() => { void startUpdate(); }, []);
-
-  if (s.phase === 'idle' || s.phase === 'no-update') return null;
-
-  const humanSize = (b: number) => `${(b / (1024 * 1024)).toFixed(1)} МБ`;
-  const pct = s.progress.total ? Math.min(100, Math.round((s.progress.done / s.progress.total) * 100)) : null;
-
-  return (
-    <div
-      className="fixed z-50 font-mono"
-      style={{
-        left: 12, right: 12, bottom: 12, maxWidth: 440, margin: '0 auto',
-        background: 'var(--overlay-bg)', border: '1px solid var(--border)',
-        padding: '10px 12px', fontSize: 12, color: 'var(--text-primary)',
-        boxShadow: '0 4px 12px rgba(0,0,0,0.4)',
-      }}
-    >
-      {s.phase === 'checking' && (
-        <div className="flex items-center gap-3">
-          <Loader2 size={14} className="animate-spin" />
-          <span style={{ color: 'var(--text-muted)' }}>проверяю обновления…</span>
-        </div>
-      )}
-      {s.phase === 'available' && s.update && (
-        <div className="flex items-center justify-between gap-3">
-          <span style={{ color: 'var(--text-muted)' }}>
-            есть новая версия <b style={{ color: 'var(--text-primary)' }}>v{s.update.version}</b>
-          </span>
-          <div className="flex gap-2">
-            <button
-              onClick={doUpdate}
-              className="flex items-center gap-1 px-3 py-1 rounded"
-              style={{ background: 'var(--accent)', color: 'var(--on-accent)', border: 'none', cursor: 'pointer' }}
-            >
-              <Download size={12} /> скачать
-            </button>
-            <button
-              onClick={() => setState({ phase: 'idle' })}
-              className="px-2"
-              style={{ background: 'transparent', border: 'none', color: 'var(--text-muted)', cursor: 'pointer' }}
-              aria-label="закрыть"
-            >
-              <X size={14} />
-            </button>
-          </div>
-        </div>
-      )}
-      {s.phase === 'downloading' && (
-        <div className="flex flex-col gap-2">
-          <div className="flex items-center justify-between gap-3">
-            <span style={{ color: 'var(--text-muted)' }}>
-              скачивание {humanSize(s.progress.done)}{s.progress.total ? ` из ${humanSize(s.progress.total)}` : ''}
-            </span>
-            <span style={{ color: 'var(--text-primary)', fontVariantNumeric: 'tabular-nums' }}>
-              {pct !== null ? `${pct}%` : ''}
-            </span>
-          </div>
-          <ProgressBar pct={pct} />
-        </div>
-      )}
-      {s.phase === 'ready' && s.update && (
-        <div className="flex items-center justify-between gap-3">
-          <span style={{ color: 'var(--text-muted)' }}>
-            v{s.update.version} скачана
-          </span>
-          <button
-            onClick={() => { void installNow(); }}
-            className="flex items-center gap-1 px-3 py-1 rounded"
-            style={{ background: 'var(--accent)', color: 'var(--on-accent)', border: 'none', cursor: 'pointer' }}
-          >
-            <Download size={12} /> установить
-          </button>
-        </div>
-      )}
-      {s.phase === 'installing' && (
-        <div className="flex items-center gap-3">
-          <Loader2 size={14} className="animate-spin" />
-          <span style={{ color: 'var(--text-muted)' }}>
-            {s.update?.source === 'custom' ? 'открываю установщик…' : 'установка…'}
-          </span>
-        </div>
-      )}
-      {s.phase === 'done' && (
-        <div style={{ color: 'var(--text-muted)' }}>
-          {s.deliveredVia === 'browser'
-            ? 'браузер начал скачивание. подтверди установку когда закончится.'
-            : s.update?.source === 'plugin'
-              ? 'готово. перезапуск…'
-              : 'установщик запущен. подтверди установку.'}
-        </div>
-      )}
-      {s.phase === 'error' && (
-        <div className="flex items-start justify-between gap-3">
-          <div style={{ color: 'var(--danger)', wordBreak: 'break-word' }}>
-            <div style={{ fontWeight: 600, marginBottom: 4 }}>ошибка апдейтера</div>
-            <div style={{ fontSize: 11, opacity: 0.8 }}>{s.errorMsg}</div>
-          </div>
-          <div className="flex gap-1 shrink-0">
-            <button
-              onClick={() => { void checkNow(); }}
-              className="px-2"
-              style={{ background: 'transparent', border: 'none', color: 'var(--text-muted)', cursor: 'pointer' }}
-              aria-label="повторить"
-            >
-              <RefreshCw size={14} />
-            </button>
-            <button
-              onClick={() => setState({ phase: 'idle' })}
-              className="px-2"
-              style={{ background: 'transparent', border: 'none', color: 'var(--text-muted)', cursor: 'pointer' }}
-              aria-label="закрыть"
-            >
-              <X size={14} />
-            </button>
-          </div>
-        </div>
-      )}
-    </div>
-  );
 }

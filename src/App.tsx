@@ -17,7 +17,6 @@ import { TrashPage } from '@/pages/TrashPage';
 import { SyncPage } from '@/pages/SyncPage';
 import { pruneTrash } from '@/services/tasks.service';
 import { useAccountStore } from '@/stores/account.store';
-import { UpdateBanner } from '@/components/updates/UpdateBanner';
 import vpsSync from '@/services/vps-sync.service';
 
 /** Обёртка перехода между разделами — короткий fade + сдвиг, без блокировки ввода. */
@@ -95,7 +94,6 @@ export default function App() {
             <AnimatedRoutes />
           </AppShell>
         </BrowserRouter>
-        <UpdateBanner />
       </ToastProvider>
     </QueryClientProvider>
   );
