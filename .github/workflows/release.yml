@@ -1,0 +1,291 @@
+name: release
+
+# Выпуск релиза целиком: сборка под Windows и Android, заливка на VPS и
+# публикация манифеста апдейтера.
+#
+# Зачем: раньше релиз делался руками на двух машинах — собрать, скопировать,
+# написать latest.json. Шагов много, и дважды случалось одно и то же: на
+# сервер уезжала сборка из непересобранного кода, а понять это можно было
+# только по версии внутри APK. Здесь этот класс ошибок закрыт проверками:
+# версия тега обязана совпасть со всеми манифестами проекта, а версия внутри
+# собранного APK — с версией тега.
+#
+# Запуск: `git tag v0.5.3 && git push --tags`. Либо вручную из вкладки
+# Actions, указав версию — удобно, когда тег уже есть, а публикацию надо
+# повторить.
+#
+# Что нужно один раз настроить — см. DEPLOYMENT.md, раздел «Выпуск через CI».
+
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Версия, например 0.5.3 (без v)'
+        required: true
+      notes:
+        description: 'Строка «что нового» для манифеста'
+        required: false
+        default: ''
+
+env:
+  DEPLOY_HOST: 45.151.62.223
+  DEPLOY_USER: root
+  DEPLOY_DIR: /opt/kairo-server/server/data/update
+  PUBLIC_BASE: https://kairoupdate.duckdns.org/update
+
+jobs:
+  # ── Версия и её сверка со всеми манифестами проекта ──────────────────────
+  prepare:
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.check.outputs.version }}
+      notes: ${{ steps.check.outputs.notes }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - id: check
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            version='${{ inputs.version }}'
+            notes='${{ inputs.notes }}'
+          else
+            version="${GITHUB_REF_NAME#v}"
+            notes=""
+          fi
+
+          # Версия обязана совпадать везде. Рассинхрон здесь — самая дорогая
+          # ошибка релиза: собирается одно, публикуется под номером другого.
+          pkg=$(node -p "require('./package.json').version")
+          tauri=$(node -p "require('./src-tauri/tauri.conf.json').version")
+          cargo=$(grep -m1 '^version = ' src-tauri/Cargo.toml | cut -d'"' -f2)
+
+          echo "тег: $version · package.json: $pkg · tauri.conf.json: $tauri · Cargo.toml: $cargo"
+          for got in "$pkg" "$tauri" "$cargo"; do
+            if [ "$got" != "$version" ]; then
+              echo "::error::Версии разошлись. Подними номер во всех файлах и повтори."
+              exit 1
+            fi
+          done
+
+          if [ -z "$notes" ]; then
+            notes="Обновление до $version"
+          fi
+
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+          echo "notes=$notes" >> "$GITHUB_OUTPUT"
+
+  # ── Windows: NSIS-установщик ────────────────────────────────────────────
+  windows:
+    needs: prepare
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+
+      - uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            src-tauri/target
+          key: cargo-windows-${{ hashFiles('src-tauri/Cargo.lock') }}
+          restore-keys: cargo-windows-
+
+      - name: Зависимости
+        run: npm ci || npm install
+
+      - name: Сборка
+        run: npm run tauri build
+
+      - name: Забрать установщик
+        shell: bash
+        run: |
+          set -euo pipefail
+          exe=$(find src-tauri/target/release/bundle/nsis -name '*-setup.exe' | head -1)
+          [ -n "$exe" ] || { echo "::error::Установщик не найден"; exit 1; }
+          mkdir -p out
+          cp "$exe" "out/Kairo_${{ needs.prepare.outputs.version }}_x64-setup.exe"
+          ls -l out
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: windows
+          path: out/*.exe
+          retention-days: 7
+
+  # ── Android: APK, подписанный тем же ключом, что и сборки с ноутбука ────
+  android:
+    needs: prepare
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            src-tauri/target
+          key: cargo-android-${{ hashFiles('src-tauri/Cargo.lock') }}
+          restore-keys: cargo-android-
+
+      - name: Rust-таргет под arm64
+        run: rustup target add aarch64-linux-android
+
+      - name: Ключ подписи
+        env:
+          KEYSTORE_B64: ${{ secrets.ANDROID_KEYSTORE_B64 }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [ -z "${KEYSTORE_B64:-}" ]; then
+            echo "::error::Нет секрета ANDROID_KEYSTORE_B64. Без него APK подпишется чужим ключом, и Android откажется ставить его поверх установленного приложения."
+            exit 1
+          fi
+          mkdir -p ~/.android
+          echo "$KEYSTORE_B64" | base64 -d > ~/.android/debug.keystore
+          chmod 600 ~/.android/debug.keystore
+
+      - name: Зависимости
+        run: npm ci || npm install
+
+      - name: Сборка
+        shell: bash
+        run: |
+          set -euo pipefail
+          export NDK_HOME="${ANDROID_NDK_LATEST_HOME:-$ANDROID_NDK_HOME}"
+          echo "NDK: $NDK_HOME"
+          npm run tauri -- android build --apk --debug --target aarch64
+
+      - name: Сверить версию внутри APK
+        shell: bash
+        run: |
+          set -euo pipefail
+          apk=$(find src-tauri/gen/android -path '*outputs/apk*' -name '*.apk' | head -1)
+          [ -n "$apk" ] || { echo "::error::APK не найден"; exit 1; }
+
+          # Та самая проверка, которой не хватало при ручных релизах: версия
+          # берётся из самого файла, а не из того, что мы думаем о сборке.
+          got=$(unzip -p "$apk" AndroidManifest.xml | strings -el | grep -m1 -E '^[0-9]+\.[0-9]+\.[0-9]+$')
+          want='${{ needs.prepare.outputs.version }}'
+          echo "в APK: $got · ожидали: $want"
+          [ "$got" = "$want" ] || { echo "::error::APK собран из кода версии $got"; exit 1; }
+
+          mkdir -p out
+          cp "$apk" "out/kairo-$want.apk"
+          ls -l out
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: android
+          path: out/*.apk
+          retention-days: 7
+
+  # ── Публикация: файлы на VPS и манифест апдейтера ───────────────────────
+  publish:
+    needs: [prepare, windows, android]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: windows
+          path: dist-release
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: android
+          path: dist-release
+
+      - name: Ключ доступа к серверу
+        env:
+          KEY: ${{ secrets.DEPLOY_SSH_KEY }}
+          KNOWN_HOSTS: ${{ secrets.DEPLOY_KNOWN_HOSTS }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [ -z "${KEY:-}" ]; then
+            echo "::error::Нет секрета DEPLOY_SSH_KEY."
+            exit 1
+          fi
+          mkdir -p ~/.ssh && chmod 700 ~/.ssh
+          printf '%s\n' "$KEY" > ~/.ssh/id_deploy
+          chmod 600 ~/.ssh/id_deploy
+          if [ -n "${KNOWN_HOSTS:-}" ]; then
+            # Отпечаток задан заранее — соединение защищено от подмены хоста.
+            printf '%s\n' "$KNOWN_HOSTS" > ~/.ssh/known_hosts
+          else
+            # Иначе доверяем тому, кто ответит. Для личного сервера приемлемо,
+            # но лучше положить отпечаток в секрет DEPLOY_KNOWN_HOSTS.
+            ssh-keyscan -H "$DEPLOY_HOST" >> ~/.ssh/known_hosts 2>/dev/null
+          fi
+          chmod 600 ~/.ssh/known_hosts
+
+      - name: Залить сборки
+        shell: bash
+        run: |
+          set -euo pipefail
+          ls -l dist-release
+          scp -i ~/.ssh/id_deploy dist-release/* "$DEPLOY_USER@$DEPLOY_HOST:$DEPLOY_DIR/"
+
+      - name: Опубликовать манифест
+        shell: bash
+        run: |
+          set -euo pipefail
+          version='${{ needs.prepare.outputs.version }}'
+          notes='${{ needs.prepare.outputs.notes }}'
+
+          # signature пустая намеренно: приложение качает файл само и отдаёт
+          # системе, подпись minisign для этого не нужна. См. chooseDelivery
+          # в src/lib/update-manifest.ts.
+          node -e '
+            const [version, notes, base] = process.argv.slice(1);
+            const manifest = {
+              version,
+              notes,
+              pub_date: new Date().toISOString(),
+              platforms: {
+                "windows-x86_64": { signature: "", url: `${base}/Kairo_${version}_x64-setup.exe` },
+                "android-aarch64": { signature: "", url: `${base}/kairo-${version}.apk` },
+              },
+            };
+            require("fs").writeFileSync("latest.json", JSON.stringify(manifest, null, 2) + "\n");
+          ' "$version" "$notes" "$PUBLIC_BASE"
+
+          cat latest.json
+          scp -i ~/.ssh/id_deploy latest.json "$DEPLOY_USER@$DEPLOY_HOST:$DEPLOY_DIR/latest.json"
+          ssh -i ~/.ssh/id_deploy "$DEPLOY_USER@$DEPLOY_HOST" "chmod 644 $DEPLOY_DIR/*"
+
+      - name: Проверить, что раздаётся
+        shell: bash
+        run: |
+          set -euo pipefail
+          version='${{ needs.prepare.outputs.version }}'
+
+          got=$(curl -fsS "$PUBLIC_BASE/latest.json" | node -e 'let s="";process.stdin.on("data",d=>s+=d).on("end",()=>console.log(JSON.parse(s).version))')
+          echo "манифест отдаёт: $got"
+          [ "$got" = "$version" ] || { echo "::error::Манифест отдаёт $got"; exit 1; }
+
+          for f in "Kairo_${version}_x64-setup.exe" "kairo-${version}.apk"; do
+            code=$(curl -s -o /dev/null -w '%{http_code}' -I "$PUBLIC_BASE/$f")
+            echo "$f → $code"
+            [ "$code" = "200" ] || { echo "::error::$f недоступен"; exit 1; }
+          done
