@@ -1,0 +1,44 @@
+# /etc/systemd/system/observ.service
+#
+# Сайт ObserV (Next.js 16). Слушает только 127.0.0.1 — наружу отдаёт nginx.
+# Порт 3000 (у kairo-server занят 8787).
+
+[Unit]
+Description=ObserV website (Next.js)
+Documentation=https://github.com/Moroqq/observ
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=observ
+Group=observ
+WorkingDirectory=/opt/observ/app
+
+# Секреты (TELEGRAM_BOT_TOKEN и пр.) — в отдельном файле с chmod 600.
+EnvironmentFile=/etc/observ.env
+Environment=NODE_ENV=production
+
+ExecStart=/opt/observ/app/node_modules/.bin/next start -H 127.0.0.1 -p 3000
+
+Restart=on-failure
+RestartSec=5
+
+# На 1.9 ГБ RAM Next спокойно живёт в ~200–300 МБ. MemoryHigh — мягкий
+# порог (ядро начинает давить на кэш), жёсткий MemoryMax не ставим,
+# чтобы всплеск трафика не убивал процесс.
+MemoryHigh=768M
+
+# Hardening
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ProtectKernelTunables=true
+ProtectControlGroups=true
+RestrictSUIDSGID=true
+# Next пишет в .next/cache в рантайме (ISR/fetch-кэш)
+ReadWritePaths=/opt/observ/app/.next
+
+[Install]
+WantedBy=multi-user.target

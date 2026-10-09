@@ -568,6 +568,31 @@ curl -si https://kairoupdate.duckdns.org/update/latest.json | head -1
 4. Когда все устройства обновились — убрать блок старого домена из nginx
    и сам домен из DuckDNS.
 
+## Сайт ObserV на этом же VPS
+
+Второй проект на этой машине — сайт [ObserV](https://github.com/Moroqq/observ).
+Развёрнут 2026-08-27, открывается по всем трём доменам. Деплой-кит со всеми
+скриптами и подробным runbook'ом: [`deploy/observ/`](deploy/observ/README.md).
+
+- Стек: Next.js 16. Есть серверные роуты (`/api/lead`, `/api/telegram/webhook`),
+  поэтому статикой не отдаётся — нужен живой Node-процесс.
+- Код в `/opt/observ/app`, пользователь `observ`, порт `127.0.0.1:3000`
+  (у kairo — `8787`), секреты в `/etc/observ.env`.
+- Домены: `observ.team` (главный, под Cloudflare), `observ.space` и
+  `observ.tech` (напрямую, для РФ без VPN), плюс `www` у каждого.
+  Cloudflare в России режут, поэтому под облаком не весь набор.
+- TLS: Let's Encrypt, сертификат `observ` на все шесть имён, истекает
+  2026-11-25, продление тем же таймером certbot'а, что у kairo.
+- `api.telegram.org` с этого сервера недоступен напрямую, поэтому заявки
+  с сайта ходят через локальный SOCKS5: `sing-box.service` на
+  `127.0.0.1:1080`, конфиг в `/etc/sing-box/config.json`.
+- Выкатка новой версии: `bash /root/kairo-deploy/deploy/observ/update.sh`.
+
+Kairo не задет: свой пользователь, свой порт, свой vhost. Пересекаются они
+только в одном месте — `nginx -t`: невалидный конфиг сайта не даст
+перезагрузить nginx и для kairo, поэтому скрипты кита всегда проверяют
+конфиг до reload.
+
 ## Быстрые команды (для дебага)
 
 ```bash

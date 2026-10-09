@@ -1,0 +1,83 @@
+# → /etc/nginx/sites-available/observ   (симлинк в sites-enabled)
+#
+# Генерируется скриптом deploy/observ/render-nginx.sh — руками правьте
+# шаблон, а не результат, иначе следующий рендер затрёт изменения.
+#
+# Домены проксируются через Cloudflare. Режим SSL/TLS в панели CF должен
+# быть Full (strict) — тогда CF проверяет сертификат origin'а, а мы кладём
+# сюда Cloudflare Origin CA (или Let's Encrypt, см. README).
+
+# ── Origin для зеркал ────────────────────────────────────────────────────────
+# /api/lead принимает POST только с Origin из своего белого списка
+# (https://observ.team и https://www.observ.team, захардкожено в коде).
+# Заявка с зеркального домена иначе получит 403. Здесь мы подменяем Origin
+# у известных зеркал на основной домен; всё остальное проходит как есть,
+# чтобы проверка продолжала отсекать чужие сайты.
+__ORIGIN_MAP__
+
+server {
+    listen      80;
+__LISTEN_80_V6__
+    server_name __SERVER_NAMES__;
+
+    # Оставлено для certbot --webroot, если TLS выпускается Let's Encrypt.
+    location /.well-known/acme-challenge/ {
+        root /var/www/html;
+    }
+
+    location / {
+        return 301 https://$host$request_uri;
+    }
+}
+
+server {
+    listen      443 ssl http2;
+__LISTEN_443_V6__
+    server_name __SERVER_NAMES__;
+
+    ssl_certificate     __CERT__;
+    ssl_certificate_key __KEY__;
+    ssl_protocols       TLSv1.2 TLSv1.3;
+    ssl_prefer_server_ciphers off;
+    ssl_session_cache   shared:SSL:10m;
+    ssl_session_timeout 1d;
+
+    access_log /var/log/nginx/observ.access.log;
+    error_log  /var/log/nginx/observ.error.log;
+
+    # Форма заявки маленькая; ограничение отсекает мусорные POST'ы.
+    client_max_body_size 1m;
+
+    # Заголовки безопасности (CSP, X-Frame-Options и пр.) ставит сам Next
+    # в next.config.mjs → headers(). Не дублируем, чтобы не разъезжались.
+    gzip            on;
+    gzip_types      text/plain text/css application/javascript application/json image/svg+xml;
+    gzip_min_length 1024;
+
+    # Продление сертификата. Certbot кладёт челлендж в /var/www/html и
+    # ходит по http://, но Cloudflare с включённым Always Use HTTPS
+    # редиректит проверку на https:// ещё до origin — и тогда запрос
+    # приходит сюда. Без этого location Next вернёт 404, и продление
+    # молча провалится. Дублируем и на 443.
+    location /.well-known/acme-challenge/ {
+        root /var/www/html;
+    }
+
+    location / {
+        proxy_pass         http://127.0.0.1:3000;
+        proxy_http_version 1.1;
+
+        proxy_set_header Host              $host;
+        proxy_set_header Origin            $observ_origin;
+        proxy_set_header X-Real-IP         $remote_addr;
+        proxy_set_header X-Forwarded-For   $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_set_header X-Forwarded-Host  $host;
+        # CF-Connecting-IP приходит от Cloudflare и пробрасывается как есть —
+        # его читает rate-limit в /api/lead.
+
+        proxy_connect_timeout 5s;
+        proxy_read_timeout    60s;
+        proxy_buffering       on;
+    }
+}
