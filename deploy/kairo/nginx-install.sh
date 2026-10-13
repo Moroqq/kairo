@@ -36,6 +36,16 @@ if [[ "$missing" -eq 1 ]]; then
   exit 1
 fi
 
+# Ubuntu из коробки кладёт свой сайт по умолчанию, и он объявлен
+# default_server. Конфиг Kairo — тоже, и обязан им быть: иначе запросы по
+# голому IP и по чужим именам попадут в первый попавшийся блок. Два
+# default_server на одном порту nginx не разрешает, поэтому стоковый
+# отключаем. Файл в sites-available остаётся — при желании вернётся симлинком.
+if [[ -e /etc/nginx/sites-enabled/default ]]; then
+  rm -f /etc/nginx/sites-enabled/default
+  echo "отключён стоковый сайт nginx (конфликтовал по default_server)"
+fi
+
 [[ -f /etc/nginx/sites-available/kairo ]] && cp /etc/nginx/sites-available/kairo /root/kairo-nginx.bak
 install -m 644 "$SRC" /etc/nginx/sites-available/kairo
 ln -sfn /etc/nginx/sites-available/kairo /etc/nginx/sites-enabled/kairo
