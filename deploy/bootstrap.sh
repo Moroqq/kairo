@@ -3,6 +3,10 @@
 # Подготовка чистого сервера под Kairo и сайт ObserV.
 # Запускать от root на свежем Ubuntu:  bash bootstrap.sh
 #
+# На голом образе может не быть git — тогда сам этот файл сначала нечем
+# забрать. Лечится до клонирования:
+#   apt-get update -qq && apt-get install -y -qq git
+#
 # Ставит общее для обоих проектов: nginx, certbot, Node 22, sqlite3, ufw,
 # swap. Сами проекты разворачиваются потом — deploy/kairo/install.sh и
 # deploy/observ/install.sh.
