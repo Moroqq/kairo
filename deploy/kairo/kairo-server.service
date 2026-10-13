@@ -1,0 +1,42 @@
+# /etc/systemd/system/kairo-server.service
+#
+# Sync-бэкенд Kairo. Слушает только 127.0.0.1 — наружу отдаёт nginx.
+
+[Unit]
+Description=Kairo sync backend
+Documentation=https://github.com/Moroqq/kairo
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=kairo
+Group=kairo
+WorkingDirectory=/opt/kairo-server/server
+
+# Ключи ИИ-функций и прочие секреты — отдельным файлом с chmod 640.
+EnvironmentFile=/etc/kairo.env
+Environment=NODE_ENV=production
+# Бэкенд по умолчанию слушает 0.0.0.0 — заворачиваем на loopback явно,
+# иначе порт 8787 торчит наружу в обход nginx.
+Environment=HOST=127.0.0.1
+Environment=PORT=8787
+
+ExecStart=/usr/bin/node dist/index.js
+
+Restart=on-failure
+RestartSec=5
+
+# Hardening
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ProtectKernelTunables=true
+ProtectControlGroups=true
+RestrictSUIDSGID=true
+# База (SQLite в режиме WAL) и каталог релизов для апдейтера.
+ReadWritePaths=/opt/kairo-server/server/data /opt/kairo-server/server/updates
+
+[Install]
+WantedBy=multi-user.target
