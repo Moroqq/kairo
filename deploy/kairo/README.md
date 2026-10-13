@@ -116,6 +116,37 @@ curl -si https://kairoupdate.duckdns.org/update/latest.json | head -1
 Синк по `/health` не проверяется: WebSocket может быть сломан при живом
 `/health`. После установки откройте экран SYNC в приложении.
 
+## Ловушка: проверка WebSocket через curl даёт 404
+
+Синк ходит по `wss://<домен>/sync`. Если проверять его так:
+
+```bash
+curl -i -H "Connection: Upgrade" -H "Upgrade: websocket" \
+     -H "Sec-WebSocket-Version: 13" -H "Sec-WebSocket-Key: dGhlIHNhbXBsZSBub25jZQ==" \
+     https://kairoupdate.duckdns.org/sync
+```
+
+придёт `HTTP/2 404`, и выглядит это как сломанный синк. На самом деле
+сломан тест: curl договаривается на HTTP/2, а в нём механизма
+`Connection: Upgrade` нет вообще — он остался в HTTP/1.1. Заголовки
+игнорируются, бэкенд видит обычный GET и честно отвечает 404.
+
+HTTP/2 на этом сокете включает vhost сайта ObserV (`listen 443 ssl http2`):
+в nginx этот параметр действует на весь слушающий адрес, а не только на
+свой server-блок, поэтому он распространяется и на домены Kairo.
+
+Правильная проверка — с принудительным HTTP/1.1, ожидается `101`:
+
+```bash
+curl --http1.1 -s -o /dev/null -w "%{http_code}\n" \
+     -H "Connection: Upgrade" -H "Upgrade: websocket" \
+     -H "Sec-WebSocket-Version: 13" -H "Sec-WebSocket-Key: dGhlIHNhbXBsZSBub25jZQ==" \
+     https://kairoupdate.duckdns.org/sync
+```
+
+На реальных клиентов это не влияет: браузеры и WebSocket-библиотеки
+открывают отдельное соединение по HTTP/1.1, иначе апгрейд невозможен.
+
 ## Эксплуатация
 
 ```bash
