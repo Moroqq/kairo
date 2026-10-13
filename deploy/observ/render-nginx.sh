@@ -79,12 +79,23 @@ for f in "$CERT" "$KEY"; do
 done
 
 printf '%s\n' "$RENDERED" > /etc/nginx/sites-available/observ
+
+# Снимаем симлинк, если проверка не прошла: иначе битый конфиг остаётся в
+# sites-enabled и роняет каждый последующий `nginx -t`, включая certbot.
+WAS_ENABLED=0
+[[ -e /etc/nginx/sites-enabled/observ ]] && WAS_ENABLED=1
+rollback() {
+  [[ "$WAS_ENABLED" -eq 1 ]] || rm -f /etc/nginx/sites-enabled/observ
+  echo "конфиг не прошёл проверку — симлинк снят, nginx остался на прежнем" >&2
+}
+trap rollback ERR
 ln -sfn /etc/nginx/sites-available/observ /etc/nginx/sites-enabled/observ
 install -m 644 "$HERE/nginx/cloudflare-realip.conf" /etc/nginx/conf.d/cloudflare-realip.conf
 
 # nginx -t проверяет ВЕСЬ конфиг: если он падает, значит сломан не только
 # наш файл — не перезагружаем, чтобы не уронить заодно kairo.
 nginx -t
+trap - ERR
 systemctl reload nginx
 
 echo "nginx: vhost observ установлен, домены: $DOMAINS"

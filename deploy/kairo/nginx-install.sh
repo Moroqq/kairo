@@ -48,11 +48,23 @@ fi
 
 [[ -f /etc/nginx/sites-available/kairo ]] && cp /etc/nginx/sites-available/kairo /root/kairo-nginx.bak
 install -m 644 "$SRC" /etc/nginx/sites-available/kairo
+
+# Симлинк снимаем, если проверка не прошла. Иначе битый конфиг остаётся в
+# sites-enabled и роняет КАЖДЫЙ последующий `nginx -t` — в том числе внутри
+# certbot, который после этого не может даже выпустить сертификат.
+WAS_ENABLED=0
+[[ -e /etc/nginx/sites-enabled/kairo ]] && WAS_ENABLED=1
+rollback() {
+  [[ "$WAS_ENABLED" -eq 1 ]] || rm -f /etc/nginx/sites-enabled/kairo
+  echo "конфиг не прошёл проверку — симлинк снят, nginx остался на прежнем" >&2
+}
 ln -sfn /etc/nginx/sites-available/kairo /etc/nginx/sites-enabled/kairo
 
 # nginx -t проверяет весь конфиг: если он падает, виноват может быть и
 # сайт ObserV — не перезагружаем, чтобы не уронить заодно его.
+trap rollback ERR
 nginx -t
+trap - ERR
 systemctl reload nginx
 
 echo "nginx: конфиг Kairo установлен"
